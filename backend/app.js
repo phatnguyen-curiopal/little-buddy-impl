@@ -4,6 +4,7 @@ import { requestId } from './middleware/request_id.js';
 import { notFound, errorHandler } from './middleware/error.js';
 import * as db from './store/db.js';
 import * as redisStore from './store/redis.js';
+import { dashboardRouter } from './routes/dashboard.js';
 
 const HEALTH_TIMEOUT_MS = 2000;
 
@@ -46,6 +47,8 @@ export function createApp() {
       uptime_s: Math.floor(process.uptime()),
     });
   });
+
+  app.use('/api', dashboardRouter);
 
   app.use(notFound);
   app.use(errorHandler);

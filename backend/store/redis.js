@@ -22,8 +22,15 @@ export function ping() {
   return redis.ping();
 }
 
+// quit() on a lazy client that never connected would open a connection just
+// to close it, and can hang the process; disconnect() is the right call there.
 export async function close() {
-  if (redis.status !== 'end') await redis.quit();
+  if (redis.status === 'end') return;
+  if (redis.status === 'wait') {
+    redis.disconnect();
+    return;
+  }
+  await redis.quit();
 }
 
 export default redis;

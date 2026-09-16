@@ -34,3 +34,6 @@ Thumbs.db
 .vscode/
 .idea/
 .claude/
+
+# Factory manifests hold device secrets and claim codes; they never enter git.
+manifests/

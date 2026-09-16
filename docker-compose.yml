@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: littlebuddy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: littlebuddy
+      POSTGRES_PASSWORD: littlebuddy
+      POSTGRES_DB: littlebuddy
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U littlebuddy -d littlebuddy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: littlebuddy-redis
+    restart: unless-stopped
+    # Redis holds hot, TTL'd state only (nonces, counters), so persistence is
+    # switched off on purpose: nothing in it is worth surviving a restart.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

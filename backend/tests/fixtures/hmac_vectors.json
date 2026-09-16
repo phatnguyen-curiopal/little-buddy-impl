@@ -1,0 +1,29 @@
+{
+  "note": "Reference vectors for the LB1 device signing scheme. Firmware must reproduce these before talking to a real server.",
+  "secret_hex": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "device_id": "3f9c2a7b1e5d8c04",
+  "ts": "1789000000",
+  "nonce": "7c1e0f5a9b3d4e2f8a6c1b0d9e7f5a3c",
+  "empty_body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "vectors": [
+    {
+      "name": "POST heartbeat with body",
+      "method": "POST",
+      "path": "/v1/heartbeat",
+      "body": "{\"fw\":\"1.0.0\",\"uptime_s\":42}",
+      "body_sha256": "8a84e1abb3809813bf335b67de12e6c7a5ccb513801bb4bcf9a341e063e173e1",
+      "canonical": "LB1\nPOST\n/v1/heartbeat\n3f9c2a7b1e5d8c04\n1789000000\n7c1e0f5a9b3d4e2f8a6c1b0d9e7f5a3c\n8a84e1abb3809813bf335b67de12e6c7a5ccb513801bb4bcf9a341e063e173e1",
+      "sig": "1fb702f7ee187154633c9679c4b8f609bed3e2a9601a92ab60dae0fa28abf5e6"
+    },
+    {
+      "name": "WebSocket upgrade GET /v1/stream, no body",
+      "method": "GET",
+      "path": "/v1/stream",
+      "body": null,
+      "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "canonical": "LB1\nGET\n/v1/stream\n3f9c2a7b1e5d8c04\n1789000000\n7c1e0f5a9b3d4e2f8a6c1b0d9e7f5a3c\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sig": "dfca3cdd6d79e13b558e8589ea5c59e3a924ae43b59f757509e2028eda46d35b",
+      "url": "wss://host/v1/stream?device_id=3f9c2a7b1e5d8c04&ts=1789000000&nonce=7c1e0f5a9b3d4e2f8a6c1b0d9e7f5a3c&sig=dfca3cdd6d79e13b558e8589ea5c59e3a924ae43b59f757509e2028eda46d35b"
+    }
+  ]
+}

@@ -3,6 +3,8 @@ import * as auth from '../auth/service.js';
 import { requireParent } from '../middleware/require_parent.js';
 import { rateLimit, emailKey } from '../middleware/rate_limit.js';
 import { validateBody } from '../lib/validate.js';
+import { pool } from '../store/db.js';
+import * as children from '../store/child.js';
 
 // Everything the parent web app calls, mounted at /api. Never mixed with the
 // device API: a device secret must not be able to reach any of these.
@@ -55,4 +57,18 @@ dashboardRouter.post('/auth/logout', async (req, res) => {
 
 dashboardRouter.get('/me', requireParent, async (req, res) => {
   res.json(await auth.me(req.parent.id));
+});
+
+dashboardRouter.post('/children', requireParent, async (req, res) => {
+  const body = validateBody(req.body, {
+    name: { type: 'string', required: true, min: 1, max: 40 },
+    birth_year: { type: 'int', required: true, min: 2000, max: 2100 },
+  });
+  const child = await children.insert(pool, { familyId: req.familyId, name: body.name, birthYear: body.birth_year });
+  res.status(201).json({ child: children.toDto(child) });
+});
+
+dashboardRouter.get('/children', requireParent, async (req, res) => {
+  const rows = await children.listByFamily(pool, req.familyId);
+  res.json({ children: rows.map(children.toDto) });
 });

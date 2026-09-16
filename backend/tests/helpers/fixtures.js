@@ -22,3 +22,9 @@ export async function registerParent(api, overrides = {}) {
     familyId: res.body.family.id,
   };
 }
+
+export async function createChild(api, token, overrides = {}) {
+  const res = await api('POST', '/api/children', { token, body: { name: 'Bông', birth_year: 2020, ...overrides } });
+  if (res.status !== 201) throw new Error(`createChild failed: ${res.status} ${res.text}`);
+  return res.body.child;
+}

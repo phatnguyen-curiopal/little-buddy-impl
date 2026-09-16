@@ -5,6 +5,10 @@ import { rateLimit, emailKey } from '../middleware/rate_limit.js';
 import { validateBody } from '../lib/validate.js';
 import { pool } from '../store/db.js';
 import * as children from '../store/child.js';
+import * as registry from '../devices/registry.js';
+import * as deviceStore from '../store/device.js';
+import { isUuid } from '../lib/validate.js';
+import { badRequest, notFound } from '../lib/http_error.js';
 
 // Everything the parent web app calls, mounted at /api. Never mixed with the
 // device API: a device secret must not be able to reach any of these.
@@ -71,4 +75,62 @@ dashboardRouter.post('/children', requireParent, async (req, res) => {
 dashboardRouter.get('/children', requireParent, async (req, res) => {
   const rows = await children.listByFamily(pool, req.familyId);
   res.json({ children: rows.map(children.toDto) });
+});
+
+// Claim codes are ~39 bits; this limit is what makes guessing them futile.
+const claimLimit = rateLimit({ name: 'claim', limit: 10, windowSec: 3600, key: (req) => req.parent.id });
+
+function deviceId(req) {
+  if (!isUuid(req.params.id)) throw notFound('device_not_found', 'device not found');
+  return req.params.id.toLowerCase();
+}
+
+const deviceResponse = (row) => ({ device: deviceStore.toDto(row) });
+
+dashboardRouter.post('/devices/claim', requireParent, claimLimit, async (req, res) => {
+  const body = validateBody(req.body, {
+    claim_code: { type: 'string', required: true, min: 8, max: 12 },
+    child_id: { type: 'uuid', nullable: true },
+  });
+  const row = await registry.claimByCode({
+    familyId: req.familyId,
+    claimCode: body.claim_code,
+    childId: body.child_id ?? null,
+    actorId: req.parent.id,
+  });
+  res.json(deviceResponse(row));
+});
+
+dashboardRouter.get('/devices', requireParent, async (req, res) => {
+  const rows = await registry.listForFamily(req.familyId);
+  res.json({ devices: rows.map(deviceStore.toDto) });
+});
+
+dashboardRouter.patch('/devices/:id', requireParent, async (req, res) => {
+  const body = validateBody(req.body, { child_id: { type: 'uuid', nullable: true } });
+  if (body.child_id === undefined) throw badRequest('validation_error', 'child_id is required (uuid or null)');
+  const row = await registry.assignChild({ deviceId: deviceId(req), familyId: req.familyId, childId: body.child_id });
+  res.json(deviceResponse(row));
+});
+
+dashboardRouter.post('/devices/:id/disable', requireParent, async (req, res) => {
+  const body = validateBody(req.body, { reason: { type: 'string', max: 200 } });
+  const row = await registry.disable({
+    deviceId: deviceId(req),
+    familyId: req.familyId,
+    by: 'parent',
+    reason: body.reason ?? null,
+    actorId: req.parent.id,
+  });
+  res.json(deviceResponse(row));
+});
+
+dashboardRouter.post('/devices/:id/enable', requireParent, async (req, res) => {
+  const row = await registry.enable({ deviceId: deviceId(req), familyId: req.familyId, by: 'parent', actorId: req.parent.id });
+  res.json(deviceResponse(row));
+});
+
+dashboardRouter.delete('/devices/:id', requireParent, async (req, res) => {
+  await registry.unpair({ deviceId: deviceId(req), familyId: req.familyId, actorId: req.parent.id });
+  res.status(204).end();
 });

@@ -51,6 +51,11 @@ export async function claimDevice(api, token, claimCode, childId) {
 
 export const adminHeaders = { authorization: `Bearer ${process.env.ADMIN_TOKEN}` };
 
+export async function simFor(device, baseUrl, opts = {}) {
+  const { SimDevice } = await import('../../devices/sim_client.js');
+  return new SimDevice({ deviceId: device.id, secretHex: device.secretHex, baseUrl, ...opts });
+}
+
 export async function createChild(api, token, overrides = {}) {
   const res = await api('POST', '/api/children', { token, body: { name: 'Bông', birth_year: 2020, ...overrides } });
   if (res.status !== 201) throw new Error(`createChild failed: ${res.status} ${res.text}`);

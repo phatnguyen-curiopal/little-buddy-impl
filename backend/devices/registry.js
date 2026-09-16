@@ -68,8 +68,11 @@ export function toPublic(row) {
 }
 
 // The only place raw secrets and claim codes are handed back, and only to the
-// caller that must deliver them to the factory.
-export async function provisionBatch({ label, hardwareRev, count, notes = null, actorId = null }) {
+// caller that must deliver them to the factory. `beforeCommit(manifest)` runs
+// inside the transaction after the rows exist: the CLI writes the manifest
+// there, so a failed write rolls the batch back and no device ever exists
+// whose secret was lost.
+export async function provisionBatch({ label, hardwareRev, count, notes = null, actorId = null, beforeCommit = null }) {
   if (!isBatchLabel(label)) throw badRequest('invalid_batch_label', 'batch label must be 3 to 16 uppercase letters or digits');
   if (typeof hardwareRev !== 'string' || !hardwareRev.trim()) throw badRequest('invalid_hardware_rev', 'hardware_rev is required');
   if (!Number.isInteger(count) || count < 1 || count > MAX_PER_BATCH) {
@@ -99,6 +102,7 @@ export async function provisionBatch({ label, hardwareRev, count, notes = null, 
       const created = await devices.insertBatch(tx, { label, hardwareRev, size: count, notes });
       await devices.insertDevices(tx, rows.map((r) => ({ ...r, batchId: created.id })));
       await devices.insertEventsForBatch(tx, created.id, { event: 'provisioned', actorKind: 'factory', actorId });
+      if (beforeCommit) await beforeCommit(manifest, created);
       return created;
     });
     return { batch, devices: manifest };

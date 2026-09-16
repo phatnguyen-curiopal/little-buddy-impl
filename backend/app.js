@@ -6,6 +6,7 @@ import * as db from './store/db.js';
 import * as redisStore from './store/redis.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { adminRouter } from './routes/admin.js';
+import { deviceRouter } from './routes/device.js';
 
 const HEALTH_TIMEOUT_MS = 2000;
 
@@ -49,6 +50,7 @@ export function createApp() {
     });
   });
 
+  app.use('/v1', deviceRouter);
   app.use('/api', dashboardRouter);
   app.use('/admin', adminRouter);
 

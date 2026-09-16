@@ -4,11 +4,13 @@ import { createApp } from './app.js';
 import * as db from './store/db.js';
 import * as redisStore from './store/redis.js';
 import log from './lib/log.js';
+import { attachStream } from './ws/stream.js';
 
 const SHUTDOWN_GRACE_MS = 10_000;
 
 const app = createApp();
 const server = http.createServer(app);
+attachStream(server);
 
 await redisStore.connect();
 await db.ping();

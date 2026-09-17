@@ -152,6 +152,15 @@ test('rotateSecret keeps the old secret valid until the grace period ends', asyn
   assert.equal(auth.prevSecret, null);
 });
 
+test('deleting a family unlinks a toy that was assigned to one of its children', async () => {
+  const d = await provisionDevice();
+  const child = await pool.query('INSERT INTO children (family_id, name, birth_year) VALUES ($1, $2, $3) RETURNING id', [family.id, 'Bông', 2020]);
+  await registry.claimByCode({ familyId: family.id, claimCode: d.claimCode, childId: child.rows[0].id });
+  await pool.query('DELETE FROM families WHERE id = $1', [family.id]);
+  const row = await pool.query('SELECT status, family_id, child_id FROM devices WHERE id = $1', [d.id]);
+  assert.deepEqual(row.rows[0], { status: 'active', family_id: null, child_id: null });
+});
+
 test('the blocked hook fires on disable, revoke and unpair', async () => {
   const calls = [];
   registry.setDeviceBlockedHook((id, status) => calls.push([id, status]));

@@ -802,7 +802,7 @@ X-LB-Sig      1fb702f7ee187154633c9679c4b8f609bed3e2a9601a92ab60dae0fa28abf5e6</
           </div>
           <figcaption>Deleting a family cascades to its parents, tokens and children, but only unlinks its devices: a toy outlives the family that owned it and can be claimed again.</figcaption>
         </figure>
-        <p>Two checks in the <code>devices</code> table encode rules the code also enforces: a toy cannot be assigned to a child without belonging to a family, and <code>status = 'disabled'</code> holds exactly when <code>disabled_by</code> is set (so the "who disabled it" question always has an answer).</p>
+        <p>One check in the <code>devices</code> table encodes a rule the code also enforces: <code>status = 'disabled'</code> holds exactly when <code>disabled_by</code> is set, so the "who disabled it" question always has an answer. The rule "a toy's child belongs to the toy's family" lives only in the registry: as a CHECK it broke family deletion, because Postgres clears <code>family_id</code> and <code>child_id</code> through two separate cascades it cannot order.</p>
       </section>
 
       <section id="errors">

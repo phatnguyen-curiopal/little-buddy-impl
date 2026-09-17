@@ -18,10 +18,11 @@ if (config.isProd) {
 }
 
 try {
-  const existing = await parents.findByEmail(pool, EMAIL);
-  if (existing) await pool.query('DELETE FROM families WHERE id = $1', [existing.family_id]);
+  // Devices first, then the family, so nothing depends on cascade ordering.
   await pool.query('DELETE FROM devices WHERE batch_id IN (SELECT id FROM device_batches WHERE label = $1)', [BATCH]);
   await pool.query('DELETE FROM device_batches WHERE label = $1', [BATCH]);
+  const existing = await parents.findByEmail(pool, EMAIL);
+  if (existing) await pool.query('DELETE FROM families WHERE id = $1', [existing.family_id]);
 
   const reg = await auth.register({ email: EMAIL, password: PASSWORD, familyName: 'Gia đình Demo', displayName: 'Phụ huynh Demo' });
   const child = await childrenStore.insert(pool, { familyId: reg.family.id, name: 'Bông', birthYear: 2020 });

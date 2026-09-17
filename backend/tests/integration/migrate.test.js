@@ -19,7 +19,7 @@ test('running migrations twice applies nothing the second time', async () => {
 
 test('schema_migrations records the initial file', async () => {
   const r = await pool.query('SELECT filename FROM schema_migrations ORDER BY filename');
-  assert.deepEqual(r.rows.map((x) => x.filename), ['001_init.sql']);
+  assert.deepEqual(r.rows.map((x) => x.filename), ['001_init.sql', '002_drop_child_family_check.sql']);
 });
 
 test('the vector extension and every table exist', async () => {

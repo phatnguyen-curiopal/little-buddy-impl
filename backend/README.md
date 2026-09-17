@@ -76,6 +76,7 @@ Chi tiết giao thức chữ ký cho firmware: `docs/device_auth.md`.
 
 Mọi phản hồi là JSON, khóa `snake_case`, lỗi có dạng
 `{ "error": { "code", "message", ... } }` kèm header `x-request-id`.
+Cách nhanh nhất để bấm thử bằng tay là console ở `frontend/` (`npm run dev`).
 
 ### `/api` (dashboard, `Authorization: Bearer <access_token>`)
 

@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Little Buddy Device Auth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F4F6F7;
+    --surface: #FFFFFF;
+    --surface-2: #EBEFF1;
+    --ink: #1B2430;
+    --muted: #5B6672;
+    --line: #D3DAE0;
+    --line-strong: #A9B4BE;
+    --device: #D08A1E;
+    --device-soft: #FBF1DE;
+    --parent: #1B8A8C;
+    --parent-soft: #DDF1F1;
+    --admin: #6B7A8C;
+    --admin-soft: #E6EAEE;
+    --bad: #B5443C;
+    --bad-soft: #F7E3E1;
+    --code-bg: #EEF1F3;
+    --shadow: 0 1px 2px rgba(27, 36, 48, 0.06), 0 8px 24px rgba(27, 36, 48, 0.06);
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", Roboto, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151A20;
+      --surface: #1C232B;
+      --surface-2: #232C36;
+      --ink: #E6EAEE;
+      --muted: #9AA6B2;
+      --line: #2E3944;
+      --line-strong: #4A5866;
+      --device: #E8A53A;
+      --device-soft: #3A2E17;
+      --parent: #3FB6B8;
+      --parent-soft: #163536;
+      --admin: #93A2B3;
+      --admin-soft: #262F39;
+      --bad: #E0736B;
+      --bad-soft: #3B2422;
+      --code-bg: #10151A;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151A20;
+    --surface: #1C232B;
+    --surface-2: #232C36;
+    --ink: #E6EAEE;
+    --muted: #9AA6B2;
+    --line: #2E3944;
+    --line-strong: #4A5866;
+    --device: #E8A53A;
+    --device-soft: #3A2E17;
+    --parent: #3FB6B8;
+    --parent-soft: #163536;
+    --admin: #93A2B3;
+    --admin-soft: #262F39;
+    --bad: #E0736B;
+    --bad-soft: #3B2422;
+    --code-bg: #10151A;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--parent); outline-offset: 2px; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 40px 80px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .toc { position: static !important; }
+  }
+
+  /* Header */
+  header.top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 32px;
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 10px;
+  }
+  header h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(30px, 4.2vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+    max-width: 18ch;
+  }
+  header .lede {
+    max-width: 60ch;
+    margin: 14px 0 0;
+    color: var(--muted);
+    font-size: 17px;
+  }
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 8px 28px;
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .facts b { display: block; color: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 600; line-height: 1.1; }
+
+  /* TOC */
+  .toc {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 20px);
+    font-size: 14px;
+  }
+  .toc h2 { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; font-weight: 500; }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .toc a { display: block; padding: 5px 10px; border-left: 2px solid var(--line); text-decoration: none; color: var(--muted); }
+  .toc a:hover { color: var(--ink); border-color: var(--line-strong); }
+  @media (max-width: 860px) {
+    .toc ol { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .toc a { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; }
+  }
+
+  /* Article */
+  article { min-width: 0; }
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section > h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 27px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  section h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 19px;
+    margin: 28px 0 8px;
+  }
+  p, li { max-width: 68ch; }
+  p { margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .callout {
+    border-left: 3px solid var(--device);
+    background: var(--device-soft);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 0 0 16px;
+    max-width: 68ch;
+  }
+  .callout.parent { border-color: var(--parent); background: var(--parent-soft); }
+  .callout.bad { border-color: var(--bad); background: var(--bad-soft); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* Lanes: the one encoding the whole page shares */
+  .lane {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    vertical-align: middle;
+  }
+  .lane.device { color: var(--device); border-color: var(--device); background: var(--device-soft); }
+  .lane.parent { color: var(--parent); border-color: var(--parent); background: var(--parent-soft); }
+  .lane.admin { color: var(--admin); border-color: var(--admin); background: var(--admin-soft); }
+
+  /* Figures */
+  figure { margin: 20px 0 24px; }
+  figure svg { display: block; max-width: 100%; height: auto; color: var(--ink); font-family: var(--body); }
+  figcaption { font-size: 13.5px; color: var(--muted); margin-top: 8px; max-width: 68ch; }
+  .scroll { overflow-x: auto; }
+  svg text { font-size: 12px; }
+  svg .mono { font-family: var(--mono); font-size: 11px; }
+  svg .small { font-size: 11px; fill: var(--muted); }
+  svg .box { fill: var(--surface); stroke: currentColor; stroke-width: 1.2; }
+  svg .box-device { fill: var(--device-soft); stroke: var(--device); stroke-width: 1.4; }
+  svg .box-parent { fill: var(--parent-soft); stroke: var(--parent); stroke-width: 1.4; }
+  svg .box-admin { fill: var(--admin-soft); stroke: var(--admin); stroke-width: 1.4; }
+  svg .box-store { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1.2; }
+  svg .box-bad { fill: var(--bad-soft); stroke: var(--bad); stroke-width: 1.4; }
+  svg .edge { fill: none; stroke: currentColor; stroke-width: 1.3; }
+  svg .edge-device { stroke: var(--device); }
+  svg .edge-parent { stroke: var(--parent); }
+  svg .edge-admin { stroke: var(--admin); }
+  svg .edge-bad { stroke: var(--bad); }
+  svg .dashed { stroke-dasharray: 4 4; }
+  svg .lifeline { stroke: var(--line-strong); stroke-dasharray: 3 4; stroke-width: 1; }
+  svg .t-device { fill: var(--device); }
+  svg .t-parent { fill: var(--parent); }
+  svg .t-bad { fill: var(--bad); }
+  svg .band { fill: var(--parent-soft); }
+  svg .band-device { fill: var(--device-soft); }
+
+  /* Tables */
+  .tbl { overflow-x: auto; margin: 0 0 18px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  td code { white-space: nowrap; }
+
+  /* Pipeline steps: a real sequence, so numbering carries meaning */
+  .steps { list-style: none; padding: 0; margin: 0 0 18px; counter-reset: step; display: grid; gap: 8px; max-width: none; }
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    max-width: none;
+    margin: 0;
+  }
+  .steps li::before {
+    content: counter(step);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--device);
+    line-height: 1.2;
+  }
+  .steps b { display: block; font-weight: 600; }
+  .steps .why { color: var(--muted); font-size: 14px; }
+  .steps .fails { font-family: var(--mono); font-size: 12px; color: var(--bad); white-space: nowrap; padding-top: 3px; }
+  @media (max-width: 560px) {
+    .steps li { grid-template-columns: 34px minmax(0, 1fr); }
+    .steps .fails { grid-column: 2; white-space: normal; }
+  }
+
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 0 0 18px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .card h4 { margin: 0 0 8px; font-family: var(--display); font-size: 16px; font-weight: 600; }
+  .card p, .card li { font-size: 14.5px; }
+  .card ul { margin-bottom: 0; }
+
+  .filemap { font-family: var(--mono); font-size: 13px; line-height: 1.7; }
+  .filemap dt { color: var(--ink); font-weight: 500; }
+  .filemap dd { margin: 0 0 8px 0; color: var(--muted); font-family: var(--body); font-size: 14px; }
+  @media (min-width: 700px) {
+    .filemap { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 20px; }
+    .filemap dd { margin: 0; }
+  }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Little Buddy backend, step one</p>
+      <h1>How the toy proves it is a toy</h1>
+      <p class="lede">Every answer a Little Buddy gives costs its family one credit, so a device that cannot prove who it is could spend other people's money. This page walks through the device registry, the signing protocol, the pairing flow, and the parent side that owns it all.</p>
+    </div>
+    <div class="facts">
+      <div><b>3</b>API surfaces</div>
+      <div><b>4</b>device states</div>
+      <div><b>99</b>tests, all green</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <nav class="toc" aria-label="Sections">
+      <h2>On this page</h2>
+      <ol>
+        <li><a href="#shape">The shape of it</a></li>
+        <li><a href="#surfaces">Three doors, three keys</a></li>
+        <li><a href="#life">A device's life</a></li>
+        <li><a href="#factory">Born at the factory</a></li>
+        <li><a href="#claim">Claimed by a parent</a></li>
+        <li><a href="#signing">Signing a request</a></li>
+        <li><a href="#verify">What the server checks</a></li>
+        <li><a href="#clock">Clock and nonce</a></li>
+        <li><a href="#stream">The stream and the kill switch</a></li>
+        <li><a href="#parents">Parent accounts</a></li>
+        <li><a href="#data">The data model</a></li>
+        <li><a href="#errors">Error codes</a></li>
+        <li><a href="#files">Where things live</a></li>
+        <li><a href="#run">Running it</a></li>
+      </ol>
+    </nav>
+
+    <article>
+
+      <section id="shape">
+        <h2>The shape of it</h2>
+        <p>Three parties talk to one backend. The <strong>toy</strong> (an ESP32-S3 with a mic, a screen, a speaker and one button) is deliberately thin: it records, streams and plays. The <strong>parent</strong> uses a web dashboard to pair toys, pick a child, pause a toy, and later to buy credits. An <strong>operator</strong> provisions batches at the factory and holds the kill switch. Postgres is the durable truth; Redis holds only short-lived state that can vanish.</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 330" role="img" aria-label="The toy, the parent dashboard and the operator each reach the backend through their own API surface; the backend writes durable data to Postgres and short-lived nonces and counters to Redis.">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+              <marker id="arr-device" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="t-device"/></marker>
+              <marker id="arr-parent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="t-parent"/></marker>
+              <marker id="arr-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="t-bad"/></marker>
+            </defs>
+            <!-- toy -->
+            <rect x="20" y="40" width="170" height="86" rx="8" class="box-device"/>
+            <text x="105" y="66" text-anchor="middle" font-weight="600">Toy (ESP32-S3)</text>
+            <text x="105" y="86" text-anchor="middle" class="small">holds device_id + secret</text>
+            <text x="105" y="104" text-anchor="middle" class="small">never holds a vendor key</text>
+            <!-- backend -->
+            <rect x="295" y="20" width="200" height="200" rx="8" class="box"/>
+            <text x="395" y="46" text-anchor="middle" font-weight="600">Node.js backend</text>
+            <rect x="312" y="62" width="166" height="30" rx="5" class="box-device"/>
+            <text x="395" y="82" text-anchor="middle" class="mono">/v1  HMAC-signed</text>
+            <rect x="312" y="102" width="166" height="30" rx="5" class="box-parent"/>
+            <text x="395" y="122" text-anchor="middle" class="mono">/api  parent JWT</text>
+            <rect x="312" y="142" width="166" height="30" rx="5" class="box-admin"/>
+            <text x="395" y="162" text-anchor="middle" class="mono">/admin  operator token</text>
+            <text x="395" y="200" text-anchor="middle" class="small">registry, lifecycle rules</text>
+            <!-- parent -->
+            <rect x="590" y="82" width="150" height="70" rx="8" class="box-parent"/>
+            <text x="665" y="108" text-anchor="middle" font-weight="600">Parent dashboard</text>
+            <text x="665" y="128" text-anchor="middle" class="small">React, built next</text>
+            <!-- operator -->
+            <rect x="590" y="170" width="150" height="50" rx="8" class="box-admin"/>
+            <text x="665" y="200" text-anchor="middle" font-weight="600">Operator (CLI + /admin)</text>
+            <!-- stores -->
+            <rect x="255" y="262" width="130" height="52" rx="8" class="box-store"/>
+            <text x="320" y="284" text-anchor="middle" font-weight="600">Postgres</text>
+            <text x="320" y="302" text-anchor="middle" class="small">durable truth</text>
+            <rect x="405" y="262" width="130" height="52" rx="8" class="box-store"/>
+            <text x="470" y="284" text-anchor="middle" font-weight="600">Redis</text>
+            <text x="470" y="302" text-anchor="middle" class="small">nonces, counters (TTL)</text>
+            <!-- edges -->
+            <line x1="190" y1="72" x2="310" y2="72" class="edge edge-device" marker-end="url(#arr-device)"/>
+            <text x="250" y="64" text-anchor="middle" class="small">HTTPS, signed</text>
+            <line x1="190" y1="100" x2="310" y2="100" class="edge edge-device" marker-end="url(#arr-device)"/>
+            <text x="250" y="116" text-anchor="middle" class="small">WSS /v1/stream</text>
+            <line x1="590" y1="117" x2="480" y2="117" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <line x1="590" y1="195" x2="480" y2="160" class="edge edge-admin" marker-end="url(#arr)"/>
+            <line x1="360" y1="220" x2="325" y2="262" class="edge" marker-end="url(#arr)"/>
+            <text x="318" y="246" text-anchor="end" class="small">rows</text>
+            <line x1="430" y1="220" x2="465" y2="262" class="edge" marker-end="url(#arr)"/>
+            <text x="472" y="246" class="small">SET NX EX</text>
+          </svg>
+          </div>
+          <figcaption>Each party has its own door and its own kind of key. The device door never opens for a parent token and vice versa; that separation is a house rule, not an accident.</figcaption>
+        </figure>
+      </section>
+
+      <section id="surfaces">
+        <h2>Three doors, three keys</h2>
+        <p>The colour of a lane is used consistently on this page: <span class="lane device">device</span> for anything the toy does, <span class="lane parent">parent</span> for the dashboard, <span class="lane admin">admin</span> for operators.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Surface</th><th>Who</th><th>Proof</th><th>Why that proof</th></tr></thead>
+            <tbody>
+              <tr><td><code>/v1/*</code> <span class="lane device">device</span></td><td>The toy</td><td>HMAC-SHA256 signature over each request, keyed by a per-device secret flashed at the factory</td><td>A microcontroller can do one HMAC cheaply; it cannot safely hold a long-lived bearer token that would be replayable if copied.</td></tr>
+              <tr><td><code>/api/*</code> <span class="lane parent">parent</span></td><td>Parent web app</td><td>15-minute JWT plus a rotating refresh token</td><td>Browsers are good at bearer tokens; short access tokens mean removing a parent takes effect within minutes.</td></tr>
+              <tr><td><code>/admin/*</code> <span class="lane admin">admin</span></td><td>Operators</td><td>One shared <code>ADMIN_TOKEN</code>, compared in constant time</td><td>Internal only, few callers, no self-service; a proper operator login can replace it later.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Nothing that provisions a device is reachable over HTTP. Secrets travel from the CLI into a factory manifest file and from there onto the toy, never through an endpoint.</p>
+      </section>
+
+      <section id="life">
+        <h2>A device's life</h2>
+        <p>A toy is in exactly one of four states. Every transition goes through one module, <code>devices/registry.js</code>, which also writes a row to <code>device_events</code>, so the history of any toy can be read back for support.</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 250" role="img" aria-label="State machine: provisioned becomes active when a parent claims it; active and disabled swap by parent pause and resume or operator kill switch; unpair returns to provisioned; any state can be revoked, which is terminal.">
+            <rect x="30" y="90" width="150" height="56" rx="28" class="box"/>
+            <text x="105" y="124" text-anchor="middle" font-weight="600">provisioned</text>
+            <rect x="305" y="90" width="150" height="56" rx="28" class="box-device"/>
+            <text x="380" y="124" text-anchor="middle" font-weight="600">active</text>
+            <rect x="580" y="90" width="150" height="56" rx="28" class="box"/>
+            <text x="655" y="124" text-anchor="middle" font-weight="600">disabled</text>
+            <rect x="305" y="196" width="150" height="46" rx="8" class="box-bad"/>
+            <text x="380" y="225" text-anchor="middle" font-weight="600">revoked</text>
+            <!-- claim -->
+            <line x1="180" y1="105" x2="305" y2="105" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="242" y="96" text-anchor="middle" class="small">parent enters claim code</text>
+            <!-- unpair -->
+            <line x1="305" y1="132" x2="180" y2="132" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="242" y="150" text-anchor="middle" class="small">parent unpairs</text>
+            <!-- disable / enable -->
+            <line x1="455" y1="105" x2="580" y2="105" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="517" y="96" text-anchor="middle" class="small">pause, or operator kill switch</text>
+            <line x1="580" y1="132" x2="455" y2="132" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="517" y="150" text-anchor="middle" class="small">resume (operator disables: admin only)</text>
+            <!-- unpair from disabled -->
+            <path d="M655,146 L655,176 L105,176 L105,146" class="edge edge-parent dashed" marker-end="url(#arr-parent)"/>
+            <text x="380" y="171" text-anchor="middle" class="small">parent unpairs a paused toy</text>
+            <!-- revoke -->
+            <line x1="380" y1="146" x2="380" y2="196" class="edge edge-bad" marker-end="url(#arr-bad)"/>
+            <path d="M105,146 L105,219 L305,219" class="edge edge-bad" marker-end="url(#arr-bad)"/>
+            <path d="M655,146 L655,219 L455,219" class="edge edge-bad" marker-end="url(#arr-bad)"/>
+            <text x="205" y="238" text-anchor="middle" class="small">operator revokes: lost, stolen, compromised, retired</text>
+            <text x="380" y="40" text-anchor="middle" class="small">nothing leaves revoked</text>
+            <line x1="380" y1="46" x2="380" y2="60" class="edge dashed"/>
+          </svg>
+          </div>
+          <figcaption>Teal arrows are parent actions from the dashboard; the red ones belong to the operator. A parent cannot undo an operator's disable, and no one can undo a revoke.</figcaption>
+        </figure>
+        <p>What a toy is allowed to do depends only on its state. A toy that is not yet claimed, or that a parent has paused, still needs to talk to the server so its screen can say why it is quiet:</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>State</th><th><code>POST /v1/heartbeat</code></th><th><code>/v1/stream</code></th><th>On the toy's screen</th></tr></thead>
+            <tbody>
+              <tr><td><code>provisioned</code></td><td>200, <code>heartbeat_interval_s: 5</code></td><td>403 <code>device_not_claimed</code></td><td>"waiting for a grown-up"; polls fast so pairing shows within seconds</td></tr>
+              <tr><td><code>active</code></td><td>200, <code>heartbeat_interval_s: 60</code></td><td>allowed</td><td>normal face</td></tr>
+              <tr><td><code>disabled</code></td><td>200, <code>status: "disabled"</code></td><td>403 <code>device_disabled</code></td><td>sleeping face, keeps checking</td></tr>
+              <tr><td><code>revoked</code></td><td>403 <code>device_revoked</code></td><td>403</td><td>sleeping face</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The heartbeat therefore doubles as the pairing-status poll: no separate endpoint is needed.</p>
+      </section>
+
+      <section id="factory">
+        <h2>Born at the factory</h2>
+        <p><code>npm run provision -- --label 2026W38A --count 500 --hardware-rev r1</code> creates a batch. For each toy it generates three things in memory: a uuid <code>device_id</code>, a random 32-byte <code>secret</code>, and an 8-character <code>claim code</code>. Only transformed versions of the last two reach the database.</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 250" role="img" aria-label="The secret is generated once; the toy stores it in encrypted NVS, the database stores it sealed under a key derived from DEVICE_KEK, and verification unseals it to compute the HMAC. The claim code is printed on a card and stored only as a peppered hash.">
+            <rect x="20" y="20" width="170" height="90" rx="8" class="box"/>
+            <text x="105" y="44" text-anchor="middle" font-weight="600">provision_batch.js</text>
+            <text x="105" y="66" text-anchor="middle" class="mono">device_id (uuid)</text>
+            <text x="105" y="82" text-anchor="middle" class="mono">secret (32 bytes)</text>
+            <text x="105" y="98" text-anchor="middle" class="mono">claim code (8 chars)</text>
+            <!-- manifest -->
+            <rect x="295" y="20" width="170" height="60" rx="8" class="box-admin"/>
+            <text x="380" y="44" text-anchor="middle" font-weight="600">manifest.csv (0600)</text>
+            <text x="380" y="64" text-anchor="middle" class="small">the only clear-text copy</text>
+            <line x1="190" y1="50" x2="295" y2="50" class="edge" marker-end="url(#arr)"/>
+            <text x="242" y="42" text-anchor="middle" class="small">fsync inside the</text>
+            <text x="242" y="56" text-anchor="middle" class="small">DB transaction</text>
+            <!-- toy -->
+            <rect x="570" y="20" width="170" height="60" rx="8" class="box-device"/>
+            <text x="655" y="44" text-anchor="middle" font-weight="600">Toy NVS (encrypted)</text>
+            <text x="655" y="64" text-anchor="middle" class="mono">device_id, secret</text>
+            <line x1="465" y1="50" x2="570" y2="50" class="edge edge-device" marker-end="url(#arr-device)"/>
+            <text x="517" y="42" text-anchor="middle" class="small">flashed on the bench</text>
+            <!-- card -->
+            <rect x="570" y="100" width="170" height="44" rx="8" class="box-parent"/>
+            <text x="655" y="127" text-anchor="middle" class="mono">card: XXXX-XXXX</text>
+            <path d="M465,60 L520,60 L520,122 L570,122" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <!-- db -->
+            <rect x="295" y="150" width="170" height="80" rx="8" class="box-store"/>
+            <text x="380" y="172" text-anchor="middle" font-weight="600">devices row</text>
+            <text x="380" y="192" text-anchor="middle" class="mono">secret_enc = AES-GCM(secret)</text>
+            <text x="380" y="208" text-anchor="middle" class="mono">claim_code_hash = HMAC(code)</text>
+            <text x="380" y="224" text-anchor="middle" class="small">AAD = device_id, keys from DEVICE_KEK</text>
+            <line x1="105" y1="110" x2="105" y2="190" class="edge"/>
+            <line x1="105" y1="190" x2="295" y2="190" class="edge" marker-end="url(#arr)"/>
+            <text x="200" y="182" text-anchor="middle" class="small">sealed, never plain</text>
+          </svg>
+          </div>
+          <figcaption>Three copies of the secret exist: the manifest for the bench, the toy's flash, and a sealed row. A database dump alone yields nothing usable.</figcaption>
+        </figure>
+        <div class="two">
+          <div class="card">
+            <h4>Why the secret is encrypted, not hashed</h4>
+            <p>To verify an HMAC the server must compute it with the real key, so hashing is impossible. Instead the secret is sealed with AES-256-GCM under a subkey derived (HKDF) from the <code>DEVICE_KEK</code> environment variable, with the device id as associated data so a ciphertext cannot be transplanted between rows.</p>
+          </div>
+          <div class="card">
+            <h4>Why the claim code is hashed with a pepper</h4>
+            <p>Eight characters from a 30-letter alphabet is about 39 bits: fine against online guessing behind a rate limit, trivial to brute-force from a plain hash of a leaked dump. A second HKDF subkey acts as the pepper, so a dump without the KEK is useless there too.</p>
+          </div>
+          <div class="card">
+            <h4>Why the manifest is written inside the transaction</h4>
+            <p>The batch commits only after the file is written and fsynced. If the write fails, the rows roll back, so a device can never exist whose secret was lost. The file is opened with <code>wx</code>: an existing manifest is evidence, never overwritten.</p>
+          </div>
+          <div class="card">
+            <h4>The alphabet on the card</h4>
+            <p><code>ABCDEFGHJKMNPQRSTVWXYZ23456789</code>: no <code>I L O U 0 1</code>, the characters a tired parent misreads. Printed as <code>XXXX-XXXX</code>; entry is case-insensitive and ignores spaces and dashes.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="claim">
+        <h2>Claimed by a parent</h2>
+        <p>A parent logs in, types the code from the card, and optionally picks which child the toy belongs to. The server normalizes the code, hashes it with the pepper, and looks the row up <em>for update</em> so that two parents racing on the same code are serialized: the second one finds the row already active and gets the same answer as a wrong code.</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 300" role="img" aria-label="Sequence: the dashboard posts the claim code with a JWT; the backend checks the rate limit, normalizes and hashes the code, locks the row in Postgres, verifies the status is provisioned, updates it to active with the family and child, writes an event, and returns the device; the toy's next heartbeat reports active.">
+            <text x="90" y="24" text-anchor="middle" font-weight="600">Dashboard</text>
+            <text x="330" y="24" text-anchor="middle" font-weight="600">Backend</text>
+            <text x="560" y="24" text-anchor="middle" font-weight="600">Postgres</text>
+            <text x="700" y="24" text-anchor="middle" font-weight="600">Toy</text>
+            <line x1="90" y1="34" x2="90" y2="290" class="lifeline"/>
+            <line x1="330" y1="34" x2="330" y2="290" class="lifeline"/>
+            <line x1="560" y1="34" x2="560" y2="290" class="lifeline"/>
+            <line x1="700" y1="34" x2="700" y2="290" class="lifeline"/>
+            <line x1="90" y1="60" x2="330" y2="60" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="210" y="52" text-anchor="middle" class="mono">POST /api/devices/claim {claim_code, child_id}</text>
+            <rect x="324" y="72" width="12" height="150" class="band"/>
+            <text x="345" y="88" class="small">rate limit: 10 claims / hour / parent</text>
+            <text x="345" y="106" class="small">normalize "ab cd-ef gh" to ABCDEFGH, hash with pepper</text>
+            <line x1="336" y1="124" x2="560" y2="124" class="edge" marker-end="url(#arr)"/>
+            <text x="448" y="116" text-anchor="middle" class="mono">SELECT ... WHERE claim_code_hash = $1 FOR UPDATE</text>
+            <text x="345" y="146" class="small">row missing or status not provisioned: 404 claim_code_invalid</text>
+            <text x="345" y="162" class="small">child_id given: must belong to this family</text>
+            <line x1="336" y1="180" x2="560" y2="180" class="edge" marker-end="url(#arr)"/>
+            <text x="448" y="172" text-anchor="middle" class="mono">UPDATE status='active', family_id, child_id, claimed_at</text>
+            <line x1="336" y1="204" x2="560" y2="204" class="edge" marker-end="url(#arr)"/>
+            <text x="448" y="196" text-anchor="middle" class="mono">INSERT device_events 'claimed'</text>
+            <line x1="330" y1="222" x2="90" y2="222" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="210" y="238" text-anchor="middle" class="mono">200 {device}</text>
+            <line x1="700" y1="262" x2="336" y2="262" class="edge edge-device" marker-end="url(#arr-device)"/>
+            <text x="518" y="254" text-anchor="middle" class="mono">next heartbeat (within 5 s)</text>
+            <line x1="336" y1="282" x2="700" y2="282" class="edge edge-device" marker-end="url(#arr-device)"/>
+            <text x="518" y="296" text-anchor="middle" class="mono">{status: "active", heartbeat_interval_s: 60}</text>
+          </svg>
+          </div>
+          <figcaption>The toy is not involved in claiming at all. It learns it has a family from its next heartbeat, which is why an unclaimed toy polls every five seconds.</figcaption>
+        </figure>
+        <div class="callout parent">
+          <p><strong>Unknown, already used, and revoked all look the same.</strong> The dashboard gets <code>404 claim_code_invalid</code> for every failure that is not a malformed code, so a guesser learns nothing about which codes exist. Combined with ten attempts per hour per account, 39 bits is more than enough for a code that can only bind a toy to the guesser's own traceable account.</p>
+        </div>
+        <p>Unpairing (<code>DELETE /api/devices/:id</code>) returns the toy to <code>provisioned</code> with the same claim hash, so a gifted or resold toy is claimed with the card it came with. For a lost card, an operator can reissue a fresh code, which kills the printed one.</p>
+      </section>
+
+      <section id="signing">
+        <h2>Signing a request</h2>
+        <p>Every request the toy makes to <code>/v1/*</code> carries four headers. The signature covers the method, the path, the toy's identity, the time, a one-time nonce and a hash of the exact body bytes, so a captured request cannot be altered, moved to another path, or sent again.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Header</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td><code>X-LB-Device</code></td><td>the device id (uuid)</td></tr>
+              <tr><td><code>X-LB-Ts</code></td><td>Unix time in seconds, decimal</td></tr>
+              <tr><td><code>X-LB-Nonce</code></td><td>32 lowercase hex characters, 16 random bytes, never reused</td></tr>
+              <tr><td><code>X-LB-Sig</code></td><td>64 lowercase hex characters: <code>hex(HMAC-SHA256(secret, canonical))</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The canonical string is seven fields joined by a single newline, no trailing newline:</p>
+<pre><code>LB1
+&lt;METHOD&gt;          uppercase, e.g. POST or GET
+&lt;PATH&gt;            path only: no host, no port, no ?query
+&lt;device_id&gt;
+&lt;ts&gt;              the same bytes as X-LB-Ts
+&lt;nonce&gt;           the same bytes as X-LB-Nonce
+&lt;body_sha256&gt;     lowercase hex; for no body:
+                  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code></pre>
+        <p><code>LB1</code> is a version tag so a future format cannot be confused with this one. The path excludes the query string on purpose: on the WebSocket upgrade the signature itself travels in the query, so the query cannot be part of what is signed. Everything is hex because a microcontroller produces raw bytes and hex needs no padding and no URL escaping.</p>
+        <h3>A worked example</h3>
+        <p>With secret <code>0123…cdef</code> (64 hex chars), device <code>3f9c2a7b1e5d8c04</code>, timestamp <code>1789000000</code> and nonce <code>7c1e0f5a9b3d4e2f8a6c1b0d9e7f5a3c</code>, a <code>POST /v1/heartbeat</code> whose body is exactly <code>{"fw":"1.0.0","uptime_s":42}</code> signs as:</p>
+<pre><code>body sha256   8a84e1abb3809813bf335b67de12e6c7a5ccb513801bb4bcf9a341e063e173e1
+canonical     "LB1\nPOST\n/v1/heartbeat\n3f9c2a7b1e5d8c04\n1789000000\n7c1e…5a3c\n8a84…73e1"
+X-LB-Sig      1fb702f7ee187154633c9679c4b8f609bed3e2a9601a92ab60dae0fa28abf5e6</code></pre>
+        <p>These vectors live in <code>tests/fixtures/hmac_vectors.json</code>. The server's own signer (<code>devices/signing.js</code>), the simulated device used by the tests, and the firmware all have to reproduce them byte for byte; any drift between "what firmware should do" and "what the server checks" fails a test instead of a toy in a child's hands.</p>
+        <h3>For the firmware, in ten steps</h3>
+        <ol>
+          <li>Keep the 32-byte secret from the manifest in encrypted NVS; never send it anywhere.</li>
+          <li><code>ts</code> = <code>time()</code> + offset, where the offset comes from <code>GET /v1/time</code> or from any 401 body.</li>
+          <li>Nonce: 16 bytes from <code>esp_random()</code>, hex-encoded lowercase.</li>
+          <li>SHA-256 the exact body bytes you will send; no body means the empty hash above.</li>
+          <li>Build the canonical string exactly as shown. No trailing newline.</li>
+          <li><code>mbedtls_md_hmac(SHA256, secret, 32, canonical, len, out)</code>; hex-encode the 32 bytes lowercase.</li>
+          <li>HTTP: send the four headers and the exact body from step 4.</li>
+          <li>WebSocket: sign <code>GET /v1/stream</code> and put the four values in the query string.</li>
+          <li>On <code>auth_ts_skew</code>: update the offset from <code>server_time</code>, sign again with a new nonce, retry once. On any 403: sleeping face, keep heartbeating.</li>
+          <li>Check against the two reference vectors before touching a real server.</li>
+        </ol>
+      </section>
+
+      <section id="verify">
+        <h2>What the server checks, in order</h2>
+        <p>The verifier in <code>devices/hmac_auth.js</code> runs the cheap checks first so junk traffic costs nothing, keeps a spray of bad requests away from the database, and writes the nonce last so that only a request that has already proven itself can touch Redis. The same function guards both HTTP requests and the WebSocket upgrade.</p>
+        <ol class="steps">
+          <li><div><b>Shape</b><span class="why">Is the id a uuid, the timestamp digits, the nonce 32 hex, the signature 64 hex? No I/O.</span></div><span class="fails">401 auth_missing</span></li>
+          <li><div><b>Clock window</b><span class="why">|server now − ts| must be at most 300 s. No I/O. The rejection carries <code>server_time</code>.</span></div><span class="fails">401 auth_ts_skew</span></li>
+          <li><div><b>Failure counters</b><span class="why">Redis: 30 failures per minute per device id, 60 per minute per IP for ids that do not exist. Over the limit means no database lookup at all. Redis down means devices fail closed (503), because an unverifiable turn would spend money.</span></div><span class="fails">429 rate_limited</span></li>
+          <li><div><b>Load the row</b><span class="why">Postgres: fetch the device, unseal its secret (and the previous secret, if a rotation is inside its 7-day grace).</span></div><span class="fails">401 auth_unknown_device</span></li>
+          <li><div><b>Signature</b><span class="why">Recompute the HMAC over the canonical string and compare in constant time against the current secret, then the previous one. The body hash comes from the raw request bytes, captured before JSON parsing.</span></div><span class="fails">401 auth_bad_signature</span></li>
+          <li><div><b>Nonce</b><span class="why">Redis <code>SET dev:nonce:&lt;id&gt;:&lt;nonce&gt; 1 NX EX 900</code>. A second request with the same nonce loses here, no matter how valid its signature.</span></div><span class="fails">401 auth_replay</span></li>
+          <li><div><b>Status</b><span class="why">A revoked device is refused everywhere. Routes that spend money add <code>requireActive</code>: provisioned and disabled toys get a 403 that names the reason.</span></div><span class="fails">403 device_*</span></li>
+        </ol>
+        <p>A 401 means "prove who you are again": the toy resyncs its clock or makes a new nonce and retries once. A 403 means "we know who you are and the answer is no": the toy shows a sleeping face and keeps heartbeating. Auth failures never produce speech, only a face.</p>
+        <div class="callout">
+          <p><strong><code>DEVICE_AUTH=off</code></strong> exists for local development and is refused in production. It skips steps 2, 3, 5 and 6 but still requires a real <code>X-LB-Device</code>, so every status rule behaves exactly as it will with auth on. Turning auth off never turns authorization off.</p>
+        </div>
+      </section>
+
+      <section id="clock">
+        <h2>Clock and nonce, and why 900 is bigger than 600</h2>
+        <p>An ESP32 has no battery-backed clock. Its time comes from NTP, drifts between syncs, and is nonsense for the first seconds after boot. The protocol tolerates all of that with two numbers that are chosen together.</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 170" role="img" aria-label="Timeline: a request signed at time ts is accepted from ts minus 300 to ts plus 300 seconds; its nonce is remembered for 900 seconds from acceptance, which outlasts the whole window, so the same signed request can never be accepted twice.">
+            <line x1="40" y1="90" x2="720" y2="90" class="edge" marker-end="url(#arr)"/>
+            <text x="730" y="94" class="small">time</text>
+            <!-- window -->
+            <rect x="180" y="60" width="240" height="30" class="band-device"/>
+            <line x1="180" y1="52" x2="180" y2="98" class="edge edge-device"/>
+            <line x1="420" y1="52" x2="420" y2="98" class="edge edge-device"/>
+            <line x1="300" y1="44" x2="300" y2="98" class="edge edge-device" stroke-width="2"/>
+            <text x="300" y="36" text-anchor="middle" class="mono">ts (X-LB-Ts)</text>
+            <text x="180" y="112" text-anchor="middle" class="mono">ts − 300</text>
+            <text x="420" y="112" text-anchor="middle" class="mono">ts + 300</text>
+            <text x="300" y="80" text-anchor="middle" class="small">signature accepted here</text>
+            <!-- nonce ttl -->
+            <line x1="300" y1="134" x2="660" y2="134" class="edge edge-parent" stroke-width="3"/>
+            <line x1="660" y1="126" x2="660" y2="142" class="edge edge-parent"/>
+            <text x="480" y="156" text-anchor="middle" class="small">nonce remembered for 900 s from the moment it is accepted</text>
+            <text x="300" y="128" text-anchor="end" class="mono">accepted at </text>
+          </svg>
+          </div>
+          <figcaption>Even a request accepted at the last permitted second (ts + 300) keeps its nonce until well after the window has closed, so a replay is always caught by one check or the other.</figcaption>
+        </figure>
+        <ul>
+          <li><strong>Skew window 300 s</strong>: wide enough for NTP drift between syncs, narrow enough that a captured request goes stale within minutes.</li>
+          <li><strong>Nonce TTL 900 s</strong>: strictly more than twice the window. If Redis lost a nonce early, the timestamp check would still reject the replay once the window closed; that is accepted degradation, not a hole worth a second store.</li>
+          <li><strong>Resync</strong>: every 401 and 403 body carries <code>server_time</code>, and <code>GET /v1/time</code> answers without auth, so a toy with a wrong clock fixes itself from the very response that refused it.</li>
+        </ul>
+      </section>
+
+      <section id="stream">
+        <h2>The stream and the kill switch</h2>
+        <p>Audio flows over a WebSocket at <code>/v1/stream</code>. The upgrade is signed exactly like a <code>GET</code> with an empty body, and the four values ride in the query string because most embedded WebSocket clients (and every browser) cannot set headers on an upgrade. Headers are accepted too, for clients that can.</p>
+        <p>A verified upgrade is answered with <code>{"type":"ready"}</code>. Text frames of <code>{"type":"ping"}</code> get a pong; binary frames are 20 ms PCM16 audio, accepted and discarded until the streaming pipeline lands in the next step. The interesting part is what happens when a parent presses pause while the toy is mid-stream:</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 270" role="img" aria-label="Sequence: the toy opens a signed WebSocket and receives ready; the parent disables the toy from the dashboard; the registry updates the status, writes an event, and calls the blocked hook; the stream module closes the toy's open socket with code 4003; the toy's next heartbeat reports disabled and it shows a sleeping face.">
+            <text x="80" y="24" text-anchor="middle" font-weight="600">Toy</text>
+            <text x="330" y="24" text-anchor="middle" font-weight="600">Backend</text>
+            <text x="560" y="24" text-anchor="middle" font-weight="600">Registry</text>
+            <text x="700" y="24" text-anchor="middle" font-weight="600">Parent</text>
+            <line x1="80" y1="34" x2="80" y2="260" class="lifeline"/>
+            <line x1="330" y1="34" x2="330" y2="260" class="lifeline"/>
+            <line x1="560" y1="34" x2="560" y2="260" class="lifeline"/>
+            <line x1="700" y1="34" x2="700" y2="260" class="lifeline"/>
+            <line x1="80" y1="58" x2="330" y2="58" class="edge edge-device" marker-end="url(#arr-device)"/>
+            <text x="205" y="50" text-anchor="middle" class="mono">GET /v1/stream?device_id&amp;ts&amp;nonce&amp;sig</text>
+            <line x1="330" y1="82" x2="80" y2="82" class="edge edge-device" marker-end="url(#arr-device)"/>
+            <text x="205" y="98" text-anchor="middle" class="mono">101 + {type: "ready"}</text>
+            <text x="205" y="118" text-anchor="middle" class="small">audio frames flowing</text>
+            <line x1="700" y1="140" x2="336" y2="140" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="518" y="132" text-anchor="middle" class="mono">POST /api/devices/:id/disable</text>
+            <line x1="336" y1="164" x2="560" y2="164" class="edge" marker-end="url(#arr)"/>
+            <text x="448" y="156" text-anchor="middle" class="small">disable({by: 'parent'})</text>
+            <text x="570" y="184" class="small">status = disabled, event written,</text>
+            <text x="570" y="198" class="small">blocked hook fires</text>
+            <line x1="560" y1="212" x2="336" y2="212" class="edge" marker-end="url(#arr)"/>
+            <text x="448" y="204" text-anchor="middle" class="small">closeDeviceSockets(id)</text>
+            <line x1="330" y1="236" x2="80" y2="236" class="edge edge-bad" marker-end="url(#arr-bad)"/>
+            <text x="205" y="228" text-anchor="middle" class="mono">close 4003 "disabled"</text>
+            <text x="80" y="256" text-anchor="middle" class="small">sleeping face; next heartbeat says why</text>
+          </svg>
+          </div>
+          <figcaption>The registry does not know about sockets; it exposes a hook that <code>ws/stream.js</code> registers at boot. Disable, revoke and unpair all fire it, so a blocked toy stops within milliseconds instead of at its next turn.</figcaption>
+        </figure>
+        <div class="two">
+          <div class="card">
+            <h4>Parent pause <span class="lane parent">parent</span></h4>
+            <ul>
+              <li>Disables and re-enables their own toys only; another family's device id is a plain 404.</li>
+              <li>Unpair returns the toy to <code>provisioned</code>.</li>
+              <li>Cannot re-enable a toy the operator disabled: <code>403 disabled_by_operator</code>.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Operator kill switch <span class="lane admin">admin</span></h4>
+            <ul>
+              <li>Disable with a required reason, enable, revoke (<code>lost</code>, <code>stolen</code>, <code>compromised</code>, <code>retired</code>).</li>
+              <li>Reissue a claim code for a lost card, only while the toy is unclaimed.</li>
+              <li>Rotate a secret from the CLI; the old one keeps working for 7 days so the bench can reflash.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="parents">
+        <h2>Parent accounts</h2>
+        <p>Registering creates a family and its first (owner) login in one transaction. Passwords are hashed with Node's built-in scrypt, with the parameters stored inside the hash string, so the cost can be raised later and old hashes still verify. A login attempt for an unknown email still runs the hash against a dummy value, so the response time and body are identical whether or not the account exists.</p>
+        <p>The session is two tokens: a 15-minute access JWT that carries the family id (so no database hit per request) and an opaque 30-day refresh token, of which only the SHA-256 is stored. Refreshing rotates it, and rotation is what makes theft visible:</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 170" role="img" aria-label="Refresh tokens form a chain: A is replaced by B, B by C. Presenting A again after it was replaced is treated as a leak and revokes the whole chain, including the still-valid C.">
+            <rect x="30" y="40" width="130" height="44" rx="8" class="box-parent"/>
+            <text x="95" y="67" text-anchor="middle" class="mono">refresh A</text>
+            <rect x="240" y="40" width="130" height="44" rx="8" class="box-parent"/>
+            <text x="305" y="67" text-anchor="middle" class="mono">refresh B</text>
+            <rect x="450" y="40" width="130" height="44" rx="8" class="box-parent"/>
+            <text x="515" y="67" text-anchor="middle" class="mono">refresh C (live)</text>
+            <line x1="160" y1="62" x2="240" y2="62" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="200" y="54" text-anchor="middle" class="small">rotate</text>
+            <line x1="370" y1="62" x2="450" y2="62" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="410" y="54" text-anchor="middle" class="small">rotate</text>
+            <text x="95" y="102" text-anchor="middle" class="small">revoked_at set,</text>
+            <text x="95" y="116" text-anchor="middle" class="small">replaced_by = B</text>
+            <rect x="620" y="40" width="120" height="44" rx="8" class="box-bad"/>
+            <text x="680" y="67" text-anchor="middle" class="mono">A presented</text>
+            <path d="M680,84 L680,140 L515,140 L515,84" class="edge edge-bad" marker-end="url(#arr-bad)"/>
+            <text x="597" y="156" text-anchor="middle" class="small">refresh_token_reused: revoke every token for this parent, even C</text>
+          </svg>
+          </div>
+          <figcaption>An old refresh token showing up again means either the client lost the new one or someone copied the old one. Both are resolved the same way: end every session and force a fresh login. That revocation commits even though the request itself fails.</figcaption>
+        </figure>
+        <p>Login and register are rate limited in Redis (10 per 15 minutes per IP and email; 5 registrations per hour per IP). Unlike the device side, these limits fail open when Redis is down: locking every parent out because a cache is unavailable would be worse than a short window without brute-force protection, and a parent request cannot spend credits.</p>
+      </section>
+
+      <section id="data">
+        <h2>The data model</h2>
+        <p>Seven tables, all uuid keyed, created by one forward-only SQL migration. The <code>vector</code> extension is enabled now so the memory tables that arrive later never need a superuser step.</p>
+        <figure>
+          <div class="scroll">
+          <svg viewBox="0 0 760 330" role="img" aria-label="Entity diagram: families own parents, children and devices; parents own refresh tokens; device batches contain devices; devices have events; devices optionally point at a child.">
+            <rect x="290" y="20" width="180" height="60" rx="6" class="box-parent"/>
+            <text x="380" y="42" text-anchor="middle" font-weight="600">families</text>
+            <text x="380" y="62" text-anchor="middle" class="mono">id, name</text>
+            <rect x="30" y="130" width="200" height="74" rx="6" class="box-parent"/>
+            <text x="130" y="152" text-anchor="middle" font-weight="600">parents</text>
+            <text x="130" y="170" text-anchor="middle" class="mono">family_id, email (unique)</text>
+            <text x="130" y="186" text-anchor="middle" class="mono">password_hash, role</text>
+            <rect x="30" y="250" width="200" height="60" rx="6" class="box-parent"/>
+            <text x="130" y="272" text-anchor="middle" font-weight="600">refresh_tokens</text>
+            <text x="130" y="292" text-anchor="middle" class="mono">parent_id, token_hash, revoked_at</text>
+            <rect x="280" y="130" width="200" height="60" rx="6" class="box-parent"/>
+            <text x="380" y="152" text-anchor="middle" font-weight="600">children</text>
+            <text x="380" y="172" text-anchor="middle" class="mono">family_id, name, birth_year</text>
+            <rect x="530" y="130" width="200" height="90" rx="6" class="box-device"/>
+            <text x="630" y="152" text-anchor="middle" font-weight="600">devices</text>
+            <text x="630" y="170" text-anchor="middle" class="mono">batch_id, family_id?, child_id?</text>
+            <text x="630" y="186" text-anchor="middle" class="mono">secret_enc, claim_code_hash</text>
+            <text x="630" y="202" text-anchor="middle" class="mono">status, disabled_by, last_seen_at</text>
+            <rect x="530" y="20" width="200" height="60" rx="6" class="box-admin"/>
+            <text x="630" y="42" text-anchor="middle" font-weight="600">device_batches</text>
+            <text x="630" y="62" text-anchor="middle" class="mono">label (unique), hardware_rev</text>
+            <rect x="530" y="250" width="200" height="60" rx="6" class="box-admin"/>
+            <text x="630" y="272" text-anchor="middle" font-weight="600">device_events</text>
+            <text x="630" y="292" text-anchor="middle" class="mono">device_id, event, actor_kind, at</text>
+            <!-- edges: child -> parent (arrow points at the owner) -->
+            <path d="M130,130 L130,100 L290,100 L290,60" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <line x1="380" y1="130" x2="380" y2="80" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <path d="M560,130 L560,100 L470,100 L470,60" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <text x="500" y="94" class="small">on delete set null</text>
+            <line x1="130" y1="250" x2="130" y2="204" class="edge edge-parent" marker-end="url(#arr-parent)"/>
+            <line x1="630" y1="130" x2="630" y2="80" class="edge edge-admin" marker-end="url(#arr)"/>
+            <line x1="630" y1="250" x2="630" y2="220" class="edge edge-admin" marker-end="url(#arr)"/>
+            <line x1="530" y1="175" x2="480" y2="160" class="edge edge-device dashed" marker-end="url(#arr-device)"/>
+            <text x="505" y="150" text-anchor="middle" class="small">child_id</text>
+            <text x="380" y="320" text-anchor="middle" class="small">arrows point from the referencing row to the row it belongs to</text>
+          </svg>
+          </div>
+          <figcaption>Deleting a family cascades to its parents, tokens and children, but only unlinks its devices: a toy outlives the family that owned it and can be claimed again.</figcaption>
+        </figure>
+        <p>Two checks in the <code>devices</code> table encode rules the code also enforces: a toy cannot be assigned to a child without belonging to a family, and <code>status = 'disabled'</code> holds exactly when <code>disabled_by</code> is set (so the "who disabled it" question always has an answer).</p>
+      </section>
+
+      <section id="errors">
+        <h2>Error codes</h2>
+        <p>Every error is <code>{ "error": { "code", "message", ... } }</code> with an <code>x-request-id</code> header; device errors add <code>server_time</code>. Logs carry ids and codes only, never a signature, nonce, email or a child's words.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>HTTP</th><th>Code</th><th>Lane</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>401</td><td><code>auth_missing</code></td><td><span class="lane device">device</span></td><td>A header is absent or malformed</td></tr>
+              <tr><td>401</td><td><code>auth_ts_skew</code></td><td><span class="lane device">device</span></td><td>Timestamp outside the 300 s window; resync from <code>server_time</code></td></tr>
+              <tr><td>401</td><td><code>auth_unknown_device</code></td><td><span class="lane device">device</span></td><td>No such device id</td></tr>
+              <tr><td>401</td><td><code>auth_bad_signature</code></td><td><span class="lane device">device</span></td><td>HMAC mismatch against current and previous secret</td></tr>
+              <tr><td>401</td><td><code>auth_replay</code></td><td><span class="lane device">device</span></td><td>Nonce already used</td></tr>
+              <tr><td>403</td><td><code>device_not_claimed</code> / <code>device_disabled</code> / <code>device_revoked</code></td><td><span class="lane device">device</span></td><td>Known device, refused by status</td></tr>
+              <tr><td>429</td><td><code>rate_limited</code></td><td>all</td><td>Too many failures; <code>Retry-After</code> says how long</td></tr>
+              <tr><td>503</td><td><code>auth_unavailable</code></td><td><span class="lane device">device</span></td><td>Redis down; devices fail closed</td></tr>
+              <tr><td>401</td><td><code>invalid_credentials</code></td><td><span class="lane parent">parent</span></td><td>Wrong password or unknown email, identical either way</td></tr>
+              <tr><td>401</td><td><code>token_expired</code> / <code>unauthorized</code></td><td><span class="lane parent">parent</span></td><td>Access token expired or invalid</td></tr>
+              <tr><td>401</td><td><code>refresh_token_reused</code> / <code>_expired</code> / <code>invalid_refresh_token</code></td><td><span class="lane parent">parent</span></td><td>Refresh failed; reuse revoked the whole chain</td></tr>
+              <tr><td>404</td><td><code>claim_code_invalid</code></td><td><span class="lane parent">parent</span></td><td>Unknown, consumed or revoked, indistinguishable on purpose</td></tr>
+              <tr><td>404</td><td><code>device_not_found</code> / <code>child_not_found</code></td><td><span class="lane parent">parent</span></td><td>Not in this family (never a 403, so ids are not discoverable)</td></tr>
+              <tr><td>403</td><td><code>disabled_by_operator</code></td><td><span class="lane parent">parent</span></td><td>An operator's disable is not parent-reversible</td></tr>
+              <tr><td>409</td><td><code>device_not_active</code> / <code>device_not_disabled</code> / <code>device_already_claimed</code> / <code>email_taken</code> / <code>batch_exists</code></td><td>all</td><td>The action does not apply in the current state</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="files">
+        <h2>Where things live</h2>
+        <p>Store modules are SQL only; every business rule sits in <code>devices/registry.js</code> or <code>auth/service.js</code>. Repository functions take the queryable (pool or transaction client) as their first argument, so whether a call is inside a transaction is visible at the call site.</p>
+        <dl class="filemap">
+          <dt>config.js</dt><dd>Reads the environment once, freezes it, and refuses to boot in production on default secrets, a placeholder KEK, or <code>DEVICE_AUTH=off</code>.</dd>
+          <dt>devices/signing.js</dt><dd>The pure half: canonical string, HMAC, nonce. Shared by the server, the simulator and the test vectors.</dd>
+          <dt>devices/hmac_auth.js</dt><dd>The verifier (the seven steps above) and the header/query extractor.</dd>
+          <dt>devices/registry.js</dt><dd>Provisioning, claim, disable/enable, unpair, revoke, reissue, rotate, and the blocked-socket hook.</dd>
+          <dt>devices/secret_box.js</dt><dd>AES-GCM sealing of secrets and peppered claim-code hashing, both under HKDF subkeys of <code>DEVICE_KEK</code>.</dd>
+          <dt>devices/sim_client.js</dt><dd><code>SimDevice</code>: signs exactly like firmware; used by the tests and <code>npm run e2e</code>.</dd>
+          <dt>middleware/device_auth.js</dt><dd><code>deviceAuth</code> and <code>requireActive</code> for Express; captures raw body bytes for the signature.</dd>
+          <dt>ws/stream.js</dt><dd>The <code>/v1/stream</code> upgrade, the <code>ready</code> message, and the socket map the kill switch closes.</dd>
+          <dt>routes/device.js</dt><dd><code>GET /v1/time</code>, <code>POST /v1/heartbeat</code>.</dd>
+          <dt>routes/dashboard.js</dt><dd>Everything under <code>/api</code>: auth, children, claim, device management.</dd>
+          <dt>routes/admin.js</dt><dd>Batches, device search, force-disable, revoke, reissue claim code.</dd>
+          <dt>auth/</dt><dd>scrypt passwords, JWT and refresh tokens, register/login/refresh/logout.</dd>
+          <dt>store/migrations/001_init.sql</dt><dd>The schema drawn above.</dd>
+          <dt>scripts/</dt><dd><code>provision_batch</code>, <code>seed_demo</code>, <code>e2e_device_flow</code>, <code>migrate</code>, <code>check_services</code>.</dd>
+          <dt>docs/device_auth.md</dt><dd>The firmware-facing contract, the same rules as this page in reference form.</dd>
+          <dt>tests/</dt><dd>Unit tests for the pure parts; integration tests against real Postgres and Redis in a separate <code>littlebuddy_test</code> database.</dd>
+        </dl>
+      </section>
+
+      <section id="run">
+        <h2>Running it</h2>
+<pre><code>docker compose up -d          # Postgres (pgvector) + Redis
+cd backend
+npm install
+copy .env.example .env
+npm run migrate
+npm test                      # 99 tests; fails fast with a hint if Docker is off
+npm run seed                  # demo family, one claimed toy, one unclaimed toy
+npm run e2e                   # a simulated toy through its whole life
+npm run dev                   # http://localhost:3000/healthz</code></pre>
+        <p>The seed prints a parent login (<code>demo@littlebuddy.local</code> / <code>demo-password</code>), a claimed toy's id and secret (also written to <code>backend/.env.device</code>), and the claim code of a second, unclaimed toy, so the whole flow can be driven by hand with <code>SimDevice</code> and <code>curl</code>.</p>
+        <p>What comes next: the streaming pipeline behind <code>/v1/stream</code> (speech-to-text, the model, text-to-speech, the per-turn ask gate that debits a credit), then the React dashboard in <code>frontend/</code>. Both build on the pieces described here without changing them.</p>
+      </section>
+
+      <footer>Little Buddy backend, implementation phase, September 2026. Source of the product invariants: the team's onboarding spec in the sibling <code>LittleBuddy</code> repository.</footer>
+    </article>
+  </div>
+</div>
+
+</html>

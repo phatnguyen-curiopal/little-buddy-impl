@@ -23,7 +23,7 @@ ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
 | Thư mục | Nội dung |
 |---|---|
 | `backend/` | API Node.js: quản lý thiết bị, xác thực thiết bị (HMAC), tài khoản phụ huynh (JWT), endpoint quản trị. Xem `backend/README.md`. |
-| `frontend/` | Dashboard phụ huynh (React). Chưa có trong bước này. |
+| `frontend/` | Console kiểm thử dev (Vite + React): làn phụ huynh, thiết bị mô phỏng chạy trong trình duyệt, làn vận hành. Không phải dashboard sản phẩm. Xem `frontend/README.md`. |
 | `docker/` | Script khởi tạo Postgres (tạo thêm database test). |
 | `docker-compose.yml` | Postgres (pgvector) và Redis cho dev và test. |
 
@@ -57,6 +57,14 @@ stream, tắt, gỡ ghép):
 
 ```powershell
 npm run e2e
+```
+
+Bấm thử mọi thứ từ trình duyệt (backend phải đang chạy):
+
+```powershell
+cd frontend
+npm install
+npm run dev           # http://localhost:5173
 ```
 
 ## Lưu ý

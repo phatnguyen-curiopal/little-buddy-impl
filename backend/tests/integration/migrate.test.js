@@ -19,7 +19,7 @@ test('running migrations twice applies nothing the second time', async () => {
 
 test('schema_migrations records the initial file', async () => {
   const r = await pool.query('SELECT filename FROM schema_migrations ORDER BY filename');
-  assert.deepEqual(r.rows.map((x) => x.filename), ['001_init.sql', '002_drop_child_family_check.sql']);
+  assert.deepEqual(r.rows.map((x) => x.filename), ['001_init.sql', '002_drop_child_family_check.sql', '003_credits_turns.sql']);
 });
 
 test('the vector extension and every table exist', async () => {
@@ -30,7 +30,7 @@ test('the vector extension and every table exist', async () => {
   );
   assert.deepEqual(
     tables.rows.map((x) => x.tablename),
-    ['children', 'device_batches', 'device_events', 'devices', 'families', 'parents', 'refresh_tokens', 'schema_migrations'],
+    ['children', 'conversations', 'credit_ledger', 'device_batches', 'device_events', 'devices', 'families', 'parents', 'refresh_tokens', 'schema_migrations', 'turns'],
   );
 });
 

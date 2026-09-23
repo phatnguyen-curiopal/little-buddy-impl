@@ -56,6 +56,68 @@ export class SimDevice {
     return { url: `${this.wsUrl}/v1/stream?${new URLSearchParams(signed.query)}`, headers: {} };
   }
 
+  // Waits for the next text frame whose type is in `types`, as firmware
+  // would after sending a command. Rejects on close or timeout.
+  static nextMessage(ws, types, timeoutMs = 5000) {
+    const wanted = Array.isArray(types) ? types : [types];
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`timed out waiting for ${wanted.join('|')}`));
+      }, timeoutMs);
+      const onMessage = (data, isBinary) => {
+        if (isBinary) return;
+        let msg;
+        try {
+          msg = JSON.parse(data.toString());
+        } catch {
+          return;
+        }
+        if (!wanted.includes(msg.type)) return;
+        cleanup();
+        resolve(msg);
+      };
+      const onClose = (code) => {
+        cleanup();
+        reject(Object.assign(new Error(`socket closed (${code}) while waiting for ${wanted.join('|')}`), { code }));
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        ws.off('message', onMessage);
+        ws.off('close', onClose);
+      };
+      ws.on('message', onMessage);
+      ws.on('close', onClose);
+    });
+  }
+
+  turnStart(ws) {
+    const reply = SimDevice.nextMessage(ws, ['turn_accepted', 'turn_denied', 'error']);
+    ws.send(JSON.stringify({ type: 'turn_start' }));
+    return reply;
+  }
+
+  // Resolves { answer, done } for an answered turn, or { error } when the
+  // server reports protocol misuse.
+  async turnEnd(ws) {
+    const first = SimDevice.nextMessage(ws, ['answer', 'error']);
+    ws.send(JSON.stringify({ type: 'turn_end' }));
+    const msg = await first;
+    if (msg.type === 'error') return { error: msg };
+    const done = await SimDevice.nextMessage(ws, ['turn_done']);
+    return { answer: msg, done };
+  }
+
+  turnCancel(ws) {
+    const reply = SimDevice.nextMessage(ws, ['turn_done', 'error']);
+    ws.send(JSON.stringify({ type: 'turn_cancel' }));
+    return reply;
+  }
+
+  sendFrames(ws, count) {
+    for (let i = 0; i < count; i += 1) ws.send(Buffer.alloc(640));
+  }
+
   // Resolves with the open socket once `ready` arrives; rejects with
   // { status, body } when the upgrade is refused.
   openStream(opts) {

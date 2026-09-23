@@ -1,12 +1,14 @@
 import { WebSocketServer } from 'ws';
 import * as registry from '../devices/registry.js';
-import { verifyDeviceRequest, extractAuth, requireActiveCheck, nowSec } from '../devices/hmac_auth.js';
+import { verifyDeviceRequest, extractAuth, nowSec } from '../devices/hmac_auth.js';
 import { EMPTY_BODY_HASH } from '../devices/signing.js';
+import { handleText, handleBinary, abandonSocket, safeSend } from './turns.js';
 import log from '../lib/log.js';
 
-// /v1/stream: the realtime audio channel. This step only authenticates the
-// upgrade, says `ready`, and drops the socket the moment the device is
-// disabled or revoked. Audio frames are accepted and discarded until the
+// /v1/stream: the realtime channel. Any non-revoked toy may connect; what
+// it may do is decided per turn by the ask gate (ws/turns.js), so an
+// unclaimed or paused toy hears a kind refusal instead of a closed door.
+// Audio frames are counted on the open turn and otherwise dropped until the
 // streaming pipeline lands.
 export const STREAM_PATH = '/v1/stream';
 export const CLOSE_BLOCKED = 4003;
@@ -28,10 +30,15 @@ function track(ws) {
   });
 }
 
+// The kill switch. The in-flight turn is released before the close frame
+// goes out, so a late turn_end from the toy finds nothing to charge.
 export function closeDeviceSockets(deviceId, reason) {
   const set = sockets.get(deviceId);
   if (!set) return 0;
-  for (const ws of set) ws.close(CLOSE_BLOCKED, reason);
+  for (const ws of set) {
+    abandonSocket(ws, 'blocked');
+    ws.close(CLOSE_BLOCKED, reason);
+  }
   return set.size;
 }
 
@@ -54,16 +61,6 @@ function rejectUpgrade(socket, { http, code, message }) {
   socket.destroy();
 }
 
-function handleText(ws, data) {
-  let msg;
-  try {
-    msg = JSON.parse(data.toString());
-  } catch {
-    return;
-  }
-  if (msg?.type === 'ping') ws.send(JSON.stringify({ type: 'pong', server_time: nowSec() }));
-}
-
 export function attachStream(server) {
   const wss = new WebSocketServer({ noServer: true });
 
@@ -76,6 +73,8 @@ export function attachStream(server) {
       return;
     }
     const { deviceId, ts, nonce, sig } = extractAuth({ headers: req.headers, query: Object.fromEntries(url.searchParams) });
+    // Revoked devices are refused inside the verifier; every other status
+    // gets a socket and a per-turn answer.
     const result = await verifyDeviceRequest({
       method: 'GET',
       path: url.pathname,
@@ -87,8 +86,6 @@ export function attachStream(server) {
       ip: req.socket.remoteAddress,
     });
     if (!result.ok) return rejectUpgrade(socket, result);
-    const blocked = requireActiveCheck(result.device);
-    if (blocked) return rejectUpgrade(socket, blocked);
 
     wss.handleUpgrade(req, socket, head, (ws) => {
       ws.device = result.device;
@@ -98,11 +95,21 @@ export function attachStream(server) {
 
   wss.on('connection', (ws) => {
     track(ws);
+    ws.turn = null;
     ws.on('error', () => {});
     ws.on('message', (data, isBinary) => {
-      if (!isBinary) handleText(ws, data);
+      if (isBinary) return handleBinary(ws);
+      let msg;
+      try {
+        msg = JSON.parse(data.toString());
+      } catch {
+        return undefined;
+      }
+      if (msg?.type === 'ping') return safeSend(ws, { type: 'pong', server_time: nowSec() });
+      return handleText(ws, msg).catch((err) => log.error('turn_handler_failed', { device_id: ws.device.id, err_message: err.message }));
     });
-    ws.send(JSON.stringify({ type: 'ready', device_id: ws.device.id, server_time: nowSec() }));
+    ws.on('close', () => abandonSocket(ws, 'socket_closed'));
+    safeSend(ws, { type: 'ready', device_id: ws.device.id, server_time: nowSec() });
     log.info('stream_open', { device_id: ws.device.id });
   });
 

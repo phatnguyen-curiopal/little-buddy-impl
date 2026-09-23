@@ -4,6 +4,7 @@ import * as deviceStore from '../store/device.js';
 import { requireAdmin } from '../middleware/require_admin.js';
 import { validateBody, isUuid } from '../lib/validate.js';
 import { badRequest, notFound } from '../lib/http_error.js';
+import * as billing from '../billing/ledger.js';
 
 // Internal operator endpoints, mounted at /admin. Provisioning is not here
 // on purpose: device secrets never cross HTTP, they go from the CLI to the
@@ -51,6 +52,27 @@ adminRouter.post('/devices/:id/revoke', async (req, res) => {
   const body = validateBody(req.body, { reason: { type: 'enum', required: true, values: registry.REVOKE_REASONS } });
   const row = await registry.revoke({ deviceId: deviceId(req), reason: body.reason, actorId: req.admin.id });
   res.json({ device: deviceStore.toDto(row) });
+});
+
+function familyId(req) {
+  if (!isUuid(req.params.id)) throw notFound('family_not_found', 'family not found');
+  return req.params.id.toLowerCase();
+}
+
+adminRouter.post('/families/:id/credits', async (req, res) => {
+  const body = validateBody(req.body, {
+    amount: { type: 'int', required: true, min: 1, max: 10000 },
+    kind: { type: 'enum', values: ['grant', 'refund'] },
+    reason: { type: 'string', required: true, min: 1, max: 200 },
+  });
+  res.json(await billing.grant({ familyId: familyId(req), amount: body.amount, kind: body.kind ?? 'grant', reason: body.reason, actorId: req.admin.id }));
+});
+
+adminRouter.get('/families/:id/wallet', async (req, res) => {
+  const { findById } = await import('../store/family.js');
+  const { pool } = await import('../store/db.js');
+  if (!(await findById(pool, familyId(req)))) throw notFound('family_not_found', 'family not found');
+  res.json(await billing.wallet(familyId(req)));
 });
 
 adminRouter.post('/devices/:id/reissue-claim-code', async (req, res) => {

@@ -59,6 +59,17 @@ test('rejects unknown NODE_ENV and out-of-range integers', () => {
   assert.throws(() => loadConfig({ DEVICE_CLOCK_SKEW_SEC: '5' }), /DEVICE_CLOCK_SKEW_SEC/);
 });
 
+test('turn and credit knobs have defaults and only the mock provider is accepted', () => {
+  const cfg = loadConfig({});
+  assert.equal(cfg.providerMode, 'mock');
+  assert.equal(cfg.welcomeCredits, 10);
+  assert.equal(cfg.turnMaxSec, 120);
+  assert.equal(cfg.conversationIdleSec, 300);
+  assert.equal(loadConfig({ WELCOME_CREDITS: '0' }).welcomeCredits, 0);
+  assert.throws(() => loadConfig({ PROVIDER_MODE: 'openai' }), /PROVIDER_MODE/);
+  assert.throws(() => loadConfig({ TURN_MAX_SEC: '1' }), /TURN_MAX_SEC/);
+});
+
 test('test env defaults log level to silent, development to info', () => {
   assert.equal(loadConfig({ NODE_ENV: 'test' }).logLevel, 'silent');
   assert.equal(loadConfig({}).logLevel, 'info');

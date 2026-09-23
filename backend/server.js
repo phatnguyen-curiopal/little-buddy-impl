@@ -5,6 +5,7 @@ import * as db from './store/db.js';
 import * as redisStore from './store/redis.js';
 import log from './lib/log.js';
 import { attachStream } from './ws/stream.js';
+import { sweepStale } from './turns/service.js';
 
 const SHUTDOWN_GRACE_MS = 10_000;
 
@@ -14,6 +15,9 @@ attachStream(server);
 
 await redisStore.connect();
 await db.ping();
+// Crash leftovers: accepted turns that never closed would reserve credits.
+await sweepStale();
+setInterval(() => sweepStale().catch((err) => log.warn('turns_sweep_failed', { err_message: err.message })), 60_000).unref();
 
 server.listen(config.port, () => {
   log.info('server_listening', { port: config.port, node_env: config.nodeEnv, device_auth: config.deviceAuth });

@@ -64,9 +64,18 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
    claim_code_invalid` giống hệt nhau. Giới hạn 10 lần/giờ mỗi phụ huynh.
 3. **Heartbeat** (`POST /v1/heartbeat`, có chữ ký): thiết bị biết trạng thái
    của mình và chu kỳ heartbeat tiếp theo.
-4. **Stream** (`GET /v1/stream` WebSocket, chữ ký trong query string): chỉ
-   thiết bị `active`. Tắt hoặc thu hồi thiết bị sẽ đóng socket đang mở với mã
-   `4003`.
+4. **Stream** (`GET /v1/stream` WebSocket, chữ ký trong query string): mọi
+   thiết bị chưa bị thu hồi đều kết nối được. Mỗi lần bấm nút (`turn_start`)
+   đi qua **ask gate**: thiết bị phải `active` và gia đình còn credit (trừ các
+   lượt đang mở). Bị từ chối thì đồ chơi chỉ nhận cảm xúc và một câu nói
+   (`turn_denied {emotion, say}`), không bao giờ nhận lý do; hết credit và bị
+   tạm dừng cho ra phản hồi giống hệt nhau. Một lượt trả lời xong
+   (`turn_end` → `answer` → `turn_done`) trừ đúng một credit của gia đình,
+   ghi vào sổ `credit_ledger` (append-only, số dư = tổng). Hủy, quá hạn, rớt
+   kết nối hay công tắc tắt (`4003`) đều không trừ. Gia đình mới được tặng
+   `WELCOME_CREDITS` (mặc định 10); vận hành cấp thêm qua
+   `POST /admin/families/:id/credits`. Chi tiết giao thức: `docs/device_auth.md`
+   mục 7.
 5. **Gỡ ghép** (`DELETE /api/devices/:id`): thiết bị về `provisioned`, mã in
    trên thẻ dùng lại được cho chủ mới.
 
@@ -94,6 +103,8 @@ Cách nhanh nhất để bấm thử bằng tay là console ở `frontend/` (`np
 | POST | `/api/devices/:id/disable` | `{reason?}`. 409 `device_not_active` |
 | POST | `/api/devices/:id/enable` | 403 `disabled_by_operator` nếu vận hành đã tắt |
 | DELETE | `/api/devices/:id` | Gỡ ghép → 204 |
+| GET | `/api/wallet` | `{balance, ledger}` của gia đình |
+| GET | `/api/turns` | Các lượt gần đây kèm lý do từ chối thật (`denied_reason`) |
 
 Thiết bị của gia đình khác luôn là `404 device_not_found`, không bao giờ 403.
 
@@ -120,6 +131,8 @@ Mã lỗi thiết bị: `auth_missing`, `auth_ts_skew`, `auth_unknown_device`,
 | POST | `/admin/devices/:id/enable` | |
 | POST | `/admin/devices/:id/revoke` | `{reason}` trong `lost / stolen / compromised / retired` |
 | POST | `/admin/devices/:id/reissue-claim-code` | Chỉ với thiết bị `provisioned`; trả mã mới một lần |
+| POST | `/admin/families/:id/credits` | `{amount, kind? grant|refund, reason}` → `{balance}` |
+| GET | `/admin/families/:id/wallet` | Số dư và sổ credit của một gia đình |
 
 Không có endpoint provision qua HTTP: bí mật thiết bị chỉ đi từ CLI ra manifest.
 

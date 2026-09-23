@@ -57,6 +57,11 @@ export function loadConfig(env = process.env) {
 
   const logLevel = env.LOG_LEVEL || (nodeEnv === 'test' ? 'silent' : 'info');
 
+  // Only the mock pipeline exists; naming another provider here is a typo
+  // until real adapters land, and a typo must not boot.
+  const providerMode = (env.PROVIDER_MODE || 'mock').toLowerCase();
+  if (providerMode !== 'mock') fail('PROVIDER_MODE must be mock (no other provider is implemented yet)');
+
   return Object.freeze({
     nodeEnv,
     isProd,
@@ -77,6 +82,10 @@ export function loadConfig(env = process.env) {
     deviceHeartbeatUnclaimedSec: readInt(env, 'DEVICE_HEARTBEAT_UNCLAIMED_SEC', 5, 1, 3600),
     deviceAuthFailLimit: readInt(env, 'DEVICE_AUTH_FAIL_LIMIT', 30, 1, 100000),
     trustProxy: readInt(env, 'TRUST_PROXY', 0, 0, 10),
+    providerMode,
+    welcomeCredits: readInt(env, 'WELCOME_CREDITS', 10, 0, 100000),
+    turnMaxSec: readInt(env, 'TURN_MAX_SEC', 120, 5, 3600),
+    conversationIdleSec: readInt(env, 'CONVERSATION_IDLE_SEC', 300, 10, 86400),
   });
 }
 

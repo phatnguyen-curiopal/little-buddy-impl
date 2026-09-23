@@ -85,20 +85,53 @@ wss://host/v1/stream?device_id=...&ts=...&nonce=...&sig=...
 ```
 
 The `X-LB-*` headers are also accepted on the upgrade for clients that can
-set them. After a successful upgrade the server sends
-`{"type":"ready","device_id":...,"server_time":...}`. Text frames of
-`{"type":"ping"}` get `{"type":"pong"}`. Binary frames are audio (PCM16,
-16 kHz, 20 ms) and are currently accepted and discarded; the streaming
-pipeline is the next step.
+set them. Any device that is not revoked gets a socket; whether a button
+press gets an answer is decided per turn (section 7). After a successful
+upgrade the server sends `{"type":"ready","device_id":...,"server_time":...}`.
+Text frames of `{"type":"ping"}` get `{"type":"pong"}`.
 
 ## 6. Status and what the device may do
 
-| Status | `/v1/heartbeat` | `/v1/stream` | Screen |
-|---|---|---|---|
-| `provisioned` (not yet claimed) | 200, `status: "provisioned"`, `heartbeat_interval_s: 5` | 403 `device_not_claimed` | "waiting for a grown-up" |
-| `active` | 200, `heartbeat_interval_s: 60` | allowed | normal face |
-| `disabled` (parent pause or operator) | 200, `status: "disabled"` | 403 `device_disabled` | sleeping face, keep heartbeating |
-| `revoked` (lost, stolen, retired) | 403 `device_revoked` | 403 | sleeping face |
+| Status | `/v1/heartbeat` | `/v1/stream` | Button press | Screen |
+|---|---|---|---|---|
+| `provisioned` (not yet claimed) | 200, `status: "provisioned"`, `heartbeat_interval_s: 5` | connects | `turn_denied`, emotion `confused` | "waiting for a grown-up" |
+| `active` | 200, `heartbeat_interval_s: 60` | connects | `turn_accepted` while the family has credits, else `turn_denied` `sleepy` | normal face |
+| `disabled` (parent pause or operator) | 200, `status: "disabled"` | connects | `turn_denied`, emotion `sleepy` | sleeping face, keep heartbeating |
+| `revoked` (lost, stolen, retired) | 403 `device_revoked` | 403 | n/a | sleeping face |
+
+## 7. Turns: the button press
+
+One press is one turn, and one answered turn costs the family one credit.
+The toy never learns why a press was refused: it gets an emotion and a
+sentence to speak, nothing else. A paused toy and a family with no credits
+receive byte-identical refusals, and no money word ever crosses this
+channel. The parent dashboard shows the real reason.
+
+Toy to server (text frames):
+
+| type | meaning |
+|---|---|
+| `turn_start` | the button was pressed |
+| binary frames | PCM16 16 kHz 20 ms audio while the turn is open (640 bytes each) |
+| `turn_end` | the button was released |
+| `turn_cancel` | give up this turn |
+| `ping` | keepalive |
+
+Server to toy:
+
+| type | fields | meaning |
+|---|---|---|
+| `turn_accepted` | `turn_id`, `emotion:"listening"` | speak now; a credit is reserved |
+| `turn_denied` | `emotion`, `say`, `conversation_open:false` | show the face and say the sentence; nothing is charged |
+| `answer` | `turn_id`, `emotion`, `say` | the answer, sent before anything is charged |
+| `turn_done` | `turn_id`, `status:"completed"|"abandoned"|"failed"` | the turn is closed; only `completed` charged a credit |
+| `error` | `code:"turn_in_flight"|"no_turn"` | protocol misuse: a second press mid-turn, or a release with no turn open |
+
+A turn that is not ended within 120 seconds, a cancelled turn, a socket
+that drops mid-turn, and a kill switch (close code 4003) all end as
+`abandoned` and charge nothing. The answer is always delivered before the
+debit is written, so a family never pays for silence. Turns within five
+minutes of each other on the same toy belong to one conversation.
 
 Heartbeat request body (JSON, optional fields):
 `{ "firmware_version": "1.0.0", "uptime_s": 42 }`. Response:

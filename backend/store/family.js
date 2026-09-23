@@ -10,6 +10,13 @@ export async function findById(db, id) {
   return r.rows[0] ?? null;
 }
 
+// The family row is the lock that serializes turn admission, so two toys
+// cannot both be admitted on the family's last credit.
+export async function lockForUpdate(tx, id) {
+  const r = await tx.query('SELECT id FROM families WHERE id = $1 FOR UPDATE', [id]);
+  return r.rows[0] ?? null;
+}
+
 export function toDto(row) {
   return { id: row.id, name: row.name, created_at: row.created_at };
 }

@@ -9,6 +9,8 @@ import * as registry from '../devices/registry.js';
 import * as deviceStore from '../store/device.js';
 import { isUuid } from '../lib/validate.js';
 import { badRequest, notFound } from '../lib/http_error.js';
+import * as billing from '../billing/ledger.js';
+import * as turns from '../turns/service.js';
 
 // Everything the parent web app calls, mounted at /api. Never mixed with the
 // device API: a device secret must not be able to reach any of these.
@@ -133,4 +135,19 @@ dashboardRouter.post('/devices/:id/enable', requireParent, async (req, res) => {
 dashboardRouter.delete('/devices/:id', requireParent, async (req, res) => {
   await registry.unpair({ deviceId: deviceId(req), familyId: req.familyId, actorId: req.parent.id });
   res.status(204).end();
+});
+
+function limitParam(req, fallback = 50, max = 200) {
+  const n = Number(req.query.limit);
+  if (!Number.isInteger(n)) return fallback;
+  return Math.min(Math.max(n, 1), max);
+}
+
+dashboardRouter.get('/wallet', requireParent, async (req, res) => {
+  res.json(await billing.wallet(req.familyId, { limit: limitParam(req) }));
+});
+
+// The parent sees why a turn was refused; the toy never does.
+dashboardRouter.get('/turns', requireParent, async (req, res) => {
+  res.json({ turns: await turns.listForFamily(req.familyId, limitParam(req)) });
 });

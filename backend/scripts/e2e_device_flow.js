@@ -79,14 +79,13 @@ try {
     return `interval ${res.body.heartbeat_interval_s}s`;
   });
 
-  await step('stream is refused while unclaimed', async () => {
-    try {
-      await sim.openStream();
-    } catch (err) {
-      expect(err.status === 403 && err.body?.error?.code === 'device_not_claimed', `got ${err.status} ${JSON.stringify(err.body)}`);
-      return;
-    }
-    throw new Error('upgrade was accepted');
+  await step('unclaimed toy connects but a button press is turned away kindly', async () => {
+    const { ws } = await sim.openStream();
+    const reply = await sim.turnStart(ws);
+    expect(reply.type === 'turn_denied' && reply.emotion === 'confused' && reply.reason === undefined, `got ${JSON.stringify(reply)}`);
+    ws.close();
+    await new Promise((resolve) => ws.once('close', resolve));
+    return `face: ${reply.emotion}`;
   });
 
   await step('parent claims the toy with the printed code', async () => {
@@ -102,7 +101,7 @@ try {
   });
 
   let ws;
-  await step('stream opens, answers ping, accepts audio frames', async () => {
+  await step('stream opens, answers ping', async () => {
     const opened = await sim.openStream();
     ws = opened.ws;
     const pong = await new Promise((resolve) => {
@@ -110,7 +109,29 @@ try {
       ws.send(JSON.stringify({ type: 'ping' }));
     });
     expect(pong.type === 'pong', `got ${pong.type}`);
-    for (let i = 0; i < 3; i += 1) ws.send(Buffer.alloc(640));
+  });
+
+  await step('button press: accepted, frames, answer, done, one credit spent', async () => {
+    const before = (await api(baseUrl, 'GET', '/api/wallet', { token })).body.balance;
+    const accepted = await sim.turnStart(ws);
+    expect(accepted.type === 'turn_accepted', `got ${JSON.stringify(accepted)}`);
+    sim.sendFrames(ws, 25);
+    const { answer, done } = await sim.turnEnd(ws);
+    expect(answer?.emotion === 'happy' && done?.status === 'completed', `got ${JSON.stringify({ answer, done })}`);
+    const after = (await api(baseUrl, 'GET', '/api/wallet', { token })).body.balance;
+    expect(after === before - 1, `balance ${before} -> ${after}`);
+    return `"${answer.say}" balance ${before} -> ${after}`;
+  });
+
+  await step('a second press mid-turn is refused, cancel charges nothing', async () => {
+    const before = (await api(baseUrl, 'GET', '/api/wallet', { token })).body.balance;
+    await sim.turnStart(ws);
+    const dup = await sim.turnStart(ws);
+    expect(dup.type === 'error' && dup.code === 'turn_in_flight', `got ${JSON.stringify(dup)}`);
+    const cancelled = await sim.turnCancel(ws);
+    expect(cancelled.status === 'abandoned', `got ${JSON.stringify(cancelled)}`);
+    const after = (await api(baseUrl, 'GET', '/api/wallet', { token })).body.balance;
+    expect(after === before, `balance changed ${before} -> ${after}`);
   });
 
   await step('parent disables the toy and the open stream closes with 4003', async () => {
@@ -121,16 +142,15 @@ try {
     expect(code === CLOSE_BLOCKED, `close code ${code}`);
   });
 
-  await step('heartbeat reports disabled; stream is refused', async () => {
+  await step('heartbeat reports disabled; a button press gets the sleepy face', async () => {
     const res = await sim.heartbeat();
     expect(res.body.status === 'disabled', `status ${res.body.status}`);
-    try {
-      await sim.openStream();
-    } catch (err) {
-      expect(err.body?.error?.code === 'device_disabled', `got ${JSON.stringify(err.body)}`);
-      return;
-    }
-    throw new Error('upgrade was accepted');
+    const opened = await sim.openStream();
+    const reply = await sim.turnStart(opened.ws);
+    expect(reply.type === 'turn_denied' && reply.emotion === 'sleepy', `got ${JSON.stringify(reply)}`);
+    opened.ws.close();
+    await new Promise((resolve) => opened.ws.once('close', resolve));
+    return `"${reply.say}"`;
   });
 
   await step('parent unpairs the toy', async () => {

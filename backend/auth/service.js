@@ -6,6 +6,7 @@ import * as sessions from '../store/session.js';
 import { hashPassword, verifyPassword, DUMMY_HASH } from './password.js';
 import { signAccessToken, newRefreshToken, hashToken } from './tokens.js';
 import { conflict, unauthorized } from '../lib/http_error.js';
+import { welcomeGrant } from '../billing/ledger.js';
 
 function refreshExpiry() {
   return new Date(Date.now() + config.refreshTokenTtlDays * 86_400_000);
@@ -25,6 +26,7 @@ export async function register({ email, password, familyName, displayName = null
   try {
     return await withTransaction(async (tx) => {
       const family = await families.insert(tx, { name: familyName });
+      await welcomeGrant(tx, family.id);
       const parent = await parents.insert(tx, { familyId: family.id, email, passwordHash, displayName, role: 'owner' });
       const tokens = await issueTokenPair(tx, parent);
       return { ...tokens, parent: parents.toDto(parent), family: families.toDto(family) };

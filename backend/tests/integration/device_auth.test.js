@@ -208,12 +208,16 @@ test('auth failures log the device id and code, never the signature or nonce', a
   assert.equal(line.nonce, undefined);
 });
 
-test('WebSocket upgrade: provisioned 403, then ready after claim, query and header forms both work', async () => {
+test('WebSocket upgrade: any non-revoked toy connects; query and header forms both work', async () => {
   const p = await registerParent(api);
   const d = await provisionDevice();
   const sim = await simFor(d, srv.baseUrl);
 
-  await assert.rejects(sim.openStream(), (err) => err.status === 403 && err.body.error.code === 'device_not_claimed');
+  // Unclaimed toys get a socket too; the gate answers per turn (turns_stream tests).
+  const early = await sim.openStream();
+  assert.equal(early.ready.device_id, d.id);
+  early.ws.close();
+  await new Promise((resolve) => early.ws.once('close', resolve));
 
   await claimDevice(api, p.token, d.claimCode);
   const { ws, ready } = await sim.openStream();
@@ -245,13 +249,13 @@ async function waitFor(check, { timeoutMs = 2000 } = {}) {
   }
 }
 
-test('WebSocket upgrade rejections: bad signature, disabled device, stray path', async () => {
-  const { d, p, sim } = await activeDevice();
+test('WebSocket upgrade rejections: bad signature, revoked device, stray path', async () => {
+  const { d, sim } = await activeDevice();
 
   await assert.rejects(sim.openStream({ signedPath: '/v1/stream?x=1' }), (err) => err.status === 401 && err.body.error.code === 'auth_bad_signature');
 
-  await registry.disable({ deviceId: d.id, familyId: p.familyId, by: 'parent' });
-  await assert.rejects(sim.openStream(), (err) => err.status === 403 && err.body.error.code === 'device_disabled');
+  await registry.revoke({ deviceId: d.id, reason: 'lost' });
+  await assert.rejects(sim.openStream(), (err) => err.status === 403 && err.body.error.code === 'device_revoked');
 
   const { default: WebSocket } = await import('ws');
   await assert.rejects(

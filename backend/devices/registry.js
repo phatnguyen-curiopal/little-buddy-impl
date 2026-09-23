@@ -163,17 +163,20 @@ async function lockDevice(tx, deviceId, familyId) {
 
 // `by` is 'parent' or 'admin'. A parent may only touch devices in their
 // family (familyId given); an admin passes no familyId.
+// The blocked hook fires only after COMMIT: it closes sockets and abandons
+// turns, which must not happen for a transaction that then rolls back.
 export async function disable({ deviceId, familyId = null, by, reason = null, actorId = null }) {
-  return withTransaction(async (tx) => {
+  const updated = await withTransaction(async (tx) => {
     const row = await lockDevice(tx, deviceId, familyId);
     if (row.status === STATUS.REVOKED) throw conflict('device_revoked', 'device is revoked');
     if (row.status !== STATUS.ACTIVE) throw conflict('device_not_active', 'device is not active');
     assertTransition(row.status, STATUS.DISABLED);
-    const updated = await devices.setStatus(tx, row.id, { status: STATUS.DISABLED, statusReason: reason, disabledBy: by });
+    const next = await devices.setStatus(tx, row.id, { status: STATUS.DISABLED, statusReason: reason, disabledBy: by });
     await devices.insertEvent(tx, { deviceId: row.id, event: 'disabled', actorKind: by, actorId });
-    onDeviceBlocked(row.id, STATUS.DISABLED);
-    return updated;
+    return next;
   });
+  onDeviceBlocked(updated.id, STATUS.DISABLED);
+  return updated;
 }
 
 export async function enable({ deviceId, familyId = null, by, actorId = null }) {
@@ -195,11 +198,11 @@ export async function enable({ deviceId, familyId = null, by, actorId = null }) 
 // Back to provisioned: the printed claim code becomes valid again, so a
 // gifted or resold toy is claimed with the card it came with.
 export async function unpair({ deviceId, familyId, actorId = null }) {
-  return withTransaction(async (tx) => {
+  const updated = await withTransaction(async (tx) => {
     const row = await lockDevice(tx, deviceId, familyId);
     if (row.status === STATUS.REVOKED) throw conflict('device_revoked', 'device is revoked');
     assertTransition(row.status, STATUS.PROVISIONED);
-    const updated = await devices.unpair(tx, row.id);
+    const next = await devices.unpair(tx, row.id);
     await devices.insertEvent(tx, {
       deviceId: row.id,
       event: 'unpaired',
@@ -207,24 +210,26 @@ export async function unpair({ deviceId, familyId, actorId = null }) {
       actorId,
       detail: { family_id: familyId },
     });
-    onDeviceBlocked(row.id, STATUS.PROVISIONED);
-    return updated;
+    return next;
   });
+  onDeviceBlocked(updated.id, STATUS.PROVISIONED);
+  return updated;
 }
 
 export async function revoke({ deviceId, reason, actorId = null }) {
   if (!REVOKE_REASONS.includes(reason)) {
     throw badRequest('validation_error', `reason must be one of ${REVOKE_REASONS.join(', ')}`);
   }
-  return withTransaction(async (tx) => {
+  const updated = await withTransaction(async (tx) => {
     const row = await lockDevice(tx, deviceId, null);
     if (row.status === STATUS.REVOKED) throw conflict('device_revoked', 'device is already revoked');
     assertTransition(row.status, STATUS.REVOKED);
-    const updated = await devices.setStatus(tx, row.id, { status: STATUS.REVOKED, statusReason: reason });
+    const next = await devices.setStatus(tx, row.id, { status: STATUS.REVOKED, statusReason: reason });
     await devices.insertEvent(tx, { deviceId: row.id, event: 'revoked', actorKind: 'admin', actorId, detail: { reason } });
-    onDeviceBlocked(row.id, STATUS.REVOKED);
-    return updated;
+    return next;
   });
+  onDeviceBlocked(updated.id, STATUS.REVOKED);
+  return updated;
 }
 
 // For a lost card. Returns the new formatted code exactly once.

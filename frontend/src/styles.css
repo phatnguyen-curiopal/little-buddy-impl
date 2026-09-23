@@ -81,6 +81,15 @@ input.narrow { width: 110px; }
 .dot-revoked { background: var(--bad); }
 
 .toy-screen { border-color: var(--device); }
+.say { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--device); background: var(--surface-2); border-radius: 0 6px 6px 0; font-size: 15px; }
+.balance { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pos { color: var(--ok); }
+.neg { color: var(--bad); }
+.answer-cell { white-space: normal; max-width: 320px; }
+.pill-completed { color: var(--ok); border-color: var(--ok); background: transparent; }
+.pill-denied { color: var(--device); border-color: var(--device); background: transparent; }
+.pill-abandoned, .pill-failed { color: var(--muted); }
+.pill-accepted { color: var(--parent); border-color: var(--parent); background: transparent; }
 .face { font-family: var(--mono); font-size: 22px; padding: 18px 12px; margin-bottom: 10px; border-radius: 6px; background: var(--surface-2); text-align: center; }
 
 .tbl { overflow-x: auto; margin-top: 8px; }

@@ -101,6 +101,8 @@ export const parentApi = {
   disable: (id, reason) => call('POST', `/api/devices/${id}/disable`, { auth: 'parent', body: reason ? { reason } : {} }),
   enable: (id) => call('POST', `/api/devices/${id}/enable`, { auth: 'parent' }),
   unpair: (id) => call('DELETE', `/api/devices/${id}`, { auth: 'parent' }),
+  wallet: () => call('GET', '/api/wallet', { auth: 'parent' }),
+  turns: (limit = 30) => call('GET', `/api/turns?limit=${limit}`, { auth: 'parent' }),
 };
 
 // A reissued claim code is shown once in the UI and never lands in the log,
@@ -117,4 +119,6 @@ export const adminApi = {
   enable: (id) => call('POST', `/admin/devices/${id}/enable`, { auth: 'admin' }),
   revoke: (id, reason) => call('POST', `/admin/devices/${id}/revoke`, { auth: 'admin', body: { reason } }),
   reissue: (id) => call('POST', `/admin/devices/${id}/reissue-claim-code`, { auth: 'admin', redact: redactClaimCode }),
+  grantCredits: (familyId, body) => call('POST', `/admin/families/${familyId}/credits`, { auth: 'admin', body }),
+  wallet: (familyId) => call('GET', `/admin/families/${familyId}/wallet`, { auth: 'admin' }),
 };

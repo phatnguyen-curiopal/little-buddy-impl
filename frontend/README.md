@@ -22,7 +22,8 @@ origin. Trỏ sang backend khác bằng biến `BACKEND_URL`.
 
 ## Ba làn
 
-**Parent** (`/api`): đăng nhập (điền sẵn tài khoản demo từ `npm run seed`),
+**Parent** (`/api`): ví credit của gia đình (số dư, sổ giao dịch) và các lượt
+bấm nút gần đây kèm lý do từ chối thật; đăng nhập (điền sẵn tài khoản demo từ `npm run seed`),
 đăng ký, `/api/me`, làm mới token (có ô "dùng lại refresh token cũ" để thấy
 `refresh_token_reused` thu hồi toàn bộ phiên), đăng xuất; thêm và liệt kê trẻ;
 ghép thiết bị bằng mã in trên thẻ; bảng thiết bị với gán trẻ, tạm dừng, bật
@@ -35,8 +36,12 @@ hoặc manifest nhà máy). Trang ký từng request bằng WebCrypto đúng nh�
 WebSocket `/v1/stream` với chữ ký trong query string. Ô "deliberate skew" để cố
 tình gây `auth_ts_skew` và xem lần thử lại tự động. Khi phụ huynh hoặc vận hành
 tắt thiết bị trong lúc stream đang mở, socket bị đóng với mã `4003`.
+Thẻ **The button**: Press gửi `turn_start` (ask gate quyết định, credit được
+giữ chỗ), Send frames, Release gửi `turn_end` và nhận `answer` rồi bị trừ một
+credit; Cancel không trừ. Bị từ chối thì chỉ thấy cảm xúc và câu nói.
 
-**Admin** (`/admin`): token vận hành (mặc định dev điền sẵn), danh sách lô, tìm
+**Admin** (`/admin`): token vận hành (mặc định dev điền sẵn), cấp credit cho một
+gia đình (có lý do), danh sách lô, tìm
 thiết bị theo trạng thái / lô / gia đình, tắt cưỡng bức, bật, thu hồi, cấp lại
 mã ghép (hiển thị một lần, không ghi vào log request, có nút gửi thẳng sang ô
 ghép của làn Parent).

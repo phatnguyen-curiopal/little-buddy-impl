@@ -18,6 +18,8 @@ export default function AdminLane({ onSimulate }) {
   const [reasons, setReasons] = useState({});
   const [revokeReason, setRevokeReason] = useState({});
   const [reissued, setReissued] = useState(null);
+  const [grantForm, setGrantForm] = useState({ family_id: '', amount: 5, kind: 'grant', reason: '' });
+  const [granted, setGranted] = useState(null);
 
   const run = useCallback(async (name, fn) => {
     setBusy(name);
@@ -61,6 +63,25 @@ export default function AdminLane({ onSimulate }) {
           {checked === false && <span className="pill pill-revoked">rejected</span>}
         </div>
         <p className="muted">The dev default is <code>dev-admin-token-change-me</code>; production refuses it at boot.</p>
+      </section>
+
+      <section className="card">
+        <h3>Grant credits</h3>
+        <form className="row wrap" onSubmit={(e) => { e.preventDefault(); run('grant', async () => { const out = await adminApi.grantCredits(grantForm.family_id.trim(), { amount: Number(grantForm.amount), kind: grantForm.kind, reason: grantForm.reason }); setGranted({ familyId: grantForm.family_id.trim(), balance: out.balance }); }); }}>
+          <Field label="family_id"><input id="g-family" className="wide" value={grantForm.family_id} onChange={(e) => setGrantForm({ ...grantForm, family_id: e.target.value })} /></Field>
+          {s.parent?.family?.id && <Button onClick={() => setGrantForm({ ...grantForm, family_id: s.parent.family.id })}>use parent's family</Button>}
+          <Field label="amount"><input id="g-amount" type="number" className="narrow" value={grantForm.amount} onChange={(e) => setGrantForm({ ...grantForm, amount: e.target.value })} /></Field>
+          <Field label="kind">
+            <select id="g-kind" value={grantForm.kind} onChange={(e) => setGrantForm({ ...grantForm, kind: e.target.value })}>
+              <option value="grant">grant</option>
+              <option value="refund">refund</option>
+            </select>
+          </Field>
+          <Field label="reason (required)"><input id="g-reason" value={grantForm.reason} onChange={(e) => setGrantForm({ ...grantForm, reason: e.target.value })} /></Field>
+          <Button kind="primary" type="submit" busy={busy === 'grant'}>Grant</Button>
+          {granted && <span className="chip">family {granted.familyId.slice(0, 8)} balance <b>{granted.balance}</b></span>}
+        </form>
+        <p className="muted">Every ledger change is a new row with a reason; nothing is ever edited or deleted. Purchases arrive later as their own row kind.</p>
       </section>
 
       <section className="card">
@@ -147,6 +168,7 @@ export default function AdminLane({ onSimulate }) {
                         </>
                       )}
                       <Button onClick={() => onSimulate(d.id)}>Simulate</Button>
+                      {d.family_id && <Button onClick={() => setGrantForm({ ...grantForm, family_id: d.family_id })}>grant to family</Button>}
                     </td>
                   </tr>
                 ))}

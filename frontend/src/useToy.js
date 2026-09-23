@@ -14,6 +14,11 @@ const nowSec = () => Math.floor(Date.now() / 1000);
 
 const initialStream = { state: 'closed', readyAt: null, lastPong: null, closeCode: null, closeReason: null, framesSent: 0, refusedHint: null, cutBadge: false };
 
+// One button press. phase: idle | listening (accepted, frames flowing) |
+// thinking (released, waiting for the answer). lastEmotion is what the
+// toy's face shows; lastSay is what it would speak.
+const initialTurn = { phase: 'idle', turnId: null, lastEmotion: null, lastSay: null, lastStatus: null, lastError: null };
+
 const initialState = {
   phase: 'idle', // idle | heartbeating | streaming | backoff | halted
   status: null, // last status the server reported
@@ -26,10 +31,23 @@ const initialState = {
   uptimeS: 0,
   haltReason: null,
   stream: initialStream,
+  turn: initialTurn,
+};
+
+const EMOTION_FACES = {
+  listening: '(o_o) listening...',
+  thinking: '(-_-) thinking...',
+  happy: ':D happy',
+  sleepy: 'zz sleepy',
+  confused: '(?_?) confused',
 };
 
 export function faceFor(s) {
   if (s.phase === 'idle') return 'off';
+  // A turn's emotion wins over the resting face while it is on screen.
+  if (s.turn.phase === 'listening') return EMOTION_FACES.listening;
+  if (s.turn.phase === 'thinking') return EMOTION_FACES.thinking;
+  if (s.turn.lastEmotion) return EMOTION_FACES[s.turn.lastEmotion] ?? s.turn.lastEmotion;
   if (s.phase === 'halted') return `?? cannot prove who I am (${s.haltReason})`;
   if (s.phase === 'backoff') {
     const left = Math.max(0, Math.ceil((s.backoffUntil - Date.now()) / 1000));
@@ -47,11 +65,12 @@ export function faceFor(s) {
 
 export function useToy() {
   const [state, setState] = useState(initialState);
-  const ref = useRef({ timer: null, socket: null, ready: false, startedAt: null, backoffS: 5, offsetS: 0, skewS: 0, running: false, creds: null, burst: null, badge: null });
+  const ref = useRef({ timer: null, socket: null, ready: false, startedAt: null, backoffS: 5, offsetS: 0, skewS: 0, running: false, creds: null, burst: null, badge: null, lastSent: null });
   const r = ref.current;
 
   const patch = useCallback((p) => setState((prev) => ({ ...prev, ...p })), []);
   const patchStream = useCallback((p) => setState((prev) => ({ ...prev, stream: { ...prev.stream, ...p } })), []);
+  const patchTurn = useCallback((p) => setState((prev) => ({ ...prev, turn: { ...prev.turn, ...p } })), []);
 
   const sign = useCallback(({ method, path, bodyText }) =>
     signRequest({ secretHex: r.creds.secretHex, deviceId: r.creds.deviceId, method, path, bodyText, ts: nowSec() + r.offsetS + r.skewS }), [r]);
@@ -208,11 +227,36 @@ export function useToy() {
       if (msg.type === 'ready') {
         r.ready = true;
         patchStream({ state: 'open', readyAt: msg.server_time });
-        patch({ phase: 'streaming' });
+        patch({ phase: 'streaming', turn: initialTurn });
         append({ method: 'WS', path: '/v1/stream', status: 101, ms: Math.round(performance.now() - t0), req: { device_id: r.creds.deviceId, auth: 'query string' }, res: msg });
-      } else if (msg.type === 'pong') {
+        return;
+      }
+      if (msg.type === 'pong') {
         patchStream({ lastPong: msg.server_time });
         append({ method: 'WS', path: '/v1/stream', status: 'msg', ms: 0, req: { type: 'ping' }, res: msg });
+        return;
+      }
+      append({ method: 'WS', path: '/v1/stream', status: 'msg', ms: 0, req: r.lastSent ?? null, res: msg });
+      r.lastSent = null;
+      switch (msg.type) {
+        case 'turn_accepted':
+          patchTurn({ phase: 'listening', turnId: msg.turn_id, lastEmotion: null, lastSay: null, lastStatus: null, lastError: null });
+          break;
+        case 'turn_denied':
+          // No reason arrives here on purpose; the Parent lane's turns list has it.
+          patchTurn({ phase: 'idle', turnId: null, lastEmotion: msg.emotion, lastSay: msg.say, lastStatus: 'denied', lastError: null });
+          break;
+        case 'answer':
+          patchTurn({ phase: 'idle', lastEmotion: msg.emotion, lastSay: msg.say });
+          break;
+        case 'turn_done':
+          patchTurn({ phase: 'idle', turnId: null, lastStatus: msg.status });
+          break;
+        case 'error':
+          patchTurn({ lastError: msg.code });
+          break;
+        default:
+          break;
       }
     };
     ws.onerror = () => {};
@@ -224,6 +268,7 @@ export function useToy() {
       r.ready = false;
       const reason = ev.reason || null;
       append({ method: 'WS', path: '/v1/stream', status: `close ${ev.code}`, ms: Math.round(performance.now() - t0), req: null, res: { code: ev.code, reason } });
+      patchTurn({ phase: 'idle', turnId: null });
       if (ev.code === 4003) {
         // The kill switch: the server named the new status in the reason.
         patch({ status: reason || 'disabled', phase: r.running ? 'heartbeating' : 'idle' });
@@ -238,12 +283,30 @@ export function useToy() {
         state: 'closed',
         closeCode: ev.code,
         closeReason: reason,
-        // Browsers hide the 401/403 body of a refused upgrade; the last
-        // heartbeat is the best available explanation.
+        // Browsers hide the 401/403 body of a refused upgrade. Only a
+        // revoked toy or a bad signature is refused now; the last heartbeat
+        // is the best available explanation.
         refusedHint: wasReady ? null : `upgrade refused (browser hides the 401/403 body); last heartbeat said: ${stateRef.current.status ?? 'nothing yet'}`,
       });
     };
-  }, [r, sign, patch, patchStream, beat]);
+  }, [r, sign, patch, patchStream, patchTurn, beat]);
+
+  const sendText = useCallback((obj) => {
+    if (r.socket?.readyState !== WebSocket.OPEN) return false;
+    r.lastSent = obj;
+    r.socket.send(JSON.stringify(obj));
+    return true;
+  }, [r]);
+
+  // The button. Press reserves a credit if the gate allows; release asks
+  // for the answer; cancel gives the credit back.
+  const pressButton = useCallback(() => {
+    if (sendText({ type: 'turn_start' })) patchTurn({ lastError: null, lastStatus: null });
+  }, [sendText, patchTurn]);
+  const release = useCallback(() => {
+    if (sendText({ type: 'turn_end' })) patchTurn({ phase: 'thinking' });
+  }, [sendText, patchTurn]);
+  const cancelTurn = useCallback(() => sendText({ type: 'turn_cancel' }), [sendText]);
 
   // onclose needs the latest status without re-creating the handler.
   const stateRef = useRef(state);
@@ -281,5 +344,5 @@ export function useToy() {
     if (r.socket) r.socket.close(1000, 'unmount');
   }, [r]);
 
-  return { state, face: faceFor(state), start, stop, beatNow, syncClock, setSkew, openStream, closeStream, ping, burst };
+  return { state, face: faceFor(state), start, stop, beatNow, syncClock, setSkew, openStream, closeStream, ping, burst, pressButton, release, cancelTurn };
 }

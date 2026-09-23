@@ -17,6 +17,8 @@ export default function ParentLane({ onSimulate }) {
   const [claim, setClaim] = useState({ claim_code: '', child_id: '' });
   const [reasons, setReasons] = useState({});
   const [me, setMe] = useState(null);
+  const [wallet, setWallet] = useState(null);
+  const [turns, setTurns] = useState([]);
 
   const run = useCallback(async (name, fn) => {
     setBusy(name);
@@ -33,9 +35,11 @@ export default function ParentLane({ onSimulate }) {
 
   const reload = useCallback(async () => {
     if (!session.get().parent) return;
-    const [c, d] = await Promise.all([parentApi.listChildren(), parentApi.listDevices()]);
+    const [c, d, w, t] = await Promise.all([parentApi.listChildren(), parentApi.listDevices(), parentApi.wallet(), parentApi.turns()]);
     setChildren(c.children);
     setDevices(d.devices);
+    setWallet(w);
+    setTurns(t.turns);
   }, []);
 
   useEffect(() => {
@@ -44,6 +48,8 @@ export default function ParentLane({ onSimulate }) {
       setChildren([]);
       setDevices([]);
       setMe(null);
+      setWallet(null);
+      setTurns([]);
     }
   }, [s.parent?.parent?.id, reload]);
 
@@ -84,6 +90,56 @@ export default function ParentLane({ onSimulate }) {
 
       {s.parent && (
         <>
+          <section className="card">
+            <div className="row between">
+              <h3>Wallet</h3>
+              <Button onClick={() => run('reload', reload)} busy={busy === 'reload'}>Refresh</Button>
+            </div>
+            <div className="row wrap">
+              <span className="balance">{wallet ? wallet.balance : '...'}</span>
+              <span className="muted">credits, shared by every toy in the family. One answered turn costs one.</span>
+            </div>
+            {wallet && wallet.ledger.length > 0 && (
+              <div className="tbl">
+                <table>
+                  <thead><tr><th>when</th><th>kind</th><th>delta</th><th>reason</th><th>by</th></tr></thead>
+                  <tbody>
+                    {wallet.ledger.slice(0, 8).map((row) => (
+                      <tr key={row.id}>
+                        <td>{ago(row.created_at)}</td><td>{row.kind}</td><td className={row.delta < 0 ? 'neg' : 'pos'}>{row.delta > 0 ? `+${row.delta}` : row.delta}</td><td>{row.reason ?? ''}</td><td>{row.actor_kind}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="card">
+            <h3>Recent turns</h3>
+            {turns.length === 0 ? <p className="muted">No button presses yet. Open the stream in the Toy lane and press the button.</p> : (
+              <div className="tbl">
+                <table>
+                  <thead><tr><th>when</th><th>toy</th><th>status</th><th>reason</th><th>emotion</th><th>frames</th><th>answer</th></tr></thead>
+                  <tbody>
+                    {turns.slice(0, 10).map((t) => (
+                      <tr key={t.id}>
+                        <td>{ago(t.started_at)}</td>
+                        <td><code>{t.device_serial ?? ''}</code></td>
+                        <td><StatusPill status={t.status} /></td>
+                        <td>{t.denied_reason ?? ''}</td>
+                        <td>{t.emotion ?? ''}</td>
+                        <td>{t.audio_frames}</td>
+                        <td className="answer-cell">{t.answer_text ?? ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="muted">The toy never sees <code>reason</code>; this is the only place it is shown.</p>
+          </section>
+
           <section className="card">
             <h3>Children</h3>
             <div className="row wrap">

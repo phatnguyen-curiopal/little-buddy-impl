@@ -62,6 +62,13 @@ export function loadConfig(env = process.env) {
   const providerMode = (env.PROVIDER_MODE || 'mock').toLowerCase();
   if (providerMode !== 'mock') fail('PROVIDER_MODE must be mock (no other provider is implemented yet)');
 
+  // The demo payment provider marks any purchase paid on request, so it is
+  // free credits for anyone; production gets purchases switched off until a
+  // real provider exists.
+  const paymentProvider = (env.PAYMENT_PROVIDER || (isProd ? 'disabled' : 'demo')).toLowerCase();
+  if (paymentProvider !== 'demo' && paymentProvider !== 'disabled') fail('PAYMENT_PROVIDER must be demo or disabled');
+  if (isProd && paymentProvider === 'demo') fail('PAYMENT_PROVIDER=demo is refused in production: it gives credits away');
+
   return Object.freeze({
     nodeEnv,
     isProd,
@@ -83,6 +90,7 @@ export function loadConfig(env = process.env) {
     deviceAuthFailLimit: readInt(env, 'DEVICE_AUTH_FAIL_LIMIT', 30, 1, 100000),
     trustProxy: readInt(env, 'TRUST_PROXY', 0, 0, 10),
     providerMode,
+    paymentProvider,
     welcomeCredits: readInt(env, 'WELCOME_CREDITS', 10, 0, 100000),
     turnMaxSec: readInt(env, 'TURN_MAX_SEC', 120, 5, 3600),
     conversationIdleSec: readInt(env, 'CONVERSATION_IDLE_SEC', 300, 10, 86400),

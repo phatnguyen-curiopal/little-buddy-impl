@@ -19,6 +19,9 @@ export default function ParentLane({ onSimulate }) {
   const [me, setMe] = useState(null);
   const [wallet, setWallet] = useState(null);
   const [turns, setTurns] = useState([]);
+  const [packs, setPacks] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [decline, setDecline] = useState(false);
 
   const run = useCallback(async (name, fn) => {
     setBusy(name);
@@ -35,12 +38,27 @@ export default function ParentLane({ onSimulate }) {
 
   const reload = useCallback(async () => {
     if (!session.get().parent) return;
-    const [c, d, w, t] = await Promise.all([parentApi.listChildren(), parentApi.listDevices(), parentApi.wallet(), parentApi.turns()]);
+    const [c, d, w, t, pk, pu] = await Promise.all([
+      parentApi.listChildren(), parentApi.listDevices(), parentApi.wallet(), parentApi.turns(), parentApi.packs(), parentApi.purchases(),
+    ]);
     setChildren(c.children);
     setDevices(d.devices);
     setWallet(w);
     setTurns(t.turns);
+    setPacks(pk.packs);
+    setPurchases(pu.purchases);
   }, []);
+
+  // Demo checkout in the same two steps a real provider will have: open a
+  // pending purchase, then confirm it (here: the demo-pay endpoint).
+  const buyPack = (packId) => run('buy-' + packId, async () => {
+    const { purchase } = await parentApi.createPurchase({ pack_id: packId, idempotency_key: crypto.randomUUID() });
+    try {
+      await parentApi.demoPay(purchase.id, decline ? 'decline' : 'success');
+    } finally {
+      await reload();
+    }
+  });
 
   useEffect(() => {
     if (s.parent) reload().catch((e) => setErr(e));
@@ -50,6 +68,8 @@ export default function ParentLane({ onSimulate }) {
       setMe(null);
       setWallet(null);
       setTurns([]);
+      setPacks([]);
+      setPurchases([]);
     }
   }, [s.parent?.parent?.id, reload]);
 
@@ -99,6 +119,22 @@ export default function ParentLane({ onSimulate }) {
               <span className="balance">{wallet ? wallet.balance : '...'}</span>
               <span className="muted">credits, shared by every toy in the family. One answered turn costs one.</span>
             </div>
+            <div className="packs">
+              {packs.map((pk) => (
+                <div key={pk.id} className="pack">
+                  <b>{pk.name}</b>
+                  <span>{pk.credits} credits</span>
+                  <span className="muted">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: pk.currency }).format(pk.price_amount)}</span>
+                  <Button kind="primary" onClick={() => buyPack(pk.id)} busy={busy === 'buy-' + pk.id}>Buy (demo)</Button>
+                </div>
+              ))}
+            </div>
+            <label className="check"><input id="buy-decline" type="checkbox" checked={decline} onChange={(e) => setDecline(e.target.checked)} /> simulate a declined card (purchase fails, no credits)</label>
+            {purchases.length > 0 && (
+              <p className="muted">
+                Recent purchases: {purchases.slice(0, 5).map((pu) => `${pu.pack_id} ${pu.status}`).join(', ')}
+              </p>
+            )}
             {wallet && wallet.ledger.length > 0 && (
               <div className="tbl">
                 <table>

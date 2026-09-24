@@ -105,6 +105,15 @@ Cách nhanh nhất để bấm thử bằng tay là console ở `frontend/` (`np
 | DELETE | `/api/devices/:id` | Gỡ ghép → 204 |
 | GET | `/api/wallet` | `{balance, ledger}` của gia đình |
 | GET | `/api/turns` | Các lượt gần đây kèm lý do từ chối thật (`denied_reason`) |
+| GET | `/api/credit-packs` | Các gói credit đang bán (credit, giá, tiền tệ) |
+| POST | `/api/purchases` | `{pack_id, idempotency_key?}` → 201 `{purchase}` trạng thái `pending`, chưa cộng credit |
+| POST | `/api/purchases/:id/demo-pay` | `{outcome: success|decline}` (giai đoạn demo, thay cho webhook của cổng thanh toán) → `{purchase, balance}`; mỗi purchase chỉ cộng credit một lần, lần hai trả 409 `purchase_not_pending` |
+| GET | `/api/purchases` | Lịch sử mua |
+
+Mua credit (giai đoạn demo): `PAYMENT_PROVIDER=demo` là mặc định khi dev và bị
+từ chối ở production (nó cho credit miễn phí); `disabled` tắt việc mua
+(403 `payments_disabled`). Số credit và giá được chép vào purchase lúc tạo,
+nên đổi giá gói sau này không làm thay đổi lịch sử.
 
 Thiết bị của gia đình khác luôn là `404 device_not_found`, không bao giờ 403.
 

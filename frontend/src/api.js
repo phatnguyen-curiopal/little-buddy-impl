@@ -103,6 +103,10 @@ export const parentApi = {
   unpair: (id) => call('DELETE', `/api/devices/${id}`, { auth: 'parent' }),
   wallet: () => call('GET', '/api/wallet', { auth: 'parent' }),
   turns: (limit = 30) => call('GET', `/api/turns?limit=${limit}`, { auth: 'parent' }),
+  packs: () => call('GET', '/api/credit-packs', { auth: 'parent' }),
+  purchases: () => call('GET', '/api/purchases?limit=10', { auth: 'parent' }),
+  createPurchase: (body) => call('POST', '/api/purchases', { auth: 'parent', body }),
+  demoPay: (id, outcome) => call('POST', `/api/purchases/${id}/demo-pay`, { auth: 'parent', body: { outcome } }),
 };
 
 // A reissued claim code is shown once in the UI and never lands in the log,

@@ -47,10 +47,15 @@ export async function migrate() {
   return runMigrations(pool);
 }
 
+// Reference data seeded by migrations; truncating it would leave later tests
+// with nothing to buy.
+const KEEP = ['schema_migrations', 'credit_packs'];
+
 // The table list is queried, so new tables need no edit here.
 export async function resetDb() {
   const tables = await pool.query(
-    `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'schema_migrations'`,
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND NOT (tablename = ANY($1))`,
+    [KEEP],
   );
   if (tables.rowCount === 0) return;
   const names = tables.rows.map((r) => `"${r.tablename}"`).join(', ');

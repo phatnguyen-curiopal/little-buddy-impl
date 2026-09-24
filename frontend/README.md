@@ -22,7 +22,8 @@ origin. Trỏ sang backend khác bằng biến `BACKEND_URL`.
 
 ## Ba làn
 
-**Parent** (`/api`): ví credit của gia đình (số dư, sổ giao dịch) và các lượt
+**Parent** (`/api`): ví credit của gia đình (số dư, sổ giao dịch, mua gói credit
+bằng thanh toán demo, có ô giả lập thẻ bị từ chối) và các lượt
 bấm nút gần đây kèm lý do từ chối thật; đăng nhập (điền sẵn tài khoản demo từ `npm run seed`),
 đăng ký, `/api/me`, làm mới token (có ô "dùng lại refresh token cũ" để thấy
 `refresh_token_reused` thu hồi toàn bộ phiên), đăng xuất; thêm và liệt kê trẻ;

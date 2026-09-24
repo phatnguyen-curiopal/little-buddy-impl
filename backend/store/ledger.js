@@ -1,4 +1,4 @@
-const COLUMNS = 'id, family_id, kind, delta, turn_id, reason, actor_kind, actor_id, created_at';
+const COLUMNS = 'id, family_id, kind, delta, turn_id, purchase_id, reason, actor_kind, actor_id, created_at';
 
 export async function insert(db, { familyId, kind, delta, turnId = null, reason = null, actorKind, actorId = null }) {
   const r = await db.query(
@@ -22,6 +22,17 @@ export async function insertDebit(tx, { familyId, turnId, actorId = null }) {
   return r.rowCount === 1;
 }
 
+// Same idempotency shape as the debit: one purchase adds credits once.
+export async function insertPurchase(tx, { familyId, purchaseId, credits, reason, actorId = null }) {
+  const r = await tx.query(
+    `INSERT INTO credit_ledger (family_id, kind, delta, purchase_id, reason, actor_kind, actor_id)
+     VALUES ($1, 'purchase', $2, $3, $4, 'parent', $5)
+     ON CONFLICT (purchase_id) WHERE kind = 'purchase' DO NOTHING`,
+    [familyId, credits, purchaseId, reason, actorId],
+  );
+  return r.rowCount === 1;
+}
+
 export async function balance(db, familyId) {
   const r = await db.query('SELECT COALESCE(SUM(delta), 0)::int AS balance FROM credit_ledger WHERE family_id = $1', [familyId]);
   return r.rows[0].balance;
@@ -41,6 +52,7 @@ export function toDto(row) {
     kind: row.kind,
     delta: row.delta,
     turn_id: row.turn_id,
+    purchase_id: row.purchase_id,
     reason: row.reason,
     actor_kind: row.actor_kind,
     created_at: row.created_at,

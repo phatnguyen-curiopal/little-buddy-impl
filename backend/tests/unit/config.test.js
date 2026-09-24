@@ -70,6 +70,14 @@ test('turn and credit knobs have defaults and only the mock provider is accepted
   assert.throws(() => loadConfig({ TURN_MAX_SEC: '1' }), /TURN_MAX_SEC/);
 });
 
+test('demo payments are the dev default and refused in production', () => {
+  assert.equal(loadConfig({}).paymentProvider, 'demo');
+  assert.equal(loadConfig(validProd).paymentProvider, 'disabled');
+  assert.throws(() => loadConfig({ ...validProd, PAYMENT_PROVIDER: 'demo' }), /PAYMENT_PROVIDER=demo/);
+  assert.throws(() => loadConfig({ PAYMENT_PROVIDER: 'stripe' }), /PAYMENT_PROVIDER/);
+  assert.equal(loadConfig({ PAYMENT_PROVIDER: 'disabled' }).paymentProvider, 'disabled');
+});
+
 test('test env defaults log level to silent, development to info', () => {
   assert.equal(loadConfig({ NODE_ENV: 'test' }).logLevel, 'silent');
   assert.equal(loadConfig({}).logLevel, 'info');

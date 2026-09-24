@@ -82,6 +82,9 @@ input.narrow { width: 110px; }
 
 .toy-screen { border-color: var(--device); }
 .say { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--device); background: var(--surface-2); border-radius: 0 6px 6px 0; font-size: 15px; }
+.packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 12px 0 8px; }
+.pack { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.pack .btn { margin-top: 6px; align-self: flex-start; }
 .balance { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pos { color: var(--ok); }
 .neg { color: var(--bad); }

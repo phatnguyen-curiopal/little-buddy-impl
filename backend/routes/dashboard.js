@@ -10,6 +10,7 @@ import * as deviceStore from '../store/device.js';
 import { isUuid } from '../lib/validate.js';
 import { badRequest, notFound } from '../lib/http_error.js';
 import * as billing from '../billing/ledger.js';
+import * as buying from '../billing/purchases.js';
 import * as turns from '../turns/service.js';
 
 // Everything the parent web app calls, mounted at /api. Never mixed with the
@@ -145,6 +146,37 @@ function limitParam(req, fallback = 50, max = 200) {
 
 dashboardRouter.get('/wallet', requireParent, async (req, res) => {
   res.json(await billing.wallet(req.familyId, { limit: limitParam(req) }));
+});
+
+dashboardRouter.get('/credit-packs', requireParent, async (req, res) => {
+  res.json({ packs: await buying.listPacks() });
+});
+
+dashboardRouter.get('/purchases', requireParent, async (req, res) => {
+  res.json({ purchases: await buying.listPurchases(req.familyId, limitParam(req)) });
+});
+
+const purchaseLimit = rateLimit({ name: 'purchase', limit: 20, windowSec: 3600, key: (req) => req.parent.id });
+
+dashboardRouter.post('/purchases', requireParent, purchaseLimit, async (req, res) => {
+  const body = validateBody(req.body, {
+    pack_id: { type: 'string', required: true, min: 2, max: 32 },
+    idempotency_key: { type: 'string', min: 1, max: 64 },
+  });
+  const { purchase, created } = await buying.createPurchase({
+    familyId: req.familyId,
+    parentId: req.parent.id,
+    packId: body.pack_id,
+    idempotencyKey: body.idempotency_key ?? null,
+  });
+  res.status(created ? 201 : 200).json({ purchase });
+});
+
+// Stands in for the payment provider's confirmation in the demo stage.
+dashboardRouter.post('/purchases/:id/demo-pay', requireParent, async (req, res) => {
+  if (!isUuid(req.params.id)) throw notFound('purchase_not_found', 'purchase not found');
+  const body = validateBody(req.body, { outcome: { type: 'enum', values: ['success', 'decline'] } });
+  res.json(await buying.payDemo({ familyId: req.familyId, purchaseId: req.params.id.toLowerCase(), outcome: body.outcome ?? 'success' }));
 });
 
 // The parent sees why a turn was refused; the toy never does.

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Implementation-phase monorepo for Little Buddy, an AI companion toy for children aged 4 to 8. The toy is an ESP32-S3 that streams audio to this backend; parents use a web dashboard. `backend/` is the Node.js API (built); `frontend/` is a Vite + React **dev test console** (parent, toy simulator and admin lanes), not the product dashboard, which does not exist yet.
+Implementation-phase monorepo for Little Buddy, an AI companion toy for children aged 4 to 8. The toy is an ESP32-S3 that streams audio to this backend; parents use a web dashboard. `backend/` is the Node.js API (built); `web/` is the **parent-facing website** (marketing page at `/`, dashboard at `/app`); `frontend/` is the internal Vite + React **dev test console** (parent, toy simulator and admin lanes).
 
 The product spec and invariants live outside this repo in `D:\Intern\LittleBuddy\backend_intern_onboarding.md` (the prototype repo). Its `docs/` tree is referenced there but does not exist anywhere; the device wire protocol was designed here in `backend/docs/device_auth.md`. Decisions already made with the user, do not re-ask: factory secret + printed claim code for pairing; plain JS ESM, no TypeScript, no ORM; real Postgres + Redis via Docker, no in-memory fallbacks.
 
@@ -64,6 +64,17 @@ Port 5432 clash: the prototype's container `littlebuddy-pgvector` (from `D:\Inte
 **Parent auth.** scrypt from `node:crypto` (params stored in the hash string), 15-minute HS256 JWT carrying `fam`, opaque refresh tokens stored as sha256 with a `replaced_by` chain; presenting a rotated token revokes every session for that parent. Login verifies against `DUMMY_HASH` on unknown emails so timing and body are identical.
 
 **Config.** `config.js` exports a pure `loadConfig(env)` plus a frozen default; nothing else reads `process.env`. Tests set env in `tests/helpers/env.js` (preloaded via `--import`), so a test that needs a different config value must set `process.env` before its first import of `config.js` (see `tests/integration/device_auth_off.test.js`).
+
+## Web (parent website)
+
+From `web/`: `npm install`, `npm run dev` (http://localhost:5174, needs the backend on :3000), `npm test` (pure modules only, no Docker), `npm run build`. Plain JS + JSX; deps react/react-dom only, no router, animation or UI library.
+
+- Routes live in `src/lib/routes.js` (pure: `matchRoute`, `guard`, `safeNext`); `src/lib/router.js` is a small History API router on top. `/app/*` needs a session; `safeNext` only accepts `/app` paths after login.
+- `src/lib/api.js` is the only place that calls the backend: access token in memory, refresh token in localStorage, one shared in-flight refresh so a rotated token is never presented twice (the backend treats that as a leak and ends every session).
+- Every string is in `src/i18n/vi.js` and `en.js`; `tests/i18n.test.js` fails on missing keys, mismatched placeholders, em dashes, or a `t('key')` in the source that neither dictionary has. `translate` is in `lib/translate.js` (pure) so tests can import it; `lib/i18n.jsx` is the React provider.
+- Buddy's face: `src/components/Face.jsx` draws 14 emotions (`src/lib/emotions.js`), unknown values fall back to `neutral`; animations are in `src/styles/motion.css` and all switch off under `prefers-reduced-motion`.
+- The microphone is a toggle: one tap starts, the toy detects the end of speech (or a second tap) and sends `turn_end`. The hero toy in `src/components/Toy.jsx` simulates exactly that; do not reintroduce hold-to-talk wording.
+- `GET /api/credit-packs` is public (the marketing pricing section); every other `/api` route needs a parent token.
 
 ## Frontend (dev test console)
 

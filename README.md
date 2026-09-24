@@ -14,7 +14,7 @@ ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
                                              ▲
                                              │ REST /api (JWT)
                                     ┌──────────────────┐
-                                    │ Dashboard phụ huynh │  (frontend/, sắp tới)
+                                    │ Website phụ huynh  │  (web/)
                                     └──────────────────┘
 ```
 
@@ -24,6 +24,7 @@ ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
 |---|---|
 | `backend/` | API Node.js: quản lý thiết bị, xác thực thiết bị (HMAC), tài khoản phụ huynh (JWT), endpoint quản trị. Xem `backend/README.md`. |
 | `frontend/` | Console kiểm thử dev (Vite + React): làn phụ huynh, thiết bị mô phỏng chạy trong trình duyệt, làn vận hành. Không phải dashboard sản phẩm. Xem `frontend/README.md`. |
+| `web/` | Website cho phụ huynh (Vite + React): trang giới thiệu sản phẩm và bảng điều khiển sau khi đăng nhập, song ngữ. Chạy ở http://localhost:5174. Xem `web/README.md`. |
 | `docker/` | Script khởi tạo Postgres (tạo thêm database test). |
 | `docker-compose.yml` | Postgres (pgvector) và Redis cho dev và test. |
 

@@ -1,0 +1,141 @@
+export default {
+  // common
+  close: 'Đóng', cancel: 'Huỷ', next: 'Tiếp tục', later: 'Để sau', done: 'Xong', save: 'Lưu', saving: 'Đang lưu…',
+  checking: 'Đang kiểm tra…', tryAgain: 'Thử lại', wait: 'Chờ một chút…', show: 'Hiện', hide: 'Ẩn', optional: 'không bắt buộc',
+  backHome: 'Về trang chủ', never: 'chưa kết nối', now: 'vừa xong', minsAgo: '{n} phút trước', hoursAgo: '{n} giờ trước',
+  yesterday: 'hôm qua', daysAgo: '{n} ngày trước', unknown: 'chưa rõ', titleHome: 'Little Buddy · Người bạn biết lắng nghe của bé',
+
+  // marketing nav
+  navSections: 'Các phần của trang', navHow: 'Cách hoạt động', navEmotions: 'Cảm xúc', navSafety: 'An toàn', navPricing: 'Bảng giá', navFaq: 'Hỏi đáp',
+  signIn: 'Đăng nhập', start: 'Bắt đầu', menu: 'Menu', closeMenu: 'Đóng',
+
+  // hero
+  heroEyebrow: 'Người bạn AI cho bé 4 đến 8 tuổi',
+  heroA: 'Chạm nút.', heroB: 'Hỏi bất cứ điều gì.',
+  heroSub: 'Bé chạm nút một lần rồi hỏi. Buddy tự nhận ra khi bé nói xong, rồi trả lời bằng tiếng Việt hoặc tiếng Anh, đúng ngôn ngữ bé vừa dùng. Micro tự tắt khi lượt hỏi kết thúc.',
+  ctaStart: 'Bắt đầu miễn phí', ctaHow: 'Xem cách hoạt động',
+  trust: 'Tặng 10 câu trả lời khi tạo tài khoản · Không thu phí hằng tháng',
+
+  // hero toy
+  toyIdle: 'Chạm nút cam để hỏi thử Buddy', toyListening: 'Buddy đang nghe…', toySilence: 'Bé đã ngừng nói, Buddy đang chờ thêm một chút…',
+  toyHeard: 'Buddy nhận ra bé đã nói xong', toyStopped: 'Bé chạm nút lần nữa nên Buddy thôi nghe', toyThinking: 'Buddy đang nghĩ…',
+  toyAnswer: 'Chạm lần nữa để hỏi câu khác', toyTap: 'Chạm để bắt đầu nói với Buddy', toyTapStop: 'Chạm để nói xong', asked: 'Bé hỏi',
+  demo1q: 'Vì sao bầu trời lại có màu xanh?', demo1a: 'Vì ánh sáng Mặt Trời gặp không khí thì phần màu xanh bị tán ra khắp nơi, nên nhìn đâu mình cũng thấy xanh đó!',
+  demo2q: 'Buddy kể cho con một chuyện cười đi!', demo2a: 'Vì sao con cá không dám chơi bóng rổ? Vì nó sợ cái lưới! Hi hi!',
+  demo3q: 'Buddy có thương con không?', demo3a: 'Thương nhiều lắm luôn! Hôm nay mình chơi gì tiếp nào?',
+  demo4q: 'Con khủng long to nhất dài cỡ nào?', demo4a: 'Có loài khủng long dài bằng ba chiếc xe buýt xếp liền nhau đó, to ghê chưa!',
+  demo5q: 'Con bị té, đau đầu gối quá…', demo5a: 'Ôi, thương bé quá. Mình thổi phù phù nhé. Bé nhớ kể cho bố mẹ biết để bố mẹ xem giúp nha.',
+
+  marqueeLabel: 'Những câu bé hay hỏi Buddy',
+
+  // how it works
+  howEyebrow: 'Cách hoạt động', howTitle: 'Đơn giản như một lần chạm', howSub: 'Không ứng dụng cho bé, không màn hình để lướt. Chỉ một cái nút và một người bạn biết trả lời.',
+  s1t: 'Bé chạm nút và hỏi', s1b: 'Một lần chạm là micro mở. Không có từ khoá đánh thức, không nghe lén.',
+  s2t: 'Buddy biết khi bé nói xong', s2b: 'Buddy nhận ra khoảng lặng khi bé dừng nói, tự tắt micro rồi trả lời bằng giọng ấm áp kèm khuôn mặt thể hiện cảm xúc.',
+  s3t: 'Bố mẹ nắm mọi thứ', s3b: 'Xem Buddy đã trả lời gì, cho Buddy nghỉ khi cần và quản lý lượt hỏi của cả nhà ngay trên điện thoại.',
+
+  // emotions
+  emoEyebrow: 'Mười bốn cảm xúc', emoTitle: 'Khuôn mặt nói trước cả lời nói', emoSub: 'Màn hình của Buddy đổi cảm xúc theo câu chuyện, ngay trước khi Buddy cất lời. Rê chuột hoặc chạm vào từng khuôn mặt để xem.',
+  emo_neutral: 'Bình thường', emo_listening: 'Đang nghe', emo_thinking: 'Đang nghĩ', emo_happy: 'Vui', emo_excited: 'Hào hứng',
+  emo_laughing: 'Cười lớn', emo_love: 'Yêu thương', emo_curious: 'Tò mò', emo_surprised: 'Ngạc nhiên', emo_wink: 'Nháy mắt',
+  emo_shy: 'Ngại ngùng', emo_confused: 'Bối rối', emo_sad: 'Buồn', emo_sleepy: 'Buồn ngủ',
+  emoWhen_neutral: 'Khi Buddy đang chờ bé', emoWhen_listening: 'Khi bé đang nói', emoWhen_thinking: 'Khi Buddy tìm câu trả lời',
+  emoWhen_happy: 'Khi bé khoe một điều vui', emoWhen_excited: 'Khi có điều bất ngờ thú vị', emoWhen_laughing: 'Khi bé kể chuyện cười',
+  emoWhen_love: 'Khi bé nói thương Buddy', emoWhen_curious: 'Khi câu hỏi thật là hay', emoWhen_surprised: 'Khi nghe một điều lạ lùng',
+  emoWhen_wink: 'Khi Buddy có một bí mật nhỏ', emoWhen_shy: 'Khi được bé khen', emoWhen_confused: 'Khi Buddy chưa nghe rõ',
+  emoWhen_sad: 'Khi bé buồn, Buddy buồn cùng bé', emoWhen_sleepy: 'Khi đến giờ nghỉ',
+
+  // features
+  featEyebrow: 'Buddy là ai', featTitle: 'Một người bạn, không phải một màn hình',
+  f1t: 'Nói tiếng Việt và tiếng Anh', f1b: 'Bé hỏi bằng tiếng nào, Buddy trả lời bằng tiếng đó, kể cả khi bé đổi ngôn ngữ giữa câu.',
+  f1c: 'Buddy ơi, cá heo ăn gì?', f1d: 'Cá heo thích ăn cá nhỏ và mực đó!', f1e: 'Why is the moon so bright?', f1f: 'It shines with light from the Sun!',
+  vadT: 'Tự biết khi bé nói xong', vadB: 'Không cần giữ nút. Buddy nghe khoảng lặng rồi tự tắt micro.', vadSpeak: 'Bé đang nói…', vadDone: 'Bé nói xong rồi',
+  f3t: 'Chuyện kể bằng tranh', f3b: 'Với câu hỏi cần hình dung, Buddy kể thêm một câu chuyện ngắn 4 cảnh ngay trên màn hình.',
+  f4t: 'Chọn tính cách cho Buddy', f4b: 'Mỗi tính cách có giọng nói và cách xưng hô riêng.', soon: 'Sắp có',
+  pFriend: 'Bạn thân', pTeacher: 'Thầy cô', pDad: 'Bố', pMom: 'Mẹ',
+
+  // safety
+  safeEyebrow: 'An toàn là mặc định', safeTitle: 'Thiết kế cho trẻ nhỏ ngay từ đầu', safeSub: 'Những điều Buddy luôn làm, không cần bố mẹ cài đặt.',
+  sa1t: 'Micro không bao giờ bật sẵn', sa1b: 'Micro chỉ mở sau khi bé chạm nút và tự tắt khi bé nói xong. Không có từ khoá đánh thức.',
+  sa2t: 'Mọi câu trả lời được kiểm tra', sa2b: 'Câu hỏi và câu trả lời đều đi qua bộ lọc an toàn trước khi Buddy nói.',
+  sa3t: 'Bố mẹ được báo khi cần', sa3b: 'Nếu bé chia sẻ điều đáng lo, bố mẹ nhận được thông báo ngay.',
+  sa4t: 'Không quảng cáo, không chuyện tiền', sa4b: 'Khi hết lượt, Buddy chỉ rủ bé nghỉ một chút. Chuyện mua bán nằm hoàn toàn ở phía bố mẹ.',
+  sa5t: 'Lời của bé là của bé', sa5b: 'Bảng điều khiển chỉ hiện câu trả lời của Buddy, không hiện lời bé nói.',
+  sa6t: 'Bố mẹ nắm quyền', sa6b: 'Cho Buddy nghỉ bất cứ lúc nào. Khi đang nghỉ, bấm nút không tốn lượt.',
+
+  // pricing
+  priceEyebrow: 'Bảng giá', priceTitle: 'Trả theo câu trả lời. Không thu phí hằng tháng.', priceSub: '1 lượt = 1 câu trả lời. Mọi Buddy trong nhà dùng chung một ví lượt hỏi.',
+  freeA: '10 lượt', freeB: 'tặng ngay khi tạo tài khoản để bé làm quen với Buddy.',
+  credits: '{n} lượt', perAnswer: '≈ {p} mỗi câu trả lời', best: 'Tiết kiệm nhất', choose: 'Chọn gói này',
+  pack_starter: 'Khởi đầu', pack_family: 'Gia đình', pack_big: 'Hộp lớn',
+  note1: 'Không tự động gia hạn', note2: 'Dùng chung cho mọi Buddy', note3: 'Chưa trả lời xong thì không trừ lượt',
+
+  // faq
+  faqEyebrow: 'Hỏi đáp', faqTitle: 'Những điều bố mẹ hay hỏi',
+  q1: 'Bé phải giữ nút khi nói à?', a1: 'Không cần. Bé chạm nút một lần rồi nói tự nhiên. Buddy nhận ra khi bé ngừng nói và tự tắt micro. Nếu bé muốn dừng sớm, chỉ cần chạm nút thêm lần nữa.',
+  q2: 'Hết lượt thì sao?', a2: 'Buddy không trả lời mà nói với bé: “Mình nghỉ một chút nhé, lát nữa chơi tiếp!” Buddy không bao giờ nhắc tới tiền. Bố mẹ mua thêm lượt trên điện thoại là Buddy trả lời tiếp ngay.',
+  q3: 'Buddy có nghe suốt ngày không?', a3: 'Không. Micro chỉ mở sau khi bé chạm nút và tắt khi lượt hỏi kết thúc. Không có từ khoá đánh thức và không có chế độ nghe nền.',
+  q4: 'Hai bé dùng chung được không?', a4: 'Được. Mỗi bé có thể có Buddy riêng, tất cả dùng chung ví lượt hỏi của gia đình. Bố mẹ chọn Buddy nào dành cho bé nào.',
+  q5: 'Buddy nói những ngôn ngữ nào?', a5: 'Tiếng Việt và tiếng Anh. Buddy trả lời bằng ngôn ngữ bé vừa dùng.',
+  q6: 'Tặng lại Buddy cho người khác được không?', a6: 'Được. Gỡ Buddy khỏi gia đình trong ứng dụng, mã trên thẻ sẽ dùng lại được cho gia đình mới.',
+
+  closeTitle: 'Sẵn sàng cho câu hỏi đầu tiên của bé?', closeSub: 'Tạo tài khoản trong một phút, nhận ngay 10 lượt hỏi.', closeCta: 'Tạo tài khoản',
+  footerMade: 'Làm cho những bộ óc tò mò 4 đến 8 tuổi',
+
+  // auth
+  welcomeBack: 'Chào mừng trở lại', createTitle: 'Tạo tài khoản gia đình', loginSub: 'Đăng nhập để xem Buddy và các bé.',
+  registerNote: 'Gia đình mới được tặng 10 lượt hỏi để bắt đầu.', familyName: 'Tên gia đình', familyPh: 'Ví dụ: Nhà Minh An',
+  yourName: 'Tên của bạn', email: 'Email', password: 'Mật khẩu', pwHint: 'Ít nhất 8 ký tự', register: 'Tạo tài khoản',
+  haveAccount: 'Đã có tài khoản?', noAccount: 'Chưa có tài khoản?',
+  authQuoteLogin: 'Buddy đang chờ nghe câu hỏi tiếp theo của bé.', authQuoteReg: 'Một lần chạm, một người bạn nhỏ biết lắng nghe.',
+  needFamily: 'Nhập tên gia đình giúp mình nhé.', badEmail: 'Email chưa đúng định dạng.', shortPw: 'Mật khẩu cần ít nhất 8 ký tự.',
+
+  // app
+  appNav: 'Điều hướng', nav_overview: 'Tổng quan', nav_toys: 'Đồ chơi', nav_credits: 'Lượt hỏi', nav_activity: 'Hoạt động', nav_family: 'Gia đình',
+  hi: 'Chào {name}', signOut: 'Đăng xuất', addToy: 'Thêm đồ chơi', loadFailed: 'Chưa tải được dữ liệu. Kiểm tra kết nối rồi thử lại nhé.',
+  notFoundT: 'Không tìm thấy trang này',
+  balLabel: 'Lượt hỏi còn lại', balUnit: 'lượt', balHint: '1 lượt = 1 câu trả lời. Mọi Buddy trong nhà dùng chung.', buy: 'Mua thêm lượt',
+  low: 'Sắp hết lượt', out: 'Đã hết lượt',
+  lowLong: 'Sắp hết lượt. Khi hết, Buddy sẽ nhẹ nhàng rủ bé nghỉ một chút.', outLong: 'Đã hết lượt. Bé chạm nút sẽ nghe Buddy nói: “Mình nghỉ một chút nhé!”',
+  chartTitle: 'Câu trả lời tuần này', chartTotal: '{n} câu trả lời', tip: '{d}: {n} câu trả lời', chartTable: 'Số câu trả lời theo ngày',
+  yourToys: 'Đồ chơi của nhà mình', manage: 'Quản lý', recent: 'Gần đây', seeAll: 'Xem tất cả',
+  noTurns: 'Chưa có câu hỏi nào.', activityNote: 'Đây là câu trả lời của Buddy. Lời bé nói không được hiển thị ở đây.',
+  filter: 'Lọc', fAll: 'Tất cả', fAnswered: 'Đã trả lời', fNot: 'Không trả lời',
+  forChild: 'Buddy của {name}', buddyUnassigned: 'Buddy {serial}', awake: 'Đang thức', resting: 'Đang nghỉ', support: 'Hỗ trợ đã tạm dừng', revoked: 'Đã khoá',
+  seen: 'Kết nối {t}',
+  onboardT: 'Thêm Buddy đầu tiên', onboardB: 'Mở hộp, lấy thẻ có mã 8 ký tự và nhập vào đây. Chưa đến một phút.',
+  answered: 'Buddy đã trả lời {name}', answering: 'Buddy đang trả lời {name}', notAnswered: 'Buddy không trả lời {name}', free: 'Không trừ',
+  r_disabled: 'Buddy đang nghỉ', r_no_credits: 'Hết lượt hỏi', r_not_claimed: 'Buddy chưa được thêm vào gia đình', r_daily_limit: 'Đã đủ số câu hỏi hôm nay',
+  r_quiet_hours: 'Đang trong giờ nghỉ', r_abandoned: 'Bé chưa hỏi xong', r_failed: 'Buddy gặp trục trặc nhỏ', r_accepted: 'Đang trả lời',
+  packs: 'Chọn gói', history: 'Lịch sử', noLedger: 'Chưa có giao dịch nào.',
+  l_debit: 'Buddy trả lời {n} câu', l_purchase: 'Mua gói {pack}', l_welcome: 'Quà chào mừng', l_grant: 'Hỗ trợ tặng thêm', l_refund: 'Hoàn lượt', l_expiry: 'Lượt hết hạn',
+  children: 'Các bé', age: '{n} tuổi', buddies: '{n} Buddy', noBuddy: 'Chưa có Buddy', addChild: 'Thêm bé', childName: 'Tên bé', birthYear: 'Năm sinh',
+  needName: 'Nhập tên bé giúp mình nhé.', noKids: 'Chưa có bé nào.', account: 'Tài khoản', language: 'Ngôn ngữ', saved: 'Đã lưu',
+  pause: 'Cho nghỉ', wake: 'Đánh thức', pausedToast: 'Buddy đang nghỉ', wokeToast: 'Buddy đã thức dậy',
+  pauseExplain: 'Khi Buddy nghỉ, bé chạm nút sẽ nghe: “Mình nghỉ một chút nhé, lát nữa chơi tiếp!” Không trừ lượt.',
+  supportExplain: 'Bộ phận hỗ trợ đã tạm dừng Buddy này. Liên hệ hỗ trợ để bật lại.',
+  toyFor: 'Dành cho', noChild: 'Chưa chọn bé', lastSeen: 'Kết nối lần cuối', serial: 'Số seri', firmware: 'Phần mềm',
+  remove: 'Gỡ khỏi gia đình', removeAsk: 'Gỡ Buddy này khỏi gia đình? Lịch sử vẫn được giữ. Mã trên thẻ dùng lại được, ví dụ khi bạn tặng Buddy cho người khác.',
+  removeYes: 'Gỡ Buddy', removed: 'Đã gỡ Buddy',
+  addTitle: 'Thêm đồ chơi', codeTitle: 'Nhập mã trên thẻ trong hộp',
+  codeHelp: 'Mã gồm 8 ký tự, dạng XXXX-XXXX. Mã không bao giờ có chữ O, I, L, U và số 0, 1 nên bạn không lo nhìn nhầm.',
+  codeBad: 'Mã không có ký tự “{c}”. Bạn xem lại thẻ giúp mình nhé.',
+  childTitle: 'Buddy này dành cho bé nào?', childHelp: 'Bạn có thể đổi lại bất cứ lúc nào.', addChildInline: 'Thêm bé mới', addThisToy: 'Thêm Buddy',
+  readyT: 'Buddy đã sẵn sàng!', readyB: 'Trong vài giây, màn hình của Buddy sẽ chuyển sang khuôn mặt vui. Bé chỉ cần chạm nút và hỏi.',
+  payTitle: 'Mua thêm lượt', pack: 'Gói', add: 'Thêm', total: 'Tổng cộng', payNote: 'Thanh toán thử trong giai đoạn demo. Không có tiền thật nào bị trừ.',
+  payDecline: 'Giả lập thẻ bị từ chối', pay: 'Thanh toán {price}', paying: 'Đang xử lý thanh toán…',
+  paidT: 'Đã thêm {n} lượt', paidB: 'Mọi Buddy trong nhà dùng được ngay. Số lượt hiện có: {b}.',
+  declinedT: 'Thanh toán chưa thành công', declinedB: 'Thẻ bị từ chối nên chưa có lượt nào được thêm. Bạn có thể thử lại hoặc dùng thẻ khác.',
+
+  // errors
+  err_generic: 'Có lỗi xảy ra. Bạn thử lại sau ít phút nhé.', err_network_error: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
+  err_rate_limited: 'Bạn thử hơi nhiều lần. Chờ khoảng {s} giây rồi thử lại nhé.', err_invalid_credentials: 'Email hoặc mật khẩu chưa đúng.',
+  err_email_taken: 'Email này đã có tài khoản. Bạn đăng nhập nhé.', err_validation_error: 'Thông tin chưa hợp lệ. Bạn kiểm tra lại nhé.',
+  err_claim_code_invalid: 'Mã này chưa khớp với Buddy nào, hoặc đã được thêm vào gia đình khác. Bạn xem lại thẻ nhé.',
+  err_child_not_found: 'Không tìm thấy bé này.', err_device_not_found: 'Không tìm thấy Buddy này.', err_device_not_active: 'Buddy đang không thức.',
+  err_device_not_disabled: 'Buddy đang thức rồi.', err_disabled_by_operator: 'Bộ phận hỗ trợ đã tạm dừng Buddy này. Liên hệ hỗ trợ để bật lại.',
+  err_payments_disabled: 'Hiện chưa mua được lượt. Bạn thử lại sau nhé.', err_pack_not_found: 'Gói này không còn bán.',
+  err_purchase_not_pending: 'Giao dịch này đã được xử lý.', err_unauthorized: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.',
+  err_token_expired: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.', err_refresh_token_reused: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.',
+  err_no_session: 'Bạn đăng nhập lại nhé.', err_internal_error: 'Máy chủ gặp trục trặc. Bạn thử lại sau ít phút nhé.', err_http_error: 'Có lỗi xảy ra. Bạn thử lại nhé.',
+};

@@ -1,43 +1,19 @@
-import { createElement, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function reducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-// Fade-and-rise on scroll. Content is only hidden once this code has run
-// (the class is added by JS), so nothing is lost if observers are missing.
-export function Reveal({ as = 'div', className = '', delay = 0, children, ...rest }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return undefined;
-    if (reducedMotion() || !('IntersectionObserver' in window)) {
-      el.classList.add('in');
-      return undefined;
-    }
-    el.classList.add('reveal');
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('in');
-          io.unobserve(entry.target);
-        }
-      }
-    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return createElement(as, { ref, className, style: { '--d': `${delay}ms` }, ...rest }, children);
-}
-
-// Animates a number from its previous value to the new one.
+// Animates a number from its previous value to the new one. The first real
+// value is shown as is: counting up only means something when the number
+// changes (a purchase, an answer), not when the page opens.
 export function useCountUp(value, duration = 800) {
   const [shown, setShown] = useState(value);
   const from = useRef(value);
   useEffect(() => {
     if (value === null || value === undefined) return undefined;
-    const start = from.current ?? 0;
-    if (reducedMotion() || start === value) {
+    const start = from.current;
+    if (start === null || start === undefined || reducedMotion() || start === value) {
       from.current = value;
       setShown(value);
       return undefined;

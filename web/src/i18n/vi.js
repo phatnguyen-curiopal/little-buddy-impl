@@ -26,7 +26,6 @@ export default {
   demo4q: 'Con khủng long to nhất dài cỡ nào?', demo4a: 'Có loài khủng long dài bằng ba chiếc xe buýt xếp liền nhau đó, to ghê chưa!',
   demo5q: 'Con bị té, đau đầu gối quá…', demo5a: 'Ôi, thương bé quá. Mình thổi phù phù nhé. Bé nhớ kể cho bố mẹ biết để bố mẹ xem giúp nha.',
 
-  marqueeLabel: 'Những câu bé hay hỏi Buddy',
 
   // how it works
   howEyebrow: 'Cách hoạt động', howTitle: 'Đơn giản như một lần chạm', howSub: 'Không ứng dụng cho bé, không màn hình để lướt. Chỉ một cái nút và một người bạn biết trả lời.',

@@ -43,7 +43,7 @@ function Screen({ name }) {
     );
   }
   const Comp = SCREENS[name];
-  return <div key={name} className="page-enter"><Comp /></div>;
+  return <Comp />;
 }
 
 function Shell({ screen }) {

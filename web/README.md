@@ -24,7 +24,7 @@ biến `BACKEND_URL`.
 
 | Đường dẫn | Nội dung |
 |---|---|
-| `/` | Trang giới thiệu: hero có Buddy tương tác (chạm nút để thử), câu hỏi chạy ngang, cách hoạt động, 14 cảm xúc, tính năng, an toàn, bảng giá (lấy từ API), hỏi đáp |
+| `/` | Trang giới thiệu: hero có Buddy tương tác (tự đổi khuôn mặt khi rảnh, chạm nút để thử), cách hoạt động, 14 cảm xúc, tính năng, an toàn, bảng giá (lấy từ API), hỏi đáp |
 | `/login`, `/register` | Đăng nhập, tạo tài khoản gia đình (tặng 10 lượt) |
 | `/app` | Tổng quan: số lượt còn lại, biểu đồ câu trả lời 7 ngày, đồ chơi, hoạt động gần đây |
 | `/app/toys` | Đồ chơi; bấm vào một Buddy để mở bảng chi tiết (cho nghỉ, đánh thức, đổi bé, gỡ khỏi gia đình) |
@@ -53,10 +53,16 @@ hình thật. Danh sách giống `backend/docs/device_auth.md` mục 7.
 
 ## Hiệu ứng
 
-Chữ hero hiện dần, Buddy lơ lửng và mắt nhìn theo con trỏ, ký hiệu trôi nền,
-câu hỏi chạy ngang, các phần hiện lên khi cuộn, biểu tượng an toàn tự vẽ, thẻ
-giá nghiêng theo chuột, số lượt đếm lên, cột biểu đồ mọc lên, pháo giấy khi mua
-lượt hoặc thêm đồ chơi. Tất cả tắt khi hệ điều hành bật "giảm chuyển động".
+Chỉ giữ hiệu ứng thuộc về cách một thành phần hoạt động; không có hiệu ứng khi
+trang hay nội dung vừa tải (không trượt vào, không hiện dần khi cuộn, cột biểu
+đồ đứng yên, số lượt hiện ngay).
+
+Hiệu ứng được giữ: Buddy ở hero lơ lửng, tự đổi khuôn mặt khoảng mỗi 3 giây khi
+rảnh, mắt nhìn theo con trỏ, và chạy thử một lượt hỏi khi chạm nút; mọi chuyển
+động của khuôn mặt; ký hiệu và ánh sáng nền ở hero; thẻ nhấc lên khi rê chuột,
+thẻ giá nghiêng theo chuột; số lượt đếm khi thay đổi (sau khi mua); hộp thoại,
+ngăn kéo, thông báo và pháo giấy khi mua lượt hoặc thêm đồ chơi. Tất cả tắt khi
+hệ điều hành bật "giảm chuyển động".
 
 ## Cấu trúc
 

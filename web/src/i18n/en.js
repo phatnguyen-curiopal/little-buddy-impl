@@ -26,7 +26,6 @@ export default {
   demo4q: 'How long was the biggest dinosaur?', demo4a: 'Some dinosaurs were as long as three buses parked in a row. Isn’t that huge?',
   demo5q: 'I fell down and my knee really hurts…', demo5a: 'Oh no, I’m sorry it hurts. Let me blow on it. Remember to tell a grown-up so they can take a look, okay?',
 
-  marqueeLabel: 'Questions children ask Buddy',
 
   // how it works
   howEyebrow: 'How it works', howTitle: 'As simple as one tap', howSub: 'No app for your child, no screen to scroll. Just one button and a friend with answers.',

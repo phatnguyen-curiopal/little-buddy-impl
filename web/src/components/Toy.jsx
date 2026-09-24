@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Face from './Face.jsx';
 import { useI18n } from '../lib/i18n.jsx';
-import { usePointerLook } from '../lib/motion.js';
+import { reducedMotion, usePointerLook } from '../lib/motion.js';
 
 // The hero toy. It behaves like the real one: one tap opens the microphone,
 // the toy notices on its own when the child has stopped talking, then it
@@ -21,9 +21,15 @@ const THINK_MS = 1300;
 const REST_AFTER_MS = 9000;
 const BARS = 11;
 
+// While nobody is talking to it, Buddy's screen moves through friendly
+// faces. Listening and thinking are left out because they mean something
+// during the demo; sad, confused and sleepy are the wrong mood for a hello.
+const IDLE_FACES = ['neutral', 'happy', 'curious', 'wink', 'excited', 'love', 'surprised', 'shy', 'laughing'];
+const IDLE_FACE_MS = 2800;
+
 const quiet = () => Array.from({ length: BARS }, () => 0.12);
 
-export default function Toy({ showcase = null }) {
+export default function Toy() {
   const { t } = useI18n();
   const ref = useRef(null);
   const look = usePointerLook(ref);
@@ -32,8 +38,18 @@ export default function Toy({ showcase = null }) {
   const [script, setScript] = useState(0);
   const [words, setWords] = useState(0);
   const [bars, setBars] = useState(quiet);
+  const [idleFace, setIdleFace] = useState(0);
   const timers = useRef([]);
   const next = useRef(0);
+
+  // Cycle faces only while idle; every return to idle starts again from
+  // the calm face so a finished demo does not end on a random expression.
+  useEffect(() => {
+    setIdleFace(0);
+    if (phase !== 'idle' || reducedMotion()) return undefined;
+    const id = setInterval(() => setIdleFace((i) => (i + 1) % IDLE_FACES.length), IDLE_FACE_MS);
+    return () => clearInterval(id);
+  }, [phase]);
 
   const clear = () => {
     timers.current.forEach(clearTimeout);
@@ -98,7 +114,7 @@ export default function Toy({ showcase = null }) {
     else if (phase === 'idle' || phase === 'answer') start();
   };
 
-  const emotion = showcase && phase === 'idle' ? showcase
+  const emotion = phase === 'idle' ? IDLE_FACES[idleFace]
     : phase === 'listening' ? 'listening'
       : phase === 'heard' ? 'curious'
         : phase === 'thinking' ? 'thinking'

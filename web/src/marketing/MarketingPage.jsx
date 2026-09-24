@@ -4,7 +4,7 @@ import Toy from '../components/Toy.jsx';
 import { Icon, LangSwitch } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { Link } from '../lib/router.js';
-import { Reveal, reducedMotion, usePointerVars } from '../lib/motion.js';
+import { reducedMotion, usePointerVars } from '../lib/motion.js';
 import { EMOTIONS } from '../lib/emotions.js';
 import { api } from '../lib/api.js';
 import { vnd, pricePerAnswer } from '../lib/format.js';
@@ -16,11 +16,6 @@ const FALLBACK_PACKS = [
   { id: 'family', credits: 60, price_amount: 129000, currency: 'VND' },
   { id: 'big', credits: 150, price_amount: 299000, currency: 'VND' },
 ];
-
-// Real questions children ask, in both languages on purpose: Buddy answers
-// in whichever one the child used.
-const QUESTIONS_A = ['Vì sao trời mưa?', 'Why do cats purr?', 'Cá mập có răng không?', 'How far is the Moon?', 'Vì sao lá cây màu xanh?', 'Do fish sleep?', 'Kể chuyện khủng long đi!', 'What is a rainbow made of?'];
-const QUESTIONS_B = ['Tại sao con phải đánh răng?', 'Why is the sea salty?', 'Voi nặng bao nhiêu?', 'Can penguins fly?', 'Ngôi sao ở đâu ban ngày?', 'What do bees do?', 'Buddy thích màu gì?', 'Why do we dream?'];
 
 const GLYPHS = [
   ['?', 8, 18, 0, 11], ['★', 16, 70, 2, 14], ['!', 30, 30, 4, 9], ['♥', 44, 82, 1, 13], ['?', 58, 12, 3, 12],
@@ -70,7 +65,6 @@ function Hero() {
   const { t } = useI18n();
   const ref = useRef(null);
   usePointerVars(ref);
-  const words = t('heroB').split(' ');
   return (
     <section className="hero" id="top" ref={ref}>
       <div className="hero-glow" aria-hidden="true" />
@@ -79,42 +73,20 @@ function Hero() {
       </div>
       <div className="wrap hero-inner">
         <div className="hero-copy">
-          <p className="eyebrow rise" style={{ '--d': '0ms' }}>{t('heroEyebrow')}</p>
+          <p className="eyebrow">{t('heroEyebrow')}</p>
           <h1>
-            <span className="rise" style={{ '--d': '80ms' }}>{t('heroA')}</span>
-            <span className="accent">
-              {words.map((w, i) => <span key={`${w}-${i}`} className="rise word" style={{ '--d': `${200 + i * 90}ms` }}>{w} </span>)}
-            </span>
+            <span>{t('heroA')}</span>
+            <span className="accent">{t('heroB')}</span>
           </h1>
-          <p className="hero-sub rise" style={{ '--d': `${300 + words.length * 90}ms` }}>{t('heroSub')}</p>
-          <div className="hero-ctas rise" style={{ '--d': `${420 + words.length * 90}ms` }}>
+          <p className="hero-sub">{t('heroSub')}</p>
+          <div className="hero-ctas">
             <Link className="btn apricot lg sheen" to="/register">{t('ctaStart')}{Icon.arrow}</Link>
             <a className="btn ghost-light lg" href="#how">{t('ctaHow')}</a>
           </div>
-          <p className="trust rise" style={{ '--d': `${520 + words.length * 90}ms` }}><i />{t('trust')}</p>
+          <p className="trust"><i />{t('trust')}</p>
         </div>
-        <div className="rise" style={{ '--d': '250ms' }}>
-          <Toy />
-        </div>
+        <Toy />
       </div>
-    </section>
-  );
-}
-
-function Marquee() {
-  const { t } = useI18n();
-  const row = (items, reverse) => (
-    <div className={`marquee-row ${reverse ? 'marquee-row--rev' : ''}`}>
-      <div className="marquee-track">
-        {[...items, ...items].map((q, i) => <span key={i} className="q-chip" aria-hidden={i >= items.length}>{q}</span>)}
-      </div>
-    </div>
-  );
-  return (
-    <section className="marquee" aria-label={t('marqueeLabel')}>
-      <p className="wrap eyebrow">{t('marqueeLabel')}</p>
-      {row(QUESTIONS_A, false)}
-      {row(QUESTIONS_B, true)}
     </section>
   );
 }
@@ -129,17 +101,17 @@ function HowItWorks() {
   return (
     <section className="band" id="how">
       <div className="wrap">
-        <Reveal className="band-head"><p className="eyebrow">{t('howEyebrow')}</p><h2>{t('howTitle')}</h2><p>{t('howSub')}</p></Reveal>
+        <div className="band-head"><p className="eyebrow">{t('howEyebrow')}</p><h2>{t('howTitle')}</h2><p>{t('howSub')}</p></div>
         <div className="steps">
-          {steps.map((s, i) => (
-            <Reveal as="article" key={s.n} className="step lift" delay={i * 120}>
+          {steps.map((s) => (
+            <article key={s.n} className="step lift">
               <div className="step-top">
                 <span className="step-n">{s.n}</span>
                 {s.face ? <span className="chip-screen"><Face emotion={s.face} /></span> : <span className="mini-phone"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="6.5" y="3" width="11" height="18" rx="3" /><path d="M10.5 17.5h3" /></svg></span>}
               </div>
               <h3>{t(`s${s.n}t`)}</h3>
               <p>{t(`s${s.n}b`)}</p>
-            </Reveal>
+            </article>
           ))}
         </div>
       </div>
@@ -165,16 +137,16 @@ function Emotions() {
   return (
     <section className="band alt" id="emotions">
       <div className="wrap">
-        <Reveal className="band-head"><p className="eyebrow">{t('emoEyebrow')}</p><h2>{t('emoTitle')}</h2><p>{t('emoSub')}</p></Reveal>
+        <div className="band-head"><p className="eyebrow">{t('emoEyebrow')}</p><h2>{t('emoTitle')}</h2><p>{t('emoSub')}</p></div>
         <div className="emo-layout">
-          <Reveal className="emo-stage">
+          <div className="emo-stage">
             <div className="emo-screen" key={picked}><Face emotion={picked} label={t(`emo_${picked}`)} /></div>
             <div className="emo-caption" aria-live="polite">
               <b>{t(`emo_${picked}`)}</b>
               <span>{t(`emoWhen_${picked}`)}</span>
             </div>
-          </Reveal>
-          <Reveal className="emo-grid" delay={120}>
+          </div>
+          <div className="emo-grid">
             {EMOTIONS.map((e) => (
               <button
                 key={e}
@@ -189,7 +161,7 @@ function Emotions() {
                 <span>{t(`emo_${e}`)}</span>
               </button>
             ))}
-          </Reveal>
+          </div>
         </div>
       </div>
     </section>
@@ -207,31 +179,31 @@ function Features() {
   return (
     <section className="band" id="meet">
       <div className="wrap">
-        <Reveal className="band-head"><p className="eyebrow">{t('featEyebrow')}</p><h2>{t('featTitle')}</h2></Reveal>
+        <div className="band-head"><p className="eyebrow">{t('featEyebrow')}</p><h2>{t('featTitle')}</h2></div>
         <div className="bento">
-          <Reveal as="article" className="tile tile--a lift">
+          <article className="tile tile--a lift">
             <h3>{t('f1t')}</h3><p>{t('f1b')}</p>
             <div className="say-lines">
               <span className="say say--child">{t('f1c')}</span><span className="say say--buddy">{t('f1d')}</span>
               <span className="say say--child">{t('f1e')}</span><span className="say say--buddy">{t('f1f')}</span>
             </div>
-          </Reveal>
-          <Reveal as="article" className="tile tile--b lift" delay={100}>
+          </article>
+          <article className="tile tile--b lift">
             <h3>{t('vadT')}</h3><p>{t('vadB')}</p>
             <div className="vad" aria-hidden="true">
               <div className="vad-wave">{Array.from({ length: 14 }, (_, i) => <span key={i} style={{ '--i': i }} />)}</div>
               <div className="vad-labels"><span className="vad-speak">{t('vadSpeak')}</span><span className="vad-done">{Icon.check}{t('vadDone')}</span></div>
             </div>
-          </Reveal>
-          <Reveal as="article" className="tile tile--c lift" delay={60}>
+          </article>
+          <article className="tile tile--c lift">
             <h3>{t('f3t')}</h3><p>{t('f3b')}</p>
-            <div className="scenes">{scenes.map((sc, i) => <div key={i} className="scene" style={{ '--i': i }}><svg viewBox="0 0 100 100" aria-hidden="true">{sc}</svg></div>)}</div>
-          </Reveal>
-          <Reveal as="article" className="tile tile--d lift" delay={140}>
+            <div className="scenes">{scenes.map((sc, i) => <div key={i} className="scene"><svg viewBox="0 0 100 100" aria-hidden="true">{sc}</svg></div>)}</div>
+          </article>
+          <article className="tile tile--d lift">
             <span className="soon">{t('soon')}</span>
             <h3>{t('f4t')}</h3><p>{t('f4b')}</p>
             <div className="personas">{['pFriend', 'pTeacher', 'pDad', 'pMom'].map((k) => <span key={k} className="persona">{t(k)}</span>)}</div>
-          </Reveal>
+          </article>
         </div>
       </div>
     </section>
@@ -253,14 +225,14 @@ function Safety() {
   return (
     <section className="band safety" id="safety">
       <div className="wrap">
-        <Reveal className="band-head"><p className="eyebrow">{t('safeEyebrow')}</p><h2>{t('safeTitle')}</h2><p>{t('safeSub')}</p></Reveal>
+        <div className="band-head"><p className="eyebrow">{t('safeEyebrow')}</p><h2>{t('safeTitle')}</h2><p>{t('safeSub')}</p></div>
         <div className="promises">
           {items.map((ic, i) => (
-            <Reveal key={ic} className="promise" delay={i * 80}>
+            <div key={ic} className="promise">
               <div className="ic"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="draw">{SAFETY_ICONS[ic]}</svg></div>
               <h3>{t(`sa${i + 1}t`)}</h3>
               <p>{t(`sa${i + 1}b`)}</p>
-            </Reveal>
+            </div>
           ))}
         </div>
       </div>
@@ -268,13 +240,13 @@ function Safety() {
   );
 }
 
-function PriceCard({ pack, delay }) {
+function PriceCard({ pack }) {
   const { t, lang } = useI18n();
   const ref = useRef(null);
   usePointerVars(ref, { tilt: true });
   const best = pack.id === 'big';
   return (
-    <Reveal as="article" className={`price ${best ? 'price--best' : ''}`} delay={delay}>
+    <article className={`price ${best ? 'price--best' : ''}`}>
       <div className="price-inner" ref={ref}>
         <h3>{t(`pack_${pack.id}`)}{best && <span className="badge">{t('best')}</span>}</h3>
         <div className="price-amt">{vnd(pack.price_amount, lang)}</div>
@@ -282,7 +254,7 @@ function PriceCard({ pack, delay }) {
         <div className="price-per">{t('perAnswer', { p: vnd(pricePerAnswer(pack), lang) })}</div>
         <Link className={`btn ${best ? 'apricot' : 'ghost'} block`} to="/register">{t('choose')}</Link>
       </div>
-    </Reveal>
+    </article>
   );
 }
 
@@ -295,12 +267,12 @@ function Pricing() {
   return (
     <section className="band" id="pricing">
       <div className="wrap">
-        <Reveal className="band-head"><p className="eyebrow">{t('priceEyebrow')}</p><h2>{t('priceTitle')}</h2><p>{t('priceSub')}</p></Reveal>
-        <Reveal className="free"><b>{t('freeA')}</b><span>{t('freeB')}</span></Reveal>
-        <div className="price-grid">{packs.map((p, i) => <PriceCard key={p.id} pack={p} delay={i * 110} />)}</div>
-        <Reveal className="price-notes">
+        <div className="band-head"><p className="eyebrow">{t('priceEyebrow')}</p><h2>{t('priceTitle')}</h2><p>{t('priceSub')}</p></div>
+        <div className="free"><b>{t('freeA')}</b><span>{t('freeB')}</span></div>
+        <div className="price-grid">{packs.map((p) => <PriceCard key={p.id} pack={p} />)}</div>
+        <div className="price-notes">
           {['note1', 'note2', 'note3'].map((k) => <span key={k}>{Icon.check}{t(k)}</span>)}
-        </Reveal>
+        </div>
       </div>
     </section>
   );
@@ -311,10 +283,10 @@ function Faq() {
   return (
     <section className="band alt" id="faq">
       <div className="wrap">
-        <Reveal className="band-head"><p className="eyebrow">{t('faqEyebrow')}</p><h2>{t('faqTitle')}</h2></Reveal>
+        <div className="band-head"><p className="eyebrow">{t('faqEyebrow')}</p><h2>{t('faqTitle')}</h2></div>
         <div className="faq">
-          {[1, 2, 3, 4, 5, 6].map((n, i) => (
-            <Reveal as="details" key={n} delay={i * 50}><summary>{t(`q${n}`)}</summary><p>{t(`a${n}`)}</p></Reveal>
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <details key={n}><summary>{t(`q${n}`)}</summary><p>{t(`a${n}`)}</p></details>
           ))}
         </div>
       </div>
@@ -327,7 +299,7 @@ function Closing() {
   return (
     <section className="closing">
       <div className="wrap">
-        <Reveal className="closing-card">
+        <div className="closing-card">
           <div className="closing-faces" aria-hidden="true">
             {['happy', 'love', 'excited', 'wink'].map((e, i) => <span key={e} className="chip-screen float" style={{ '--i': i }}><Face emotion={e} /></span>)}
           </div>
@@ -336,7 +308,7 @@ function Closing() {
             <p>{t('closeSub')}</p>
           </div>
           <Link className="btn dark lg sheen" to="/register">{t('closeCta')}{Icon.arrow}</Link>
-        </Reveal>
+        </div>
         <footer className="footer"><span>© 2026 Little Buddy</span><span>{t('footerMade')}</span></footer>
       </div>
     </section>
@@ -349,7 +321,6 @@ export default function MarketingPage() {
       <Nav />
       <main>
         <Hero />
-        <Marquee />
         <HowItWorks />
         <Emotions />
         <Features />

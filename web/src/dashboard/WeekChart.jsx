@@ -47,7 +47,7 @@ export default function WeekChart({ turns }) {
             const tip = t('tip', { d: long.format(d.start), n: d.n });
             return (
               <g key={d.start}>
-                {h > 0 && <path className="bar" style={{ '--i': i }} d={`M${x} ${base} V${yt + r} Q${x} ${yt} ${x + r} ${yt} H${x + bw - r} Q${x + bw} ${yt} ${x + bw} ${yt + r} V${base} Z`} />}
+                {h > 0 && <path className="bar" d={`M${x} ${base} V${yt + r} Q${x} ${yt} ${x + r} ${yt} H${x + bw - r} Q${x + bw} ${yt} ${x + bw} ${yt + r} V${base} Z`} />}
                 {d.today && <text className="val" x={x + bw / 2} y={yt - 8} textAnchor="middle">{d.n}</text>}
                 <text className={`axis ${d.today ? 'today' : ''}`} x={x + bw / 2} y={H - 8} textAnchor="middle">{short.format(d.start)}</text>
                 <rect

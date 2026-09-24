@@ -15,20 +15,20 @@ export function Overview() {
   const d = useFamilyData();
   const recent = d.turns.slice(0, 4);
   return (
-    <div className="grid-12 stagger">
+    <div className="grid-12">
       <BalanceCard balance={d.wallet?.balance ?? null} className="span-5" />
       <div className="span-7"><WeekChart turns={d.turns} /></div>
       <section className="span-12">
         {d.devices.length ? (
           <>
             <div className="section-title"><h2>{t('yourToys')}</h2><button type="button" className="link" onClick={() => navigate('/app/toys')}>{t('manage')}</button></div>
-            <div className="toy-grid">{d.devices.map((dev, i) => <ToyCard key={dev.id} device={dev} kids={d.children} index={i} />)}<AddTile /></div>
+            <div className="toy-grid">{d.devices.map((dev, i) => <ToyCard key={dev.id} device={dev} kids={d.children} />)}<AddTile /></div>
           </>
         ) : <Onboard />}
       </section>
       <section className="panel span-12">
         <div className="panel-head"><h2>{t('recent')}</h2>{recent.length > 0 && <button type="button" className="link" onClick={() => navigate('/app/activity')}>{t('seeAll')}</button>}</div>
-        <div className="feed">{recent.length ? recent.map((turn, i) => <TurnRow key={turn.id} turn={turn} index={i} />) : <p className="empty">{t('noTurns')}</p>}</div>
+        <div className="feed">{recent.length ? recent.map((turn, i) => <TurnRow key={turn.id} turn={turn} />) : <p className="empty">{t('noTurns')}</p>}</div>
       </section>
     </div>
   );
@@ -37,7 +37,7 @@ export function Overview() {
 export function Toys() {
   const d = useFamilyData();
   if (!d.devices.length) return <Onboard />;
-  return <div className="toy-grid stagger">{d.devices.map((dev, i) => <ToyCard key={dev.id} device={dev} kids={d.children} index={i} />)}<AddTile /></div>;
+  return <div className="toy-grid">{d.devices.map((dev, i) => <ToyCard key={dev.id} device={dev} kids={d.children} />)}<AddTile /></div>;
 }
 
 function ledgerLabel(row, t) {
@@ -56,7 +56,7 @@ export function Credits() {
   const { openPay } = useLayers();
   const rows = groupLedger(d.wallet?.ledger ?? []);
   return (
-    <div className="grid-12 stagger">
+    <div className="grid-12">
       <BalanceCard balance={d.wallet?.balance ?? null} className="span-5" />
       <section className="panel span-7">
         <div className="panel-head"><h2>{t('packs')}</h2></div>
@@ -74,7 +74,7 @@ export function Credits() {
         <div className="panel-head"><h2>{t('history')}</h2></div>
         <div className="feed">
           {rows.length ? rows.map((r, i) => (
-            <div key={r.id} className="feed-item" style={{ '--i': i }}>
+            <div key={r.id} className="feed-item">
               <span className={`dot ${r.delta > 0 ? 'dot--coin' : 'dot--rest'}`}>{r.delta > 0 ? Icon.plus : Icon.check}</span>
               <div><div className="feed-title">{ledgerLabel(r, t)}</div><div className="feed-sub">{relativeTime(r.created_at, t)}</div></div>
               <span className={`delta ${r.delta > 0 ? 'pos' : ''}`}>{r.delta > 0 ? '+' : ''}{r.delta}</span>
@@ -92,7 +92,7 @@ export function Activity() {
   const [filter, setFilter] = useState('all');
   const list = d.turns.filter((u) => (filter === 'all' ? true : filter === 'answered' ? u.status === 'completed' : u.status !== 'completed'));
   return (
-    <section className="panel stagger">
+    <section className="panel">
       <div className="panel-head">
         <div className="seg" role="group" aria-label={t('filter')}>
           {[['all', 'fAll'], ['answered', 'fAnswered'], ['not', 'fNot']].map(([v, k]) => (
@@ -100,7 +100,7 @@ export function Activity() {
           ))}
         </div>
       </div>
-      <div className="feed">{list.length ? list.map((turn, i) => <TurnRow key={turn.id} turn={turn} index={Math.min(i, 12)} />) : <p className="empty">{t('noTurns')}</p>}</div>
+      <div className="feed">{list.length ? list.map((turn, i) => <TurnRow key={turn.id} turn={turn} />) : <p className="empty">{t('noTurns')}</p>}</div>
       <p className="muted small">{t('activityNote')}</p>
     </section>
   );
@@ -147,7 +147,7 @@ export function Family() {
   const toast = useToast();
   const [adding, setAdding] = useState(false);
   return (
-    <div className="grid-12 stagger">
+    <div className="grid-12">
       <section className="panel span-7">
         <div className="panel-head"><h2>{t('children')}</h2>{!adding && <button type="button" className="link" onClick={() => setAdding(true)}>+ {t('addChild')}</button>}</div>
         {d.children.length ? (

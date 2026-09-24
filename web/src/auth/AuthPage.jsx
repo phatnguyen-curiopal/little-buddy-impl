@@ -61,7 +61,7 @@ export default function AuthPage({ mode }) {
       </div>
       <div className="auth-main">
         <div className="auth-top"><Link className="link" to="/">{t('backHome')}</Link><LangSwitch /></div>
-        <form className="form auth-form rise" onSubmit={submit} noValidate>
+        <form className="form auth-form" onSubmit={submit} noValidate>
           <h1>{reg ? t('createTitle') : t('welcomeBack')}</h1>
           <p className="muted">{reg ? t('registerNote') : t('loginSub')}</p>
           {reg && (<>

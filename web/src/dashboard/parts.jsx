@@ -49,7 +49,7 @@ export function useIdleFace(base, enabled) {
 
 export function BalanceCard({ balance, className = '' }) {
   const { t } = useI18n();
-  const shown = useCountUp(balance ?? 0);
+  const shown = useCountUp(balance) ?? 0;
   const { openPay } = useLayers();
   const out = balance === 0;
   const low = balance !== null && balance > 0 && balance <= 5;
@@ -69,14 +69,14 @@ export function BalanceCard({ balance, className = '' }) {
   );
 }
 
-export function ToyCard({ device, kids, index = 0 }) {
+export function ToyCard({ device, kids }) {
   const { t } = useI18n();
   const name = useToyName()(device, kids);
   const look = toyLook(device);
   const face = useIdleFace(look.emotion, device.status === 'active');
   const { openToy } = useLayers();
   return (
-    <button type="button" className="toy-card lift" style={{ '--i': index }} onClick={(e) => openToy(device.id, e.currentTarget)}>
+    <button type="button" className="toy-card lift" onClick={(e) => openToy(device.id, e.currentTarget)}>
       <span className={`tc-screen ${look.dim ? 'dim' : ''}`}><Face emotion={face} /></span>
       <span className="tc-body">
         <span className="tc-name">{name}</span>
@@ -111,13 +111,13 @@ export function Onboard() {
   );
 }
 
-export function TurnRow({ turn, index = 0 }) {
+export function TurnRow({ turn }) {
   const { t } = useI18n();
   const who = turn.child_name ?? turn.device_serial ?? 'Buddy';
   const when = relativeTime(turn.started_at, t);
   if (turn.status === 'completed') {
     return (
-      <div className="feed-item" style={{ '--i': index }}>
+      <div className="feed-item">
         <span className="chip-screen chip-screen--sm"><Face emotion={normalizeEmotion(turn.emotion)} /></span>
         <div>
           <div className="feed-title">{t('answered', { name: who })}</div>
@@ -130,7 +130,7 @@ export function TurnRow({ turn, index = 0 }) {
   }
   const reason = turn.status === 'denied' ? t(`r_${turn.denied_reason}`) : t(`r_${turn.status}`);
   return (
-    <div className="feed-item" style={{ '--i': index }}>
+    <div className="feed-item">
       <span className="chip-screen chip-screen--sm dim"><Face emotion={turn.status === 'denied' ? 'sleepy' : 'confused'} /></span>
       <div>
         <div className="feed-title">{turn.status === 'accepted' ? t('answering', { name: who }) : t('notAnswered', { name: who })}</div>

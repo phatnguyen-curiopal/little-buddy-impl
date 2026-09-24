@@ -148,7 +148,8 @@ dashboardRouter.get('/wallet', requireParent, async (req, res) => {
   res.json(await billing.wallet(req.familyId, { limit: limitParam(req) }));
 });
 
-dashboardRouter.get('/credit-packs', requireParent, async (req, res) => {
+// Public: the marketing site shows the price list to visitors.
+dashboardRouter.get('/credit-packs', async (req, res) => {
   res.json({ packs: await buying.listPacks() });
 });
 

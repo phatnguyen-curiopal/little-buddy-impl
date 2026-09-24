@@ -109,12 +109,19 @@ channel. The parent dashboard shows the real reason.
 
 Toy to server (text frames):
 
+The microphone is a toggle, not hold-to-talk. The child taps the button
+once and talks; the toy decides when they have finished, using voice
+activity detection on the device (a pause after speech), and ends the turn
+itself. A second tap while the toy is listening also ends the turn ("I'm
+done"). Either way the firmware sends `turn_end`; the server never needs
+to know which one happened.
+
 | type | meaning |
 |---|---|
-| `turn_start` | the button was pressed |
+| `turn_start` | the child tapped the button: the microphone opens |
 | binary frames | PCM16 16 kHz 20 ms audio while the turn is open (640 bytes each) |
-| `turn_end` | the button was released |
-| `turn_cancel` | give up this turn |
+| `turn_end` | the child finished talking: the toy heard the pause after speech, or the child tapped again. The microphone closes. |
+| `turn_cancel` | give up this turn (for example the toy heard no speech at all); nothing is charged |
 | `ping` | keepalive |
 
 Server to toy:
@@ -125,7 +132,14 @@ Server to toy:
 | `turn_denied` | `emotion`, `say`, `conversation_open:false` | show the face and say the sentence; nothing is charged |
 | `answer` | `turn_id`, `emotion`, `say` | the answer, sent before anything is charged |
 | `turn_done` | `turn_id`, `status:"completed"|"abandoned"|"failed"` | the turn is closed; only `completed` charged a credit |
-| `error` | `code:"turn_in_flight"|"no_turn"` | protocol misuse: a second press mid-turn, or a release with no turn open |
+| `error` | `code:"turn_in_flight"|"no_turn"` | protocol misuse: a second `turn_start` while a turn is open (a second tap must be sent as `turn_end`), or a `turn_end` with no turn open |
+
+`emotion` is one of `neutral`, `listening`, `thinking`, `happy`, `excited`,
+`laughing`, `love`, `curious`, `surprised`, `wink`, `shy`, `confused`,
+`sad`, `sleepy`. The firmware should draw each one and fall back to
+`neutral` for anything it does not know. Today the server sends
+`listening`, `happy`, `sleepy` and `confused`; the rest arrive with the real
+model. The parent website (`web/`) draws the same set.
 
 A turn that is not ended within 120 seconds, a cancelled turn, a socket
 that drops mid-turn, and a kill switch (close code 4003) all end as

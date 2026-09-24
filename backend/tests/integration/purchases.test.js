@@ -34,7 +34,9 @@ test('packs are listed in order with credits and price', async () => {
   const res = await api('GET', '/api/credit-packs', { token: p.token });
   assert.equal(res.status, 200);
   assert.deepEqual(res.body.packs.map((x) => [x.id, x.credits, x.currency]), [['starter', 20, 'VND'], ['family', 60, 'VND'], ['big', 150, 'VND']]);
-  assert.equal((await api('GET', '/api/credit-packs')).status, 401);
+  const anonymous = await api('GET', '/api/credit-packs');
+  assert.equal(anonymous.status, 200, 'the price list is public for the marketing site');
+  assert.equal(anonymous.body.packs.length, 3);
 });
 
 test('create is pending and adds nothing; pay adds the pack once', async () => {

@@ -38,7 +38,7 @@ WebSocket `/v1/stream` với chữ ký trong query string. Ô "deliberate skew" 
 tình gây `auth_ts_skew` và xem lần thử lại tự động. Khi phụ huynh hoặc vận hành
 tắt thiết bị trong lúc stream đang mở, socket bị đóng với mã `4003`.
 Thẻ **The button**: Press gửi `turn_start` (ask gate quyết định, credit được
-giữ chỗ), Send frames, Release gửi `turn_end` và nhận `answer` rồi bị trừ một
+giữ chỗ), Send frames, "Child finished talking" gửi `turn_end` (đồ chơi thật tự gửi khi nghe bé ngừng nói hoặc bé chạm lần nữa) và nhận `answer` rồi bị trừ một
 credit; Cancel không trừ. Bị từ chối thì chỉ thấy cảm xúc và câu nói.
 
 **Admin** (`/admin`): token vận hành (mặc định dev điền sẵn), cấp credit cho một

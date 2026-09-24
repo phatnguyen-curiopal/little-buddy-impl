@@ -89,7 +89,7 @@ export default function ToyLane({ toy }) {
             <Button kind="primary" onClick={toy.pressButton} disabled={state.stream.state !== 'open'}>Press button</Button>
           ) : (
             <>
-              <Button kind="primary" onClick={toy.release} disabled={state.turn.phase !== 'listening'}>Release (ask)</Button>
+              <Button kind="primary" onClick={toy.release} disabled={state.turn.phase !== 'listening'}>Child finished talking (turn_end)</Button>
               <Button onClick={() => toy.burst(25)} disabled={state.turn.phase !== 'listening'}>Send 25 frames</Button>
               <Button onClick={toy.cancelTurn} disabled={state.turn.phase !== 'listening'}>Cancel</Button>
             </>
@@ -105,7 +105,7 @@ export default function ToyLane({ toy }) {
             <div>"{state.turn.lastSay}"</div>
           </div>
         )}
-        <p className="muted">Press asks the gate: claimed and active, and the family still has a credit. A refusal is only an emotion and a sentence; the reason shows up in the Parent lane's turns list. Release sends the (mock) answer and only then charges one credit. Cancel, timeout and the kill switch charge nothing.</p>
+        <p className="muted">Press asks the gate: claimed and active, and the family still has a credit. A refusal is only an emotion and a sentence; the reason shows up in the Parent lane's turns list. The real toy sends turn_end by itself when it hears the child stop talking (or on a second tap); this button stands in for that. The (mock) answer arrives first, then one credit is charged. Cancel, timeout and the kill switch charge nothing.</p>
       </section>
     </div>
   );

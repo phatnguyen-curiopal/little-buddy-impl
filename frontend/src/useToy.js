@@ -15,7 +15,7 @@ const nowSec = () => Math.floor(Date.now() / 1000);
 const initialStream = { state: 'closed', readyAt: null, lastPong: null, closeCode: null, closeReason: null, framesSent: 0, refusedHint: null, cutBadge: false };
 
 // One button press. phase: idle | listening (accepted, frames flowing) |
-// thinking (released, waiting for the answer). lastEmotion is what the
+// thinking (turn_end sent, waiting for the answer). lastEmotion is what the
 // toy's face shows; lastSay is what it would speak.
 const initialTurn = { phase: 'idle', turnId: null, lastEmotion: null, lastSay: null, lastStatus: null, lastError: null };
 
@@ -298,8 +298,9 @@ export function useToy() {
     return true;
   }, [r]);
 
-  // The button. Press reserves a credit if the gate allows; release asks
-  // for the answer; cancel gives the credit back.
+  // The button. Press reserves a credit if the gate allows; turn_end (the
+  // toy heard the child stop, or a second tap) asks for the answer; cancel
+  // gives the credit back.
   const pressButton = useCallback(() => {
     if (sendText({ type: 'turn_start' })) patchTurn({ lastError: null, lastStatus: null });
   }, [sendText, patchTurn]);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Face from '../components/Face.jsx';
 import { burst } from '../components/Confetti.js';
 import { CloseButton, Icon, Layer, Pill, useErrorText, useToast } from '../components/ui.jsx';
@@ -8,8 +8,8 @@ import { relativeTime, vnd, age } from '../lib/format.js';
 import { useFamilyData } from './data.jsx';
 import { toyLook, useToyName } from './parts.jsx';
 import { ChildForm } from './screens.jsx';
-import { ProfileEditor, ProfileSummary } from './profile.jsx';
-import { DEFAULT_PROFILE } from '../lib/personality.js';
+import { NameField, PersonalityPicker, PersonalityQuiz, ProfileEditor, ProfileSummary, RolePicker } from './profile.jsx';
+import { DEFAULT_PROFILE, typeOf } from '../lib/personality.js';
 
 // Same alphabet as backend/devices/claim_code.js: no I, L, O, U, 0 or 1.
 const ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
@@ -119,10 +119,20 @@ export function ToyDrawer({ id, onClose }) {
   );
 }
 
+// Screens of the add-toy wizard and the stepper phase each one lights up.
+const PHASES = ['code', 'child', 'name', 'role', 'personality', 'review'];
+const PHASE_OF = { quiz: 'personality', pick: 'personality', done: 'review' };
+const sameProfile = (a, b) => a.name === b.name && a.role === b.role && a.personality === b.personality;
+
+// The toy is claimed as soon as the child is chosen, with the default profile,
+// so a wrong code shows up before any profile work and closing the wizard
+// later never loses the toy. The profile screens then save with one PATCH.
 export function AddToyModal({ onClose }) {
   const { t } = useI18n();
   const d = useFamilyData();
+  const toast = useToast();
   const errText = useErrorText();
+  const body = useRef(null);
   const [step, setStep] = useState('code');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -130,8 +140,22 @@ export function AddToyModal({ onClose }) {
   const [adding, setAdding] = useState(d.children.length === 0);
   const [busy, setBusy] = useState(false);
   const [device, setDevice] = useState(null);
-  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  const [draft, setDraft] = useState(DEFAULT_PROFILE);
   const [nameError, setNameError] = useState('');
+  const [reviewed, setReviewed] = useState(false); // after the first review, "next" returns there
+  const [leaving, setLeaving] = useState(false);
+
+  // The Layer focuses once when it opens; each new screen needs it again.
+  useEffect(() => {
+    body.current?.querySelector('[data-autofocus]')?.focus();
+  }, [step, leaving]);
+
+  const go = (next) => {
+    setError('');
+    setStep(next);
+  };
+  const forward = (next) => go(reviewed ? 'review' : next);
+  const set = (patch) => setDraft((p) => ({ ...p, ...patch }));
 
   const bad = [...code].find((c) => !ALPHABET.includes(c));
   const onCode = (e) => {
@@ -139,103 +163,217 @@ export function AddToyModal({ onClose }) {
     setError('');
   };
 
-  const pickChild = (childId) => {
-    setChild(childId);
-    setError('');
-    setStep('profile');
-  };
-
-  // Without a profile the backend stores the defaults, so "later" and an
-  // untouched editor end up in the same place.
-  const claim = async (withProfile) => {
-    if (withProfile && !profile.name.trim()) {
-      setNameError(t('needBuddyName'));
-      return;
-    }
+  const claim = async (childId) => {
     setBusy(true);
     setError('');
     try {
-      const out = await api.claim({
-        claim_code: code,
-        ...(child ? { child_id: child } : {}),
-        ...(withProfile ? { profile: { ...profile, name: profile.name.trim() } } : {}),
-      });
+      const out = await api.claim({ claim_code: code, ...(childId ? { child_id: childId } : {}) });
       setDevice(out.device);
-      setStep('done');
-      await d.reload();
+      // A retried claim returns the toy as it is, profile included.
+      setDraft(out.device.profile ?? DEFAULT_PROFILE);
+      go('name');
+    } catch (err) {
+      if (err.code === 'claim_code_invalid' || err.code === 'validation_error') setStep('code');
+      setError(errText(err));
+    } finally {
+      setBusy(false);
+      // Also after a failure: a lost response may still have claimed the toy.
+      d.reload();
+    }
+  };
+
+  const save = async (patch) => {
+    await api.updateProfile(device.id, { ...patch, name: patch.name.trim() });
+    await d.reload();
+  };
+
+  const finish = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await save(draft);
+      go('done');
       burst();
     } catch (err) {
-      // A wrong code is only discovered here; send the parent back to fix it.
-      if (err.code === 'claim_code_invalid') setStep('code');
-      else if (err.details?.some((x) => x.field === 'name')) setNameError(t('needBuddyName'));
-      else if (err.code === 'validation_error' && !err.details) setStep('code');
       setError(errText(err));
     } finally {
       setBusy(false);
     }
   };
 
-  const steps = ['code', 'child', 'profile', 'done'];
+  // Once the toy is claimed, closing asks first: the toy stays either way,
+  // the question is only whether the choices so far are kept.
+  const requestClose = () => {
+    if (busy) return;
+    if (device && step !== 'done') setLeaving(true);
+    else onClose();
+  };
+
+  const saveAndClose = async () => {
+    const saved = device.profile ?? DEFAULT_PROFILE;
+    if (!draft.name.trim() || sameProfile(draft, saved)) {
+      onClose();
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await save(draft);
+      toast(t('profileSaved'));
+      onClose();
+    } catch (err) {
+      setError(errText(err));
+      setBusy(false);
+    }
+  };
+
+  const nameNext = () => {
+    if (!draft.name.trim()) {
+      setNameError(t('needBuddyName'));
+      return;
+    }
+    forward('role');
+  };
+
+  const phase = PHASE_OF[step] ?? step;
+  const type = typeOf(draft.personality);
   return (
-    <Layer onClose={onClose} labelledBy="add-title" locked={busy}>
-      <div className="layer-head"><h2 id="add-title">{t('addTitle')}</h2><CloseButton onClick={onClose} /></div>
-      <div className="stepper" aria-hidden="true">{steps.map((s, i) => <span key={s} className={steps.indexOf(step) >= i ? 'on' : ''} />)}</div>
+    <Layer onClose={requestClose} labelledBy="add-title" locked={busy}>
+      <div className="layer-head"><h2 id="add-title">{t('addTitle')}</h2><CloseButton onClick={requestClose} /></div>
+      <div className="stepper" aria-hidden="true">{PHASES.map((s, i) => <span key={s} className={step === 'done' || PHASES.indexOf(phase) >= i ? 'on' : ''} />)}</div>
 
-      {step === 'code' && (
-        <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); if (codeReady(code)) setStep('child'); }}>
-          <h3 className="step-title">{t('codeTitle')}</h3>
-          <input className={`input code-input ${error ? 'shake' : ''}`} value={formatCode(code)} onChange={onCode} placeholder="XXXX-XXXX" maxLength={9}
-            autoComplete="off" autoCapitalize="characters" spellCheck="false" aria-describedby="code-msg" data-autofocus aria-label={t('codeTitle')} />
-          <p id="code-msg" className={`msg ${bad || error ? 'bad' : 'muted'}`}>{bad ? t('codeBad', { c: bad }) : error || t('codeHelp')}</p>
-          <button type="submit" className="btn apricot lg block" disabled={!codeReady(code)}>{t('next')}</button>
-        </form>
-      )}
+      <div ref={body}>
+        {leaving ? (
+          <div className="form">
+            <div className="hero-screen"><Face emotion="curious" /></div>
+            <div><h3 className="step-title">{t('leaveT')}</h3><p className="muted small">{t('leaveB')}</p></div>
+            {error && <p className="msg bad">{error}</p>}
+            <button type="button" className="btn apricot lg block" data-autofocus disabled={busy} onClick={() => { setLeaving(false); setError(''); }}>{t('keepGoing')}</button>
+            <button type="button" className="btn ghost block" disabled={busy} onClick={saveAndClose}>{busy ? t('saving') : t('saveAndClose')}</button>
+          </div>
+        ) : (<>
+          {step === 'code' && (
+            <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); if (codeReady(code)) go('child'); }}>
+              <h3 className="step-title">{t('codeTitle')}</h3>
+              <input className={`input code-input ${error ? 'shake' : ''}`} value={formatCode(code)} onChange={onCode} placeholder="XXXX-XXXX" maxLength={9}
+                autoComplete="off" autoCapitalize="characters" spellCheck="false" aria-describedby="code-msg" data-autofocus aria-label={t('codeTitle')} />
+              <p id="code-msg" className={`msg ${bad || error ? 'bad' : 'muted'}`}>{bad ? t('codeBad', { c: bad }) : error || t('codeHelp')}</p>
+              <button type="submit" className="btn apricot lg block" disabled={!codeReady(code)}>{t('next')}</button>
+            </form>
+          )}
 
-      {step === 'child' && (
-        <div className="form">
-          <div className="hero-screen"><Face emotion="curious" /></div>
-          <div><h3 className="step-title">{t('childTitle')}</h3><p className="muted small">{t('childHelp')}</p></div>
-          {d.children.length > 0 && (
-            <div className="choices">
-              {d.children.map((c, i) => (
-                <button key={c.id} type="button" className="choice" aria-pressed={child === c.id} onClick={() => setChild(c.id)}>
-                  <span className={`avatar ${i % 2 ? 'alt' : ''}`}>{c.name.slice(0, 1)}</span>
-                  <span><b>{c.name}</b><br /><span className="feed-sub">{t('age', { n: age(c.birth_year) })}</span></span>
-                </button>
-              ))}
+          {step === 'child' && (
+            <div className="form">
+              <div className="hero-screen"><Face emotion="curious" /></div>
+              <div><h3 className="step-title">{t('childTitle')}</h3><p className="muted small">{t('childHelp')}</p></div>
+              {d.children.length > 0 && (
+                <div className="choices">
+                  {d.children.map((c, i) => (
+                    <button key={c.id} type="button" className="choice" aria-pressed={child === c.id} onClick={() => setChild(c.id)} data-autofocus={child === c.id || undefined}>
+                      <span className={`avatar ${i % 2 ? 'alt' : ''}`}>{c.name.slice(0, 1)}</span>
+                      <span><b>{c.name}</b><br /><span className="feed-sub">{t('age', { n: age(c.birth_year) })}</span></span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {adding
+                ? <ChildForm onDone={async (c) => { await d.reload(); setChild(c.id); setAdding(false); }} />
+                : <button type="button" className="link self-start" onClick={() => setAdding(true)}>+ {t('addChildInline')}</button>}
+              {error && <p className="msg bad">{error}</p>}
+              <button type="button" className="btn apricot lg block" disabled={busy || !child} onClick={() => claim(child)}>{busy ? t('checking') : t('next')}</button>
+              <button type="button" className="btn ghost block" disabled={busy} onClick={() => claim(null)}>{t('later')}</button>
+              <button type="button" className="link self-start" disabled={busy} onClick={() => go('code')}>{t('back')}</button>
             </div>
           )}
-          {adding
-            ? <ChildForm onDone={async (c) => { await d.reload(); setChild(c.id); setAdding(false); }} />
-            : <button type="button" className="link self-start" onClick={() => setAdding(true)}>+ {t('addChildInline')}</button>}
-          {error && <p className="msg bad">{error}</p>}
-          <button type="button" className="btn apricot lg block" disabled={!child} onClick={() => pickChild(child)}>{t('next')}</button>
-          <button type="button" className="btn ghost block" onClick={() => pickChild(null)}>{t('later')}</button>
-        </div>
-      )}
 
-      {step === 'profile' && (
-        <div className="form">
-          <div><h3 className="step-title">{t('profileStepTitle')}</h3><p className="muted small">{t('profileStepHelp')}</p></div>
-          <ProfileEditor value={profile} onChange={(p) => { setProfile(p); setNameError(''); }} nameError={nameError} />
-          {error && <p className="msg bad">{error}</p>}
-          <button type="button" className="btn apricot lg block" disabled={busy} onClick={() => claim(true)}>{busy ? t('checking') : t('addThisToy')}</button>
-          <button type="button" className="btn ghost block" disabled={busy} onClick={() => claim(false)}>{t('keepDefaults')}</button>
-          <button type="button" className="link self-start" disabled={busy} onClick={() => setStep('child')}>{t('back')}</button>
-        </div>
-      )}
+          {step === 'name' && (
+            <div className="form">
+              {!reviewed && <div className="banner mint">{Icon.check}<span>{t('addedB')}</span></div>}
+              <div className="hero-screen"><Face emotion="excited" /></div>
+              <h3 className="step-title">{t('nameStepT')}</h3>
+              <NameField value={draft.name} onChange={(name) => { set({ name }); setNameError(''); }} error={nameError} autoFocus />
+              <button type="button" className="btn apricot lg block" onClick={nameNext}>{t('next')}</button>
+              {!reviewed && <button type="button" className="btn ghost block" onClick={requestClose}>{t('later')}</button>}
+            </div>
+          )}
 
-      {step === 'done' && (
-        <div className="center">
-          <div className="hero-screen full"><Face emotion="excited" /></div>
-          <h2>{t('readyT')}</h2>
-          <p className="muted">{t('readyB')}</p>
-          {device?.profile && <ProfileSummary profile={device.profile} />}
-          {device && <p className="mono muted">{device.serial}</p>}
-          <button type="button" className="btn apricot lg block" data-autofocus onClick={onClose}>{t('done')}</button>
-        </div>
-      )}
+          {step === 'role' && (
+            <div className="form">
+              <div><h3 className="step-title">{t('roleStepT')}</h3><p className="muted small">{t('roleStepB')}</p></div>
+              <RolePicker value={draft.role} onChange={(role) => set({ role })} autoFocus />
+              <button type="button" className="btn apricot lg block" onClick={() => forward('personality')}>{t('next')}</button>
+              <button type="button" className="link self-start" onClick={() => go('name')}>{t('back')}</button>
+            </div>
+          )}
+
+          {step === 'personality' && (
+            <div className="form">
+              <div><h3 className="step-title">{t('personalityStepT', { name: draft.name.trim() || 'Buddy' })}</h3><p className="muted small">{t('personalityStepB')}</p></div>
+              <div className="choices">
+                <button type="button" className="choice big-choice" data-autofocus onClick={() => go('quiz')}>
+                  <span className="chip-screen chip-screen--sm"><Face emotion="thinking" /></span>
+                  <span><b>{t('tabQuiz')}</b><br /><span className="feed-sub">{t('quizIntro')}</span></span>
+                </button>
+                <button type="button" className="choice big-choice" onClick={() => go('pick')}>
+                  <span className="chip-screen chip-screen--sm"><Face emotion={type.emotion} /></span>
+                  <span><b>{t('tabPick')}</b><br /><span className="feed-sub">{t('pickIntro')}</span></span>
+                </button>
+              </div>
+              <button type="button" className="link self-start" onClick={() => go(reviewed ? 'review' : 'role')}>{t('back')}</button>
+            </div>
+          )}
+
+          {step === 'quiz' && (
+            <div className="form">
+              <h3 className="step-title">{t('personalityStepT', { name: draft.name.trim() || 'Buddy' })}</h3>
+              <PersonalityQuiz onExit={() => go('personality')} onPick={() => go('pick')}
+                onResult={(code) => { set({ personality: code, personality_source: 'quiz' }); go('review'); }} />
+            </div>
+          )}
+
+          {step === 'pick' && (
+            <div className="form">
+              <h3 className="step-title">{t('personalityStepT', { name: draft.name.trim() || 'Buddy' })}</h3>
+              <PersonalityPicker value={draft.personality} onPick={(code) => set({ personality: code, personality_source: 'picked' })} />
+              <button type="button" className="btn apricot lg block sticky-cta" onClick={() => go('review')}>{t('next')}</button>
+              <button type="button" className="link self-start" onClick={() => go('personality')}>{t('back')}</button>
+            </div>
+          )}
+
+          {step === 'review' && (
+            <ReviewStep draft={draft} busy={busy} error={error} onEnter={() => setReviewed(true)}
+              onEdit={(s) => go(s)} onSave={finish} />
+          )}
+
+          {step === 'done' && (
+            <div className="center">
+              <div className="hero-screen full"><Face emotion="excited" /></div>
+              <h2>{t('readyNamed', { name: draft.name.trim() })}</h2>
+              <p className="muted">{t('readyB')}</p>
+              {device && <p className="mono muted">{device.serial}</p>}
+              <button type="button" className="btn apricot lg block" data-autofocus onClick={onClose}>{t('done')}</button>
+            </div>
+          )}
+        </>)}
+      </div>
     </Layer>
+  );
+}
+
+function ReviewStep({ draft, busy, error, onEnter, onEdit, onSave }) {
+  const { t } = useI18n();
+  useEffect(() => {
+    onEnter();
+    // Marks the wizard as reviewed once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="form">
+      <div><h3 className="step-title">{t('reviewStepT')}</h3><p className="muted small">{t('reviewStepB')}</p></div>
+      <ProfileSummary profile={draft} onEdit={onEdit} />
+      {error && <p className="msg bad">{error}</p>}
+      <button type="button" className="btn apricot lg block" data-autofocus disabled={busy} onClick={onSave}>{busy ? t('saving') : t('saveProfile')}</button>
+    </div>
   );
 }
 

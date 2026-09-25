@@ -66,18 +66,32 @@ hệ điều hành bật "giảm chuyển động".
 
 ## Thêm Buddy và hồ sơ của Buddy
 
-Thêm đồ chơi gồm bốn bước: nhập mã in trên thẻ, chọn bé, **làm quen với
-Buddy**, xong. Ở bước làm quen, phụ huynh:
+Thêm đồ chơi là một chuỗi màn hình, mỗi màn một việc:
 
-- đặt tên (gợi ý sẵn vài tên, nút "Gợi ý tên khác" chọn ngẫu nhiên);
-- chọn cách Buddy xưng hô với bé: bạn thân (tớ, cậu), bố, mẹ, cô giáo (con);
-- chọn tính cách: **làm trắc nghiệm** 12 câu về người bạn mình muốn cho bé
-  (3 câu mỗi trục E/I, S/N, T/F, J/P, số lẻ nên luôn có đa số) hoặc **tự chọn**
-  trong 16 tính cách chia 4 nhóm, mỗi tính cách có khuôn mặt riêng.
+1. Nhập mã in trên thẻ.
+2. Chọn bé (hoặc "Để sau"). Bấm tiếp là **ghép ngay** với hồ sơ mặc định
+   (Buddy / bạn thân / ENFP), nên mã sai bị phát hiện ở đây, trước khi làm hồ sơ.
+3. Đặt tên (gợi ý sẵn vài tên, nút "Gợi ý tên khác" chọn ngẫu nhiên).
+4. Cách Buddy xưng hô với bé: bạn thân (tớ, cậu), bố, mẹ, cô giáo (con).
+5. Tính cách: **làm trắc nghiệm** 12 câu về người bạn mình muốn cho bé, mỗi câu
+   một màn (3 câu mỗi trục E/I, S/N, T/F, J/P, số lẻ nên luôn có đa số), hoặc
+   **tự chọn** trong 16 tính cách chia 4 nhóm.
+6. Xem lại, "Sửa" từng mục, rồi "Lưu hồ sơ" (một lệnh `PATCH`).
 
-"Để sau, dùng mặc định" ghép ngay với Buddy / bạn thân / ENFP. Hồ sơ sửa lại
-được trong bảng chi tiết của đồ chơi. Logic thuần (câu hỏi, chấm điểm, gợi ý
-tên) ở `src/lib/personality.js`, giao diện ở `src/dashboard/profile.jsx`.
+Huỷ giữa chừng:
+
+- Trước bước 2: không có gì được ghi, đồ chơi vẫn chưa được ghép.
+- Đang gửi yêu cầu: không đóng được cửa sổ.
+- Từ bước 3 đến 6: đóng (✕, Esc, bấm ra ngoài, "Để sau") sẽ hỏi lại. "Làm tiếp"
+  quay lại, "Lưu và đóng" lưu những gì đã chọn (nếu có thay đổi). Đồ chơi đã
+  thuộc gia đình, hồ sơ hoàn tất sau được trong bảng chi tiết.
+- Mất phản hồi khi ghép: gửi lại mã sẽ nhận lại đúng đồ chơi (backend coi là
+  thao tác lặp lại của cùng gia đình).
+
+Bảng chi tiết của đồ chơi sửa hồ sơ trên một trang. Logic thuần (câu hỏi, chấm
+điểm, gợi ý tên) ở `src/lib/personality.js`, giao diện ở
+`src/dashboard/profile.jsx`, trình tự các bước ở `AddToyModal` trong
+`src/dashboard/layers.jsx`.
 
 ## Cấu trúc
 

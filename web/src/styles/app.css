@@ -207,3 +207,15 @@
   .ptype-grid, .role-grid { grid-template-columns: minmax(0, 1fr); }
   .name-row { flex-direction: column; }
 }
+
+/* Add-toy wizard: one screen per step */
+.big-choice { padding: 16px; }
+.big-choice b { font-size: 16px; }
+.review { display: grid; gap: 4px; }
+.review .hero-screen { margin-bottom: 8px; }
+.review-row { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 12px 2px; }
+.review-row + .review-row { border-top: 1px solid var(--line); }
+.review-row .k { color: var(--muted); font-size: 14.5px; }
+.review-row .v { font-weight: 500; overflow-wrap: anywhere; }
+/* The 16-type grid is long; keep "continue" reachable without scrolling back. */
+.sticky-cta { position: sticky; bottom: 0; box-shadow: 0 -12px 18px var(--surface); }

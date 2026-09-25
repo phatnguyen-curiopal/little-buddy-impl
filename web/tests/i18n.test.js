@@ -7,6 +7,7 @@ import vi from '../src/i18n/vi.js';
 import en from '../src/i18n/en.js';
 import { EMOTIONS } from '../src/lib/emotions.js';
 import { APP_SCREENS } from '../src/lib/routes.js';
+import { TYPES, GROUPS, QUESTIONS, ROLES } from '../src/lib/personality.js';
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const placeholders = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -62,6 +63,11 @@ test('keys built at runtime exist', () => {
     ...[1, 2, 3].flatMap((n) => [`s${n}t`, `s${n}b`]),
     ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`sa${n}t`, `sa${n}b`, `q${n}`, `a${n}`]),
     ...['awake', 'resting', 'support', 'revoked'],
+    ...TYPES.flatMap((ty) => [`ptype_${ty.code}`, `ptypeDesc_${ty.code}`]),
+    ...GROUPS.map((g) => `group_${g}`),
+    ...QUESTIONS.flatMap((q) => [`pq${q.n}`, `pq${q.n}a`, `pq${q.n}b`]),
+    ...ROLES.flatMap((r) => [`role_${r}`, `roleSays_${r}`]),
+    ...['quiz', 'picked', 'default'].map((s) => `source_${s}`),
     ...['rate_limited', 'network_error', 'invalid_credentials', 'email_taken', 'claim_code_invalid', 'purchase_not_pending', 'disabled_by_operator'].map((c) => `err_${c}`),
   ];
   const missing = dynamic.filter((k) => !(k in vi) || !(k in en));

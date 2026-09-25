@@ -8,6 +8,8 @@ import { relativeTime, vnd, age } from '../lib/format.js';
 import { useFamilyData } from './data.jsx';
 import { toyLook, useToyName } from './parts.jsx';
 import { ChildForm } from './screens.jsx';
+import { ProfileEditor, ProfileSummary } from './profile.jsx';
+import { DEFAULT_PROFILE } from '../lib/personality.js';
 
 // Same alphabet as backend/devices/claim_code.js: no I, L, O, U, 0 or 1.
 const ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
@@ -23,9 +25,12 @@ export function ToyDrawer({ id, onClose }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [draft, setDraft] = useState(null); // non-null while editing the profile
+  const [nameError, setNameError] = useState('');
   const device = d.devices.find((x) => x.id === id);
   if (!device) return null;
   const look = toyLook(device);
+  const profile = device.profile ?? DEFAULT_PROFILE;
 
   const act = async (fn, okText, close = false) => {
     setBusy(true);
@@ -42,11 +47,42 @@ export function ToyDrawer({ id, onClose }) {
     }
   };
 
+  const saveProfile = () => {
+    if (!draft.name.trim()) {
+      setNameError(t('needBuddyName'));
+      return;
+    }
+    act(async () => {
+      await api.updateProfile(device.id, { ...draft, name: draft.name.trim() });
+      setDraft(null);
+    }, t('profileSaved'));
+  };
+
+  if (draft) {
+    return (
+      <Layer kind="drawer" onClose={onClose} labelledBy="toy-title" locked={busy}>
+        <div className="layer-head"><h2 id="toy-title">{t('profileTitle')}</h2><CloseButton onClick={onClose} /></div>
+        <ProfileEditor value={draft} onChange={(p) => { setDraft(p); setNameError(''); }} nameError={nameError} />
+        {error && <p className="msg bad">{error}</p>}
+        <div className="actions">
+          <button type="button" className="btn apricot" disabled={busy} onClick={saveProfile}>{busy ? t('saving') : t('saveProfile')}</button>
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => { setDraft(null); setError(''); }}>{t('cancel')}</button>
+        </div>
+      </Layer>
+    );
+  }
+
   return (
     <Layer kind="drawer" onClose={onClose} labelledBy="toy-title">
       <div className="layer-head"><h2 id="toy-title">{nameOf(device, d.children)}</h2><CloseButton onClick={onClose} /></div>
       <div className={`hero-screen ${look.dim ? 'dim' : ''}`}><Face emotion={look.emotion} /></div>
       <div><Pill tone={look.tone}>{t(look.key)}</Pill></div>
+      <div className="p-card">
+        <ProfileSummary profile={profile} />
+        {device.status !== 'revoked' && (
+          <button type="button" className="btn ghost self-start" onClick={() => { setDraft(profile); setError(''); setNameError(''); }}>{t('editProfile')}</button>
+        )}
+      </div>
       {device.status === 'active' && (<>
         <button type="button" className="btn ghost block" disabled={busy} onClick={() => act(() => api.pause(device.id), t('pausedToast'))}>{t('pause')}</button>
         <p className="muted small">{t('pauseExplain')}</p>
@@ -94,6 +130,8 @@ export function AddToyModal({ onClose }) {
   const [adding, setAdding] = useState(d.children.length === 0);
   const [busy, setBusy] = useState(false);
   const [device, setDevice] = useState(null);
+  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  const [nameError, setNameError] = useState('');
 
   const bad = [...code].find((c) => !ALPHABET.includes(c));
   const onCode = (e) => {
@@ -101,25 +139,43 @@ export function AddToyModal({ onClose }) {
     setError('');
   };
 
-  const claim = async (childId) => {
+  const pickChild = (childId) => {
+    setChild(childId);
+    setError('');
+    setStep('profile');
+  };
+
+  // Without a profile the backend stores the defaults, so "later" and an
+  // untouched editor end up in the same place.
+  const claim = async (withProfile) => {
+    if (withProfile && !profile.name.trim()) {
+      setNameError(t('needBuddyName'));
+      return;
+    }
     setBusy(true);
     setError('');
     try {
-      const out = await api.claim({ claim_code: code, ...(childId ? { child_id: childId } : {}) });
+      const out = await api.claim({
+        claim_code: code,
+        ...(child ? { child_id: child } : {}),
+        ...(withProfile ? { profile: { ...profile, name: profile.name.trim() } } : {}),
+      });
       setDevice(out.device);
       setStep('done');
       await d.reload();
       burst();
     } catch (err) {
       // A wrong code is only discovered here; send the parent back to fix it.
-      if (err.code === 'claim_code_invalid' || err.code === 'validation_error') setStep('code');
+      if (err.code === 'claim_code_invalid') setStep('code');
+      else if (err.details?.some((x) => x.field === 'name')) setNameError(t('needBuddyName'));
+      else if (err.code === 'validation_error' && !err.details) setStep('code');
       setError(errText(err));
     } finally {
       setBusy(false);
     }
   };
 
-  const steps = ['code', 'child', 'done'];
+  const steps = ['code', 'child', 'profile', 'done'];
   return (
     <Layer onClose={onClose} labelledBy="add-title" locked={busy}>
       <div className="layer-head"><h2 id="add-title">{t('addTitle')}</h2><CloseButton onClick={onClose} /></div>
@@ -153,8 +209,19 @@ export function AddToyModal({ onClose }) {
             ? <ChildForm onDone={async (c) => { await d.reload(); setChild(c.id); setAdding(false); }} />
             : <button type="button" className="link self-start" onClick={() => setAdding(true)}>+ {t('addChildInline')}</button>}
           {error && <p className="msg bad">{error}</p>}
-          <button type="button" className="btn apricot lg block" disabled={busy || !child} onClick={() => claim(child)}>{busy ? t('checking') : t('addThisToy')}</button>
-          <button type="button" className="btn ghost block" disabled={busy} onClick={() => claim(null)}>{t('later')}</button>
+          <button type="button" className="btn apricot lg block" disabled={!child} onClick={() => pickChild(child)}>{t('next')}</button>
+          <button type="button" className="btn ghost block" onClick={() => pickChild(null)}>{t('later')}</button>
+        </div>
+      )}
+
+      {step === 'profile' && (
+        <div className="form">
+          <div><h3 className="step-title">{t('profileStepTitle')}</h3><p className="muted small">{t('profileStepHelp')}</p></div>
+          <ProfileEditor value={profile} onChange={(p) => { setProfile(p); setNameError(''); }} nameError={nameError} />
+          {error && <p className="msg bad">{error}</p>}
+          <button type="button" className="btn apricot lg block" disabled={busy} onClick={() => claim(true)}>{busy ? t('checking') : t('addThisToy')}</button>
+          <button type="button" className="btn ghost block" disabled={busy} onClick={() => claim(false)}>{t('keepDefaults')}</button>
+          <button type="button" className="link self-start" disabled={busy} onClick={() => setStep('child')}>{t('back')}</button>
         </div>
       )}
 
@@ -163,6 +230,7 @@ export function AddToyModal({ onClose }) {
           <div className="hero-screen full"><Face emotion="excited" /></div>
           <h2>{t('readyT')}</h2>
           <p className="muted">{t('readyB')}</p>
+          {device?.profile && <ProfileSummary profile={device.profile} />}
           {device && <p className="mono muted">{device.serial}</p>}
           <button type="button" className="btn apricot lg block" data-autofocus onClick={onClose}>{t('done')}</button>
         </div>

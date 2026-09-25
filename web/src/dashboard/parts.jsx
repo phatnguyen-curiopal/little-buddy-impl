@@ -15,6 +15,8 @@ export function useToyName() {
   const { t } = useI18n();
   return (device, children) => {
     const c = childOf(children, device.child_id);
+    const own = device.profile?.name;
+    if (own) return c ? t('buddyOf', { name: own, child: c.name }) : own;
     return c ? t('forChild', { name: c.name }) : t('buddyUnassigned', { serial: device.serial });
   };
 }

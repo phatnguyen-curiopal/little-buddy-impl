@@ -27,7 +27,7 @@ biến `BACKEND_URL`.
 | `/` | Trang giới thiệu: hero có Buddy tương tác (tự đổi khuôn mặt khi rảnh, chạm nút để thử), cách hoạt động, 14 cảm xúc, tính năng, an toàn, bảng giá (lấy từ API), hỏi đáp |
 | `/login`, `/register` | Đăng nhập, tạo tài khoản gia đình (tặng 10 lượt) |
 | `/app` | Tổng quan: số lượt còn lại, biểu đồ câu trả lời 7 ngày, đồ chơi, hoạt động gần đây |
-| `/app/toys` | Đồ chơi; bấm vào một Buddy để mở bảng chi tiết (cho nghỉ, đánh thức, đổi bé, gỡ khỏi gia đình) |
+| `/app/toys` | Đồ chơi; bấm vào một Buddy để mở bảng chi tiết (hồ sơ và sửa hồ sơ, cho nghỉ, đánh thức, đổi bé, gỡ khỏi gia đình) |
 | `/app/credits` | Mua lượt (thanh toán demo), lịch sử giao dịch |
 | `/app/activity` | Câu trả lời của Buddy và lý do khi Buddy không trả lời |
 | `/app/family` | Các bé, tài khoản, ngôn ngữ, đăng xuất |
@@ -64,15 +64,30 @@ thẻ giá nghiêng theo chuột; số lượt đếm khi thay đổi (sau khi m
 ngăn kéo, thông báo và pháo giấy khi mua lượt hoặc thêm đồ chơi. Tất cả tắt khi
 hệ điều hành bật "giảm chuyển động".
 
+## Thêm Buddy và hồ sơ của Buddy
+
+Thêm đồ chơi gồm bốn bước: nhập mã in trên thẻ, chọn bé, **làm quen với
+Buddy**, xong. Ở bước làm quen, phụ huynh:
+
+- đặt tên (gợi ý sẵn vài tên, nút "Gợi ý tên khác" chọn ngẫu nhiên);
+- chọn cách Buddy xưng hô với bé: bạn thân (tớ, cậu), bố, mẹ, cô giáo (con);
+- chọn tính cách: **làm trắc nghiệm** 12 câu về người bạn mình muốn cho bé
+  (3 câu mỗi trục E/I, S/N, T/F, J/P, số lẻ nên luôn có đa số) hoặc **tự chọn**
+  trong 16 tính cách chia 4 nhóm, mỗi tính cách có khuôn mặt riêng.
+
+"Để sau, dùng mặc định" ghép ngay với Buddy / bạn thân / ENFP. Hồ sơ sửa lại
+được trong bảng chi tiết của đồ chơi. Logic thuần (câu hỏi, chấm điểm, gợi ý
+tên) ở `src/lib/personality.js`, giao diện ở `src/dashboard/profile.jsx`.
+
 ## Cấu trúc
 
 ```
-src/lib/        routes (thuần), router, api (token + refresh), auth, i18n, translate, format, stats, emotions, motion
+src/lib/        routes (thuần), router, api (token + refresh), auth, i18n, translate, format, stats, emotions, motion, personality
 src/i18n/       vi.js, en.js (mọi câu chữ)
 src/components/ Face, Toy, Confetti, ui (Layer, Toast, Pill, LangSwitch...)
 src/marketing/  MarketingPage
 src/auth/       AuthPage
-src/dashboard/  AppShell, screens, layers (drawer, thêm đồ chơi, mua lượt), WeekChart, parts, data
+src/dashboard/  AppShell, screens, layers (drawer, thêm đồ chơi, mua lượt), profile (hồ sơ, trắc nghiệm), WeekChart, parts, data
 src/styles/     tokens, base, motion, marketing, app
 tests/          node --test cho các module thuần
 ```

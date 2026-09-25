@@ -6,6 +6,7 @@ import { useI18n } from '../lib/i18n.jsx';
 import { Link } from '../lib/router.js';
 import { reducedMotion, usePointerVars } from '../lib/motion.js';
 import { EMOTIONS } from '../lib/emotions.js';
+import { ROLES } from '../lib/personality.js';
 import { api } from '../lib/api.js';
 import { vnd, pricePerAnswer } from '../lib/format.js';
 
@@ -200,9 +201,8 @@ function Features() {
             <div className="scenes">{scenes.map((sc, i) => <div key={i} className="scene"><svg viewBox="0 0 100 100" aria-hidden="true">{sc}</svg></div>)}</div>
           </article>
           <article className="tile tile--d lift">
-            <span className="soon">{t('soon')}</span>
             <h3>{t('f4t')}</h3><p>{t('f4b')}</p>
-            <div className="personas">{['pFriend', 'pTeacher', 'pDad', 'pMom'].map((k) => <span key={k} className="persona">{t(k)}</span>)}</div>
+            <div className="personas">{ROLES.map((r) => <span key={r} className="persona">{t(`role_${r}`)}</span>)}</div>
           </article>
         </div>
       </div>

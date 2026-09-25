@@ -136,6 +136,7 @@ export const api = {
   devices: () => request('GET', '/api/devices'),
   claim: (body) => request('POST', '/api/devices/claim', { body }),
   setChild: (id, childId) => request('PATCH', `/api/devices/${id}`, { body: { child_id: childId } }),
+  updateProfile: (id, patch) => request('PATCH', `/api/devices/${id}/profile`, { body: patch }),
   pause: (id) => request('POST', `/api/devices/${id}/disable`, { body: {} }),
   resume: (id) => request('POST', `/api/devices/${id}/enable`, { body: {} }),
   unpair: (id) => request('DELETE', `/api/devices/${id}`),

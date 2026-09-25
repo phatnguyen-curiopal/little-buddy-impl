@@ -83,10 +83,24 @@ test('the full happy path: claim, disable, enable, unpair, claim again', async (
 
 test('claim rejects wrong, consumed and malformed codes identically or as 400', async () => {
   const d = await provisionDevice();
+  const other = await families.insert(pool, { name: 'Other' });
   await assert.rejects(registry.claimByCode({ familyId: family.id, claimCode: 'ABCD-EFGH' }), (e) => e.status === 404 && e.code === 'claim_code_invalid');
   await registry.claimByCode({ familyId: family.id, claimCode: d.claimCode });
-  await assert.rejects(registry.claimByCode({ familyId: family.id, claimCode: d.claimCode }), (e) => e.code === 'claim_code_invalid');
+  await assert.rejects(registry.claimByCode({ familyId: other.id, claimCode: d.claimCode }), (e) => e.status === 404 && e.code === 'claim_code_invalid');
   await assert.rejects(registry.claimByCode({ familyId: family.id, claimCode: 'ABC' }), (e) => e.status === 400);
+});
+
+test('the owning family re-claiming its toy gets it back unchanged', async () => {
+  const d = await provisionDevice();
+  const first = await registry.claimByCode({ familyId: family.id, claimCode: d.claimCode });
+  await registry.updateProfile({ deviceId: d.id, familyId: family.id, patch: { name: 'Bin' } });
+  const again = await registry.claimByCode({ familyId: family.id, claimCode: d.claimCode, profile: { name: 'Other', role: 'daddy', personality: 'INTJ' } });
+  assert.equal(again.id, first.id);
+  assert.equal(again.profile_name, 'Bin', 'a replay must not overwrite the profile');
+  assert.deepEqual(await events(d.id), ['provisioned', 'claimed', 'profile_updated']);
+
+  await registry.disable({ deviceId: d.id, by: 'parent', familyId: family.id, reason: 'x' });
+  assert.equal((await registry.claimByCode({ familyId: family.id, claimCode: d.claimCode })).status, 'disabled');
 });
 
 test('forbidden transitions are rejected with the right codes', async () => {

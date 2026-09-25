@@ -66,6 +66,11 @@ test('claim failures: unknown code 404, consumed code 404, bad format 400, other
   assert.equal(consumed.status, 404);
   assert.equal(consumed.body.error.code, 'claim_code_invalid');
   assert.deepEqual(consumed.body, unknown.body);
+
+  // The owner retrying (a lost response) gets its toy, not "invalid code".
+  const retry = await api('POST', '/api/devices/claim', { token: p1.token, body: { claim_code: d.claimCode } });
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.device.id, d.id);
 });
 
 test('a family only sees and touches its own devices', async () => {

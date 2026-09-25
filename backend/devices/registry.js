@@ -127,6 +127,12 @@ export async function claimByCode({ familyId, claimCode, childId = null, profile
 
   return withTransaction(async (tx) => {
     const row = await devices.findByClaimHashForUpdate(tx, hash);
+    // A retry after a lost response must not look like a bad code. Only the
+    // owning family gets its toy back, unchanged; nothing is written, so the
+    // profile chosen since is kept.
+    if (row && row.family_id === familyId && (row.status === STATUS.ACTIVE || row.status === STATUS.DISABLED)) {
+      return devices.findInFamily(tx, row.id, familyId);
+    }
     // Unknown, consumed, and non-provisioned all look the same on purpose.
     if (!row || row.status !== STATUS.PROVISIONED) {
       throw notFound('claim_code_invalid', 'claim code is not valid or has already been used');

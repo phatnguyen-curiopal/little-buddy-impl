@@ -62,6 +62,8 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
 2. **Ghép** (`POST /api/devices/claim`): phụ huynh đã đăng nhập nhập mã in trên
    thẻ. Mã sai, mã đã dùng và thiết bị đã bị thu hồi đều trả `404
    claim_code_invalid` giống hệt nhau. Giới hạn 10 lần/giờ mỗi phụ huynh.
+   Riêng gia đình đang sở hữu đồ chơi nhập lại mã của nó (ví dụ gửi lại sau
+   khi mất phản hồi) thì nhận lại đúng đồ chơi đó, 200, không ghi gì thêm.
    Cùng transaction đó ghi **hồ sơ Buddy** (`buddy_profiles`): tên (1 đến 24
    ký tự), vai (`friend` mặc định, `daddy`, `mommy`, `teacher`), một trong 16
    tính cách (`ENFP` mặc định) và nguồn (`quiz`, `picked`, `default`). Không

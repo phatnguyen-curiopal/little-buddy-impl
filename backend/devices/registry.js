@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { pool, withTransaction } from '../store/db.js';
 import * as devices from '../store/device.js';
 import * as childrenStore from '../store/child.js';
+import * as profiles from '../store/profile.js';
+import { DEFAULT_PROFILE, validateProfile } from '../personalization/roles.js';
 import { newDeviceSecret, wrapSecret, unwrapSecret, claimCodeHash } from './secret_box.js';
 import { newClaimCode, normalizeClaimCode, formatClaimCode } from './claim_code.js';
 import { serialFor, isBatchLabel, MAX_PER_BATCH } from './serial.js';
@@ -115,9 +117,12 @@ export async function provisionBatch({ label, hardwareRev, count, notes = null, 
   }
 }
 
-export async function claimByCode({ familyId, claimCode, childId = null, actorId = null }) {
+// The profile (name, role, personality) is written in the same transaction,
+// so a claimed toy always has one; omitted means the defaults.
+export async function claimByCode({ familyId, claimCode, childId = null, profile = null, actorId = null }) {
   const normalized = normalizeClaimCode(claimCode);
   if (!normalized) throw badRequest('validation_error', 'claim code must be 8 letters or digits');
+  const chosen = profile ? validateProfile(profile) : DEFAULT_PROFILE;
   const hash = claimCodeHash(normalized);
 
   return withTransaction(async (tx) => {
@@ -131,7 +136,8 @@ export async function claimByCode({ familyId, claimCode, childId = null, actorId
       if (!child) throw notFound('child_not_found', 'child not found');
     }
     assertTransition(row.status, STATUS.ACTIVE);
-    const updated = await devices.claim(tx, row.id, { familyId, childId });
+    await devices.claim(tx, row.id, { familyId, childId });
+    await profiles.upsert(tx, row.id, chosen);
     await devices.insertEvent(tx, {
       deviceId: row.id,
       event: 'claimed',
@@ -139,7 +145,20 @@ export async function claimByCode({ familyId, claimCode, childId = null, actorId
       actorId,
       detail: { family_id: familyId, child_id: childId },
     });
-    return updated;
+    return devices.findInFamily(tx, row.id, familyId);
+  });
+}
+
+// Rename Buddy, change how it speaks to the child, or its personality.
+export async function updateProfile({ deviceId, familyId, patch, actorId = null }) {
+  const clean = validateProfile(patch, { partial: true });
+  return withTransaction(async (tx) => {
+    const row = await lockDevice(tx, deviceId, familyId);
+    if (row.status === STATUS.REVOKED) throw conflict('device_revoked', 'device is revoked');
+    // Toys claimed before profiles existed have no row yet.
+    const updated = await profiles.update(tx, row.id, clean) ?? await profiles.upsert(tx, row.id, { ...DEFAULT_PROFILE, ...clean });
+    await devices.insertEvent(tx, { deviceId: row.id, event: 'profile_updated', actorKind: 'parent', actorId, detail: { fields: Object.keys(clean) } });
+    return updated && devices.findInFamily(tx, row.id, familyId);
   });
 }
 

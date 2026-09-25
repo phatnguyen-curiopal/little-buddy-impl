@@ -99,8 +99,15 @@ dashboardRouter.post('/devices/claim', requireParent, claimLimit, async (req, re
     familyId: req.familyId,
     claimCode: body.claim_code,
     childId: body.child_id ?? null,
+    // Validated by the registry (validateBody has no object type).
+    profile: req.body?.profile ?? null,
     actorId: req.parent.id,
   });
+  res.json(deviceResponse(row));
+});
+
+dashboardRouter.patch('/devices/:id/profile', requireParent, async (req, res) => {
+  const row = await registry.updateProfile({ deviceId: deviceId(req), familyId: req.familyId, patch: req.body, actorId: req.parent.id });
   res.json(deviceResponse(row));
 });
 

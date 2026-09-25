@@ -49,7 +49,7 @@ export async function migrate() {
 
 // Reference data seeded by migrations; truncating it would leave later tests
 // with nothing to buy.
-const KEEP = ['schema_migrations', 'credit_packs'];
+const KEEP = ['schema_migrations', 'credit_packs', 'personalities'];
 
 // The table list is queried, so new tables need no edit here.
 export async function resetDb() {

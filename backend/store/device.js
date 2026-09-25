@@ -6,6 +6,12 @@ const FULL = `id, serial, batch_id, hardware_rev, secret_enc, secret_prev_enc, s
 const PUBLIC = `id, serial, batch_id, hardware_rev, status, status_reason, disabled_by, family_id, child_id,
   firmware_version, last_seen_at, claimed_at, created_at, updated_at`;
 
+// The parent-facing reads carry the toy's profile. Columns are qualified
+// because devices and buddy_profiles share created_at and updated_at.
+const WITH_PROFILE = `${PUBLIC.split(",").map((c) => `d.${c.trim()}`).join(", ")},
+  p.name AS profile_name, p.role AS profile_role, p.personality AS profile_personality, p.personality_source AS profile_source`;
+const FROM_WITH_PROFILE = "devices d LEFT JOIN buddy_profiles p ON p.device_id = d.id";
+
 const INSERT_CHUNK = 500;
 
 export async function insertBatch(db, { label, hardwareRev, size, notes = null }) {
@@ -56,7 +62,7 @@ export async function findInFamilyForUpdate(tx, id, familyId) {
 }
 
 export async function findInFamily(db, id, familyId) {
-  const r = await db.query(`SELECT ${PUBLIC} FROM devices WHERE id = $1 AND family_id = $2`, [id, familyId]);
+  const r = await db.query(`SELECT ${WITH_PROFILE} FROM ${FROM_WITH_PROFILE} WHERE d.id = $1 AND d.family_id = $2`, [id, familyId]);
   return r.rows[0] ?? null;
 }
 
@@ -69,7 +75,7 @@ export async function findByClaimHashForUpdate(tx, hash) {
 
 export async function listByFamily(db, familyId) {
   const r = await db.query(
-    `SELECT ${PUBLIC} FROM devices WHERE family_id = $1 ORDER BY claimed_at, id`,
+    `SELECT ${WITH_PROFILE} FROM ${FROM_WITH_PROFILE} WHERE d.family_id = $1 ORDER BY d.claimed_at, d.id`,
     [familyId],
   );
   return r.rows;
@@ -190,5 +196,12 @@ export function toDto(row) {
     last_seen_at: row.last_seen_at,
     claimed_at: row.claimed_at,
     created_at: row.created_at,
+    // null on rows read without the join (admin lists, status updates).
+    profile: row.profile_name ? {
+      name: row.profile_name,
+      role: row.profile_role,
+      personality: row.profile_personality,
+      personality_source: row.profile_source,
+    } : null,
   };
 }

@@ -62,6 +62,13 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
 2. **Ghép** (`POST /api/devices/claim`): phụ huynh đã đăng nhập nhập mã in trên
    thẻ. Mã sai, mã đã dùng và thiết bị đã bị thu hồi đều trả `404
    claim_code_invalid` giống hệt nhau. Giới hạn 10 lần/giờ mỗi phụ huynh.
+   Cùng transaction đó ghi **hồ sơ Buddy** (`buddy_profiles`): tên (1 đến 24
+   ký tự), vai (`friend` mặc định, `daddy`, `mommy`, `teacher`), một trong 16
+   tính cách (`ENFP` mặc định) và nguồn (`quiz`, `picked`, `default`). Không
+   gửi `profile` thì dùng mặc định Buddy / bạn thân / ENFP. Mỗi lần ghép đều
+   ghi đè hồ sơ, nên đồ chơi đổi chủ không mang theo tên và tính cách cũ.
+   Bảng `personalities` giữ mô tả tính cách (lấy từ prototype) cho prompt sau
+   này; pipeline mock hiện chưa dùng hồ sơ.
 3. **Heartbeat** (`POST /v1/heartbeat`, có chữ ký): thiết bị biết trạng thái
    của mình và chu kỳ heartbeat tiếp theo.
 4. **Stream** (`GET /v1/stream` WebSocket, chữ ký trong query string): mọi
@@ -97,9 +104,10 @@ Cách nhanh nhất để bấm thử bằng tay là console ở `frontend/` (`np
 | POST | `/api/auth/logout` | `{refresh_token}` → 204 |
 | GET | `/api/me` | Tài khoản và gia đình |
 | POST / GET | `/api/children` | `{name, birth_year}` |
-| POST | `/api/devices/claim` | `{claim_code, child_id?}` → `{device}` |
+| POST | `/api/devices/claim` | `{claim_code, child_id?, profile?}` → `{device}` (có `device.profile`). Hồ sơ sai: 400 `validation_error`, `details` liệt kê từng trường |
 | GET | `/api/devices` | Thiết bị của gia đình |
 | PATCH | `/api/devices/:id` | `{child_id}` (uuid hoặc null) |
+| PATCH | `/api/devices/:id/profile` | `{name?, role?, personality?, personality_source?}` → `{device}`. Ghi sự kiện `profile_updated`; 409 `device_revoked` |
 | POST | `/api/devices/:id/disable` | `{reason?}`. 409 `device_not_active` |
 | POST | `/api/devices/:id/enable` | 403 `disabled_by_operator` nếu vận hành đã tắt |
 | DELETE | `/api/devices/:id` | Gỡ ghép → 204 |
@@ -154,6 +162,7 @@ lib/                   log (che thông tin nhạy cảm), HttpError, validate
 middleware/            request id, error, require_parent, require_admin, rate_limit, device_auth
 auth/                  password (scrypt), tokens (JWT + refresh), service
 devices/               secret_box, claim_code, serial, signing, registry, hmac_auth, sim_client
+personalization/       roles.js: bốn vai, cách xưng hô, kiểm tra hồ sơ Buddy
 ws/stream.js           WebSocket /v1/stream, đóng socket khi thiết bị bị chặn
 routes/                device (/v1), dashboard (/api), admin (/admin)
 store/                 db, redis, migrate, các module SQL theo bảng, migrations/

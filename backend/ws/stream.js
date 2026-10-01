@@ -8,10 +8,14 @@ import log from '../lib/log.js';
 // /v1/stream: the realtime channel. Any non-revoked toy may connect; what
 // it may do is decided per turn by the ask gate (ws/turns.js), so an
 // unclaimed or paused toy hears a kind refusal instead of a closed door.
-// Audio frames are counted on the open turn and otherwise dropped until the
-// streaming pipeline lands.
+// Audio frames are buffered on the open turn (ws/turns.js) and otherwise
+// dropped.
 export const STREAM_PATH = '/v1/stream';
 export const CLOSE_BLOCKED = 4003;
+// One message at most. A 20 ms frame is 640 bytes and a typed turn is at
+// most 2000 characters, so 64 KB is generous; anything bigger is closed by
+// ws with 1009 before it is ever buffered.
+export const MAX_PAYLOAD = 64 * 1024;
 
 const STATUS_TEXT = { 401: 'Unauthorized', 403: 'Forbidden', 429: 'Too Many Requests', 503: 'Service Unavailable' };
 
@@ -62,7 +66,7 @@ function rejectUpgrade(socket, { http, code, message }) {
 }
 
 export function attachStream(server) {
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD });
 
   server.on('upgrade', async (req, socket, head) => {
     socket.on('error', () => {});
@@ -96,9 +100,10 @@ export function attachStream(server) {
   wss.on('connection', (ws) => {
     track(ws);
     ws.turn = null;
+    ws.language = undefined;
     ws.on('error', () => {});
     ws.on('message', (data, isBinary) => {
-      if (isBinary) return handleBinary(ws);
+      if (isBinary) return handleBinary(ws, data);
       let msg;
       try {
         msg = JSON.parse(data.toString());

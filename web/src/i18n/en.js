@@ -17,7 +17,7 @@ export default {
   trust: '10 free answers when you sign up · No monthly fee',
 
   // hero toy
-  toyIdle: 'Tap the orange button to try Buddy', toyListening: 'Buddy is listening…', toySilence: 'Your child stopped talking, Buddy waits a moment…',
+  toyIdle: 'Tap the blue button to try Buddy', toyListening: 'Buddy is listening…', toySilence: 'Your child stopped talking, Buddy waits a moment…',
   toyHeard: 'Buddy noticed they finished talking', toyStopped: 'A second tap told Buddy they were done', toyThinking: 'Buddy is thinking…',
   toyAnswer: 'Tap again to ask something else', toyTap: 'Tap to start talking to Buddy', toyTapStop: 'Tap when you are done talking', asked: 'Your child asked',
   demo1q: 'Why is the sky blue?', demo1a: 'Sunlight bumps into the air and the blue part scatters everywhere, so blue is what we see all around!',
@@ -89,7 +89,7 @@ export default {
   needFamily: 'Please enter a family name.', badEmail: "That email doesn't look right.", shortPw: 'Password needs at least 8 characters.',
 
   // app
-  appNav: 'Navigation', nav_overview: 'Overview', nav_toys: 'Toys', nav_credits: 'Credits', nav_activity: 'Activity', nav_family: 'Family',
+  appNav: 'Navigation', nav_overview: 'Overview', nav_toys: 'Toys', nav_credits: 'Credits', nav_activity: 'Activity', nav_family: 'Family', nav_talk: 'Talk',
   hi: 'Hi {name}', signOut: 'Sign out', addToy: 'Add a toy', loadFailed: "We couldn't load your data. Check your connection and try again.",
   notFoundT: "We couldn't find that page",
   balLabel: 'Credits left', balUnit: 'credits', balHint: '1 credit = 1 answer. Shared by every Buddy at home.', buy: 'Buy credits',
@@ -172,6 +172,41 @@ export default {
   pq11: 'Buddy likes asking your child questions like…', pq11a: '“Why?” and “How does it work?”', pq11b: '“How do you feel?” and “Who would be happy?”',
   pq12: 'When your child changes their mind halfway, Buddy…', pq12a: 'Reminds them to finish what they started', pq12b: 'Happily switches along with them',
 
+  // talk (the web toy)
+  talkTo: 'Talk to {name}', talkPick: 'Choose a Buddy', talkLog: 'Conversation',
+  talkConnecting: 'Connecting to {name}…', talkIdle: 'Tap the blue button to talk to {name}, or type a message',
+  talkStarting: '{name} is getting ready to listen…', talkSpeakNow: 'Go ahead, {name} is listening', talkListening: "{name} is listening… Tap again when you're done",
+  talkThinking: '{name} is thinking…', talkAnswered: '{name} answered', talkSpeaking: '{name} is talking…',
+  talkDenied: "{name} can't answer right now. The reason is on the Activity page.",
+  talkAsleep: '{name} is resting. Wake {name} on the Toys page to talk.', talkOffline: "Couldn't connect to {name}.",
+  talkReconnect: 'Reconnect', talkGoToys: 'Go to Toys', talkTapStart: 'Tap to talk to {name}',
+  talkHeard: '{name} heard', talkTyped: 'Message', talkEmpty: 'Nothing here yet. Tap the button to talk, or type something to {name}.',
+  talkNewConv: 'New conversation', talkNewConvStarted: 'A new conversation started',
+  talkInputLabel: 'Message to Buddy', talkInputPh: 'Message {name}…', talkSend: 'Send',
+  talkDemoNote: 'This page plays the toy: each answer costs 1 credit, like the real Buddy.',
+  talkMicNote: "This browser can't use the microphone here. You can still type.",
+  talkInsecure: 'Talking to {name} on the web needs https or localhost. Open this page at one of those addresses.',
+  talkCancelling: 'One moment…',
+  talkNoToyT: 'No Buddy is awake', talkNoToyB: 'Wake a Buddy on the Toys page to talk to it right here.',
+  talkOffT: 'Talking on the web is off', talkOffB: "This server hasn't turned on talking to Buddy on the web.",
+  talkErr_mic_denied: "The browser hasn't allowed the microphone. Allow it from the address bar, or type instead.",
+  talkErr_mic_unavailable: "Couldn't open the microphone. Check your computer's mic, or type instead.",
+  talkErr_no_speech: "{name} didn't hear anything, so nothing was charged. Tap and talk.",
+  talkErr_turn_in_flight: 'Wait for {name} to finish first.',
+
+  // conversation settings (drawer)
+  settingsTitle: 'When talking', convLang: 'Conversation language', convLangHelp: "The language Buddy speaks and listens in, separate from this website's language.",
+  langVi: 'Tiếng Việt', langEn: 'English',
+  voiceLabel: 'Voice', voiceDefault: 'Default ({name})', voiceDefaultPlain: 'Default voice', voicesFailed: "Couldn't load the voices.",
+  learnLabel: 'Learn from conversations',
+  learnHelp: 'When on, Buddy remembers names, likes and stories your child shares, so later talks feel more natural. When off, Buddy keeps nothing.',
+  moodLabel: "Buddy's mood", moodAuto: 'Automatic', moodPinned: 'Pinned',
+  moodAutoHelp: 'Buddy has its own mood each day, like a real friend.',
+  moodPinnedHelp: 'This mood stays until you switch back to Automatic.',
+  moodLow: 'Low', moodHigh: 'Very cheerful', moodValue: '{n}/100',
+  sumLang_vi: 'Speaks Vietnamese', sumLang_en: 'Speaks English', sumLearnOn: 'Learns from talks', sumLearnOff: 'Keeps no memories',
+  sumMoodAuto: 'Automatic mood', sumMoodPin: 'Mood pinned at {n}/100',
+
   // errors
   err_generic: 'Something went wrong. Please try again in a few minutes.', err_network_error: "We couldn't reach the server. Check your connection and try again.",
   err_rate_limited: 'Too many tries. Please wait about {s} seconds and try again.', err_invalid_credentials: 'Email or password is incorrect.',
@@ -183,4 +218,5 @@ export default {
   err_purchase_not_pending: 'That purchase was already processed.', err_unauthorized: 'Your session ended. Please sign in again.',
   err_token_expired: 'Your session ended. Please sign in again.', err_refresh_token_reused: 'Your session ended. Please sign in again.',
   err_no_session: 'Please sign in again.', err_internal_error: 'The server had a problem. Please try again in a few minutes.', err_http_error: 'Something went wrong. Please try again.',
+  err_web_toy_disabled: 'Talking on the web is off.',
 };

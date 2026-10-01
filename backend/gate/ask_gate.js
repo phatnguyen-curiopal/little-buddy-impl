@@ -9,15 +9,44 @@
 
 export const REASONS = Object.freeze(['not_claimed', 'disabled', 'no_credits', 'daily_limit', 'quiet_hours']);
 
-const BREAK = Object.freeze({ emotion: 'sleepy', say: "Time for a little break. Let's play again later!" });
+// The toy speaks its conversation language (the profile's), so every
+// canned line exists once per language. An unknown language falls back to
+// Vietnamese, the product's default.
+export const LANGUAGES = Object.freeze(['vi', 'en']);
+export const DEFAULT_LANGUAGE = 'vi';
+
+function denials({ notClaimed, pause }) {
+  const BREAK = Object.freeze({ emotion: 'sleepy', say: pause });
+  return Object.freeze({
+    not_claimed: Object.freeze({ emotion: 'confused', say: notClaimed }),
+    disabled: BREAK,
+    no_credits: BREAK,
+    daily_limit: BREAK,
+    quiet_hours: BREAK,
+  });
+}
 
 export const DENIALS = Object.freeze({
-  not_claimed: Object.freeze({ emotion: 'confused', say: "Let's ask a grown-up to set me up first." }),
-  disabled: BREAK,
-  no_credits: BREAK,
-  daily_limit: BREAK,
-  quiet_hours: BREAK,
+  vi: denials({
+    notClaimed: 'Mình cần một người lớn cài đặt giúp trước đã nhé.',
+    pause: 'Mình nghỉ một chút nhé. Lát nữa mình chơi tiếp!',
+  }),
+  en: denials({
+    notClaimed: "Let's ask a grown-up to set me up first.",
+    pause: "Time for a little break. Let's play again later!",
+  }),
 });
+
+// Spoken when the brain fails mid-turn. Not a denial: the turn was
+// admitted, and it ends as failed without charging.
+export const FAILED_ANSWERS = Object.freeze({
+  vi: Object.freeze({ emotion: 'confused', say: 'Ơ, mình nghĩ mãi chưa ra. Lát nữa mình thử lại nhé!' }),
+  en: Object.freeze({ emotion: 'confused', say: "Hmm, let's try that again in a little while." }),
+});
+
+export function languageOf(value) {
+  return LANGUAGES.includes(value) ? value : DEFAULT_LANGUAGE;
+}
 
 const deny = (reason) => ({ ok: false, reason });
 
@@ -32,6 +61,10 @@ export function checkTurn({ device, balance = 0, inflight = 0 }) {
   return { ok: true };
 }
 
-export function denialFor(reason) {
-  return DENIALS[reason];
+export function denialFor(reason, language = DEFAULT_LANGUAGE) {
+  return DENIALS[languageOf(language)][reason];
+}
+
+export function failedAnswer(language = DEFAULT_LANGUAGE) {
+  return FAILED_ANSWERS[languageOf(language)];
 }

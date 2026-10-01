@@ -12,6 +12,9 @@ const defaults = {
   // scrypt at production cost takes ~100 ms per hash; the suite hashes dozens.
   SCRYPT_COST: '4096',
   DEVICE_AUTH: 'on',
+  // The brain service is never needed by the suite: brain-mode files set
+  // PROVIDER_MODE and BRAIN_URL (a stub) before their first config import.
+  PROVIDER_MODE: 'mock',
 };
 
 for (const [key, value] of Object.entries(defaults)) {

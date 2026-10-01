@@ -19,7 +19,7 @@ function NotFound() {
     <div className="splash">
       <span className="chip-screen chip-screen--xl"><Face emotion="confused" /></span>
       <h1>{t('notFoundT')}</h1>
-      <Link className="btn apricot" to="/">{t('backHome')}</Link>
+      <Link className="btn pop" to="/">{t('backHome')}</Link>
     </div>
   );
 }

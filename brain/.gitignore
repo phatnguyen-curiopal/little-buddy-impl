@@ -1,0 +1,7 @@
+node_modules/
+.env
+# Debug taps hold children's words (LLM_LOG_FILE, STT_DUMP_WAV).
+*.log
+logs/
+wavs/
+*.wav

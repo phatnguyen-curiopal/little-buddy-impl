@@ -119,10 +119,22 @@ to know which one happened.
 | type | meaning |
 |---|---|
 | `turn_start` | the child tapped the button: the microphone opens |
-| binary frames | PCM16 16 kHz 20 ms audio while the turn is open (640 bytes each) |
+| binary frames | PCM16 little-endian mono 16 kHz audio, sent only **after** `turn_accepted` (20 ms = 640 bytes per frame is the norm) |
 | `turn_end` | the child finished talking: the toy heard the pause after speech, or the child tapped again. The microphone closes. |
+| `turn_end` with `text` | a typed turn (the web toy's chat box): `{"type":"turn_end","text":"..."}`, 1 to 2000 characters after trimming. Any audio sent in this turn is ignored. |
 | `turn_cancel` | give up this turn (for example the toy heard no speech at all); nothing is charged |
+| `conversation_new` | end the toy's open conversation now; the next turn starts a new one (and Buddy's short-term context with it) |
 | `ping` | keepalive |
+
+Audio limits:
+
+- One WebSocket message is at most 64 KB. A bigger one closes the socket
+  with code `1009` before anything is buffered.
+- Frames are buffered for the open turn, up to `TURN_MAX_SEC` seconds of
+  audio (`TURN_MAX_SEC * 32000` bytes, 120 s by default); anything past
+  that is dropped. Frames that arrive before `turn_accepted` or after
+  `turn_end` are dropped, and an odd-length frame (half a sample) is
+  ignored. So a client must wait for `turn_accepted` before it streams.
 
 Server to toy:
 
@@ -130,22 +142,56 @@ Server to toy:
 |---|---|---|
 | `turn_accepted` | `turn_id`, `emotion:"listening"` | speak now; a credit is reserved |
 | `turn_denied` | `emotion`, `say`, `conversation_open:false` | show the face and say the sentence; nothing is charged |
-| `answer` | `turn_id`, `emotion`, `say` | the answer, sent before anything is charged |
+| `answer` | `turn_id`, `emotion`, `say`, `heard` | the answer, sent before anything is charged. `heard` is what Buddy understood: the transcript of a voice turn or the typed text (may be empty) |
+| `audio` | `turn_id`, `rate`, `bytes` | Buddy's voice follows: binary PCM16 LE mono frames at `rate` Hz, each at most 32000 bytes, `bytes` in total |
+| binary frames | | the audio announced by `audio` |
+| `audio_end` | `turn_id` | the audio is complete |
 | `turn_done` | `turn_id`, `status:"completed"|"abandoned"|"failed"` | the turn is closed; only `completed` charged a credit |
-| `error` | `code:"turn_in_flight"|"no_turn"` | protocol misuse: a second `turn_start` while a turn is open (a second tap must be sent as `turn_end`), or a `turn_end` with no turn open |
+| `conversation_started` | | reply to `conversation_new` |
+| `error` | `code:"turn_in_flight"|"no_turn"|"invalid_text"` | protocol misuse: a second `turn_start` (or a `conversation_new`) while a turn is open (a second tap must be sent as `turn_end`), a `turn_end` with no turn open, or a `turn_end` whose `text` is empty, too long or not a string (the turn stays open) |
+
+For an answered turn the order is always: `answer`, then, when there is
+audio, `audio`, the binary frames and `audio_end`, then `turn_done`.
+The debit is written after the answer and its audio went out. Firmware that
+cannot play downlink audio yet may ignore `audio`, the binary frames and
+`audio_end`; `answer.say` still carries the words.
+
+When Buddy heard nothing usable (an empty transcript or under 0.3 s of
+audio), the answer is a short "I didn't catch that" line (emotion
+`confused`, with its audio) and the turn ends `abandoned`: not charged.
+A server-side failure while answering speaks a canned line and ends
+`failed`, also not charged.
+
+Every sentence the toy is given (`turn_denied`, `answer.say`) is in the
+toy's conversation language, which the parent sets per toy (Vietnamese by
+default, or English). An unclaimed toy has no language yet and speaks
+Vietnamese.
 
 `emotion` is one of `neutral`, `listening`, `thinking`, `happy`, `excited`,
 `laughing`, `love`, `curious`, `surprised`, `wink`, `shy`, `confused`,
 `sad`, `sleepy`. The firmware should draw each one and fall back to
-`neutral` for anything it does not know. Today the server sends
-`listening`, `happy`, `sleepy` and `confused`; the rest arrive with the real
-model. The parent website (`web/`) draws the same set.
+`neutral` for anything it does not know. The model picks the answer's
+emotion from the whole set. The parent website (`web/`) draws the same set.
 
 A turn that is not ended within 120 seconds, a cancelled turn, a socket
 that drops mid-turn, and a kill switch (close code 4003) all end as
-`abandoned` and charge nothing. The answer is always delivered before the
-debit is written, so a family never pays for silence. Turns within five
-minutes of each other on the same toy belong to one conversation.
+`abandoned` and charge nothing, even while Buddy is still thinking: the
+server stops working on the answer and says nothing more. The answer is
+always delivered before the debit is written, so a family never pays for
+silence. Turns within five minutes of each other on the same toy, for the
+same child, belong to one conversation; `conversation_new` ends it early,
+and assigning the toy to another child starts a new one.
+
+The web toy (the parent's browser playing a claimed toy from the
+dashboard) uses exactly this protocol, signing with a web credential the
+owning parent can reveal. That credential is not the factory secret: it is
+HKDF-SHA256 of the device secret with info
+`lb-web-toy:<family_id>:<claimed_at in ms>`, so the server accepts it only
+while that family's claim stands (status active or disabled, after a
+reveal). Unpairing, any new claim, or rotating the device secret makes every
+copy a browser kept fail with `auth_bad_signature`, while the physical toy
+keeps signing with its own secret. It sends no heartbeat, so the physical toy's
+last-seen time and firmware version are untouched.
 
 Heartbeat request body (JSON, optional fields):
 `{ "firmware_version": "1.0.0", "uptime_s": 42 }`. Response:

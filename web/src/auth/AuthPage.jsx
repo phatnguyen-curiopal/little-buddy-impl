@@ -78,7 +78,7 @@ export default function AuthPage({ mode }) {
             <span className="muted small">{t('pwHint')}</span>
           </div>
           {error && <p className="msg bad shake">{error}</p>}
-          <button type="submit" className="btn apricot lg block sheen" disabled={busy}>{busy ? t('wait') : reg ? t('register') : t('signIn')}</button>
+          <button type="submit" className="btn pop lg block sheen" disabled={busy}>{busy ? t('wait') : reg ? t('register') : t('signIn')}</button>
           <p className="muted center-text">
             {reg ? t('haveAccount') : t('noAccount')}{' '}
             <Link className="link" to={`${reg ? '/login' : '/register'}${search.get('next') ? `?next=${encodeURIComponent(search.get('next'))}` : ''}`}>{reg ? t('signIn') : t('register')}</Link>

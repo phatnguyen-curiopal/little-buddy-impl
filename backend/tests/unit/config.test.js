@@ -59,13 +59,14 @@ test('rejects unknown NODE_ENV and out-of-range integers', () => {
   assert.throws(() => loadConfig({ DEVICE_CLOCK_SKEW_SEC: '5' }), /DEVICE_CLOCK_SKEW_SEC/);
 });
 
-test('turn and credit knobs have defaults and only the mock provider is accepted', () => {
+test('turn and credit knobs have defaults and only known providers are accepted', () => {
   const cfg = loadConfig({});
   assert.equal(cfg.providerMode, 'mock');
   assert.equal(cfg.welcomeCredits, 10);
   assert.equal(cfg.turnMaxSec, 120);
   assert.equal(cfg.conversationIdleSec, 300);
   assert.equal(loadConfig({ WELCOME_CREDITS: '0' }).welcomeCredits, 0);
+  assert.equal(loadConfig({ PROVIDER_MODE: 'BRAIN' }).providerMode, 'brain');
   assert.throws(() => loadConfig({ PROVIDER_MODE: 'openai' }), /PROVIDER_MODE/);
   assert.throws(() => loadConfig({ TURN_MAX_SEC: '1' }), /TURN_MAX_SEC/);
 });
@@ -81,4 +82,45 @@ test('demo payments are the dev default and refused in production', () => {
 test('test env defaults log level to silent, development to info', () => {
   assert.equal(loadConfig({ NODE_ENV: 'test' }).logLevel, 'silent');
   assert.equal(loadConfig({}).logLevel, 'info');
+});
+
+test('brain defaults: local URL, 45 s timeout, and a stale margin that outlasts it', () => {
+  const cfg = loadConfig({});
+  assert.equal(cfg.brainUrl, 'http://127.0.0.1:8080');
+  assert.equal(cfg.brainTimeoutMs, 45_000);
+  assert.equal(cfg.turnStaleSec, 120 + 60);
+  // A long brain timeout pushes the margin past the old fixed 60 s.
+  const slow = loadConfig({ BRAIN_TIMEOUT_MS: '120000', TURN_MAX_SEC: '30' });
+  assert.equal(slow.turnStaleSec, 30 + 135);
+  for (const ms of [1000, 45_000, 300_000]) {
+    const c = loadConfig({ BRAIN_TIMEOUT_MS: String(ms) });
+    assert.ok(ms < (c.turnStaleSec - c.turnMaxSec - 10) * 1000, `brain timeout ${ms} stays under the stale margin`);
+  }
+  assert.throws(() => loadConfig({ BRAIN_TIMEOUT_MS: '500' }), /BRAIN_TIMEOUT_MS/);
+  assert.throws(() => loadConfig({ BRAIN_TIMEOUT_MS: '400000' }), /BRAIN_TIMEOUT_MS/);
+  assert.throws(() => loadConfig({ BRAIN_URL: 'not a url' }), /BRAIN_URL/);
+  assert.throws(() => loadConfig({ BRAIN_URL: 'ftp://brain' }), /BRAIN_URL/);
+});
+
+test('production in brain mode refuses a default or short BRAIN_TOKEN; mock mode does not need one', () => {
+  assert.throws(() => loadConfig({ ...validProd, PROVIDER_MODE: 'brain' }), /BRAIN_TOKEN/);
+  assert.throws(() => loadConfig({ ...validProd, PROVIDER_MODE: 'brain', BRAIN_TOKEN: 'short' }), /BRAIN_TOKEN/);
+  assert.equal(loadConfig({ ...validProd, PROVIDER_MODE: 'brain', BRAIN_TOKEN: 'b'.repeat(40) }).brainToken, 'b'.repeat(40));
+  assert.equal(loadConfig(validProd).providerMode, 'mock');
+  assert.equal(loadConfig({ PROVIDER_MODE: 'brain' }).providerMode, 'brain');
+});
+
+test('brain mode refuses a TURN_MAX_SEC whose full voice turn is over the brain 6 MB body limit', () => {
+  assert.equal(loadConfig({ PROVIDER_MODE: 'brain', TURN_MAX_SEC: '196' }).turnMaxSec, 196);
+  assert.ok(196 * 32000 <= 6 * 1024 * 1024);
+  assert.throws(() => loadConfig({ PROVIDER_MODE: 'brain', TURN_MAX_SEC: '197' }), /TURN_MAX_SEC must be at most 196/);
+  assert.equal(loadConfig({ PROVIDER_MODE: 'mock', TURN_MAX_SEC: '600' }).turnMaxSec, 600);
+});
+
+test('the web toy is on outside production and off in production unless set', () => {
+  assert.equal(loadConfig({}).webToy, true);
+  assert.equal(loadConfig({ WEB_TOY: 'off' }).webToy, false);
+  assert.equal(loadConfig(validProd).webToy, false);
+  assert.equal(loadConfig({ ...validProd, WEB_TOY: 'on' }).webToy, true);
+  assert.throws(() => loadConfig({ WEB_TOY: 'maybe' }), /WEB_TOY/);
 });

@@ -44,7 +44,7 @@ function Nav() {
         <div className="nav-actions">
           <LangSwitch dark />
           <Link className="btn ghost-light sm" to="/login">{t('signIn')}</Link>
-          <Link className="btn apricot sm" to="/register">{t('start')}</Link>
+          <Link className="btn pop sm" to="/register">{t('start')}</Link>
         </div>
         <button type="button" className="menu-btn" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? t('closeMenu') : t('menu')}</button>
       </div>
@@ -54,7 +54,7 @@ function Nav() {
           <div className="menu-row">
             <LangSwitch dark />
             <Link className="btn ghost-light sm" to="/login">{t('signIn')}</Link>
-            <Link className="btn apricot sm" to="/register">{t('start')}</Link>
+            <Link className="btn pop sm" to="/register">{t('start')}</Link>
           </div>
         </div>
       )}
@@ -81,7 +81,7 @@ function Hero() {
           </h1>
           <p className="hero-sub">{t('heroSub')}</p>
           <div className="hero-ctas">
-            <Link className="btn apricot lg sheen" to="/register">{t('ctaStart')}{Icon.arrow}</Link>
+            <Link className="btn pop lg sheen" to="/register">{t('ctaStart')}{Icon.arrow}</Link>
             <a className="btn ghost-light lg" href="#how">{t('ctaHow')}</a>
           </div>
           <p className="trust"><i />{t('trust')}</p>
@@ -172,10 +172,10 @@ function Emotions() {
 function Features() {
   const { t } = useI18n();
   const scenes = [
-    <><rect width="100" height="100" fill="#79B4EE" /><circle cx="72" cy="28" r="12" fill="#FFE08A" /><path d="M0 78 Q30 64 55 76 T100 72 V100 H0z" fill="#2E9E80" /></>,
-    <><rect width="100" height="100" fill="#183342" /><circle cx="30" cy="30" r="3" fill="#EAF2F4" /><circle cx="70" cy="20" r="2" fill="#EAF2F4" /><circle cx="55" cy="47" r="16" fill="#E8EFF1" /><circle cx="50" cy="42" r="3" fill="#A9BDC5" /></>,
-    <><rect width="100" height="100" fill="#4FBF9F" /><path d="M20 72 Q50 30 80 72z" fill="#FF9F4A" /><circle cx="50" cy="45" r="8" fill="#FFD1A6" /></>,
-    <><rect width="100" height="100" fill="#FFEBD8" /><path d="M15 80 L50 30 L85 80z" fill="#D96F14" /><rect x="44" y="60" width="12" height="20" fill="#10212B" /></>,
+    <><rect width="100" height="100" fill="#8FB2FF" /><circle cx="72" cy="28" r="12" fill="#FFE08A" /><path d="M0 78 Q30 64 55 76 T100 72 V100 H0z" fill="#14B8A6" /></>,
+    <><rect width="100" height="100" fill="#111A2E" /><circle cx="30" cy="30" r="3" fill="#E8EEFA" /><circle cx="70" cy="20" r="2" fill="#E8EEFA" /><circle cx="55" cy="47" r="16" fill="#E8EEFA" /><circle cx="50" cy="42" r="3" fill="#A3B3CE" /></>,
+    <><rect width="100" height="100" fill="#2F6BFF" /><path d="M20 72 Q50 30 80 72z" fill="#F97316" /><circle cx="50" cy="45" r="8" fill="#FDBA74" /></>,
+    <><rect width="100" height="100" fill="#FFE7D1" /><path d="M15 80 L50 30 L85 80z" fill="#C2410C" /><rect x="44" y="60" width="12" height="20" fill="#0B1220" /></>,
   ];
   return (
     <section className="band" id="meet">
@@ -252,7 +252,7 @@ function PriceCard({ pack }) {
         <div className="price-amt">{vnd(pack.price_amount, lang)}</div>
         <div className="price-credits">{t('credits', { n: pack.credits })}</div>
         <div className="price-per">{t('perAnswer', { p: vnd(pricePerAnswer(pack), lang) })}</div>
-        <Link className={`btn ${best ? 'apricot' : 'ghost'} block`} to="/register">{t('choose')}</Link>
+        <Link className={`btn ${best ? 'pop' : 'ghost'} block`} to="/register">{t('choose')}</Link>
       </div>
     </article>
   );

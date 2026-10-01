@@ -5,6 +5,9 @@ import { requireAdmin } from '../middleware/require_admin.js';
 import { validateBody, isUuid } from '../lib/validate.js';
 import { badRequest, notFound } from '../lib/http_error.js';
 import * as billing from '../billing/ledger.js';
+import * as voices from '../store/voice.js';
+import { withTransaction } from '../store/db.js';
+import { VOICE_ID_RE } from '../personalization/roles.js';
 
 // Internal operator endpoints, mounted at /admin. Provisioning is not here
 // on purpose: device secrets never cross HTTP, they go from the CLI to the
@@ -34,7 +37,10 @@ adminRouter.get('/devices', async (req, res) => {
   const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), MAX_LIMIT);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
   const rows = await registry.listDevices({ status, batchId, familyId, limit, offset });
-  res.json({ devices: rows.map((r) => ({ ...deviceStore.toDto(r), batch_id: r.batch_id, family_id: r.family_id })) });
+  // secret_revealed_at: the owning family has a web toy credential for
+  // this toy. It is derived per ownership and dies on unpair, so it is an
+  // audit signal, not a reason to rotate the factory secret.
+  res.json({ devices: rows.map((r) => ({ ...deviceStore.toDto(r), batch_id: r.batch_id, family_id: r.family_id, secret_revealed_at: r.secret_revealed_at })) });
 });
 
 adminRouter.post('/devices/:id/disable', async (req, res) => {
@@ -78,4 +84,19 @@ adminRouter.get('/families/:id/wallet', async (req, res) => {
 adminRouter.post('/devices/:id/reissue-claim-code', async (req, res) => {
   const claimCode = await registry.reissueClaimCode({ deviceId: deviceId(req), actorId: req.admin.id });
   res.json({ claim_code: claimCode });
+});
+
+// Adds a voice, or edits one (same id). is_default moves the default here;
+// profiles that never picked a voice follow it.
+adminRouter.post('/voices', async (req, res) => {
+  const body = validateBody(req.body, {
+    id: { type: 'string', required: true, min: 1, max: 64, pattern: VOICE_ID_RE },
+    label: { type: 'string', required: true, min: 1, max: 60 },
+    sort: { type: 'int', min: -1000, max: 1000 },
+  });
+  // Omitted means "leave as is" on an edit (and false on a new voice).
+  const isDefault = req.body?.is_default ?? null;
+  if (isDefault !== null && typeof isDefault !== 'boolean') throw badRequest('validation_error', 'invalid request body', { details: [{ field: 'is_default', message: 'must be true or false' }] });
+  const row = await withTransaction((tx) => voices.upsert(tx, { id: body.id, label: body.label, sort: body.sort ?? null, isDefault }));
+  res.status(row.created ? 201 : 200).json({ voice: { ...voices.toDto(row), sort: row.sort } });
 });

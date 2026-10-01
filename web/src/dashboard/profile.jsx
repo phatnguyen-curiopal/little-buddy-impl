@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Face from '../components/Face.jsx';
 import { useI18n } from '../lib/i18n.jsx';
+import { api } from '../lib/api.js';
+import { MOOD_START, clampMood, defaultVoice, settingsOf } from '../lib/toySettings.js';
 import { GROUPS, NAME_MAX, NAME_SUGGESTIONS, QUESTIONS, ROLES, TYPES, scoreQuiz, suggestName, typeOf } from '../lib/personality.js';
 
 // Buddy's profile: a name, how it talks to the child (role) and one of 16
@@ -37,9 +39,21 @@ export function ProfileSummary({ profile, onEdit }) {
         <div className="p-name">{profile.name}</div>
         <div className="feed-sub">{t(`role_${profile.role}`)} · {t(`ptype_${type.code}`)} <span className="mono">{type.code}</span> · {t(`source_${profile.personality_source}`)}</div>
         <div className="feed-sub">{t(`ptypeDesc_${type.code}`)}</div>
+        <SettingsLine profile={profile} />
       </div>
     </div>
   );
+}
+
+function SettingsLine({ profile }) {
+  const { t } = useI18n();
+  const s = settingsOf(profile);
+  const parts = [
+    s.language === 'en' ? t('sumLang_en') : t('sumLang_vi'),
+    s.learn ? t('sumLearnOn') : t('sumLearnOff'),
+    s.mood_pin === null ? t('sumMoodAuto') : t('sumMoodPin', { n: s.mood_pin }),
+  ];
+  return <div className="feed-sub">{parts.join(' · ')}</div>;
 }
 
 export function NameField({ value, onChange, error = '', autoFocus = false }) {
@@ -95,7 +109,7 @@ export function PersonalityQuiz({ onResult, onExit, onPick }) {
         <div><b className="p-name">{t(`ptype_${code}`)}</b> <span className="mono muted">{code}</span></div>
         <p className="muted">{t(`ptypeDesc_${code}`)}</p>
         <div className="row-actions">
-          <button type="button" className="btn apricot" data-autofocus onClick={() => onResult(code)}>{t('useThis')}</button>
+          <button type="button" className="btn pop" data-autofocus onClick={() => onResult(code)}>{t('useThis')}</button>
           <button type="button" className="btn ghost" onClick={() => { setAnswers([]); setStep(0); }}>{t('retake')}</button>
         </div>
         {onPick && <button type="button" className="link" onClick={onPick}>{t('tabPick')}</button>}
@@ -156,7 +170,8 @@ export function PersonalityPicker({ value, onPick }) {
 }
 
 // The drawer's one-page editor, for changing one thing on an existing Buddy.
-// Controlled: value is { name, role, personality, personality_source }.
+// Controlled: value is { name, role, personality, personality_source } plus
+// the conversation settings (language, voice_id, learn, mood_pin).
 export function ProfileEditor({ value, onChange, nameError = '' }) {
   const { t } = useI18n();
   const [tab, setTab] = useState('pick');
@@ -184,6 +199,81 @@ export function ProfileEditor({ value, onChange, nameError = '' }) {
         {tab === 'quiz'
           ? <PersonalityQuiz key={quizKey} onResult={(code) => { set({ personality: code, personality_source: 'quiz' }); setTab('pick'); }} />
           : <PersonalityPicker value={value.personality} onPick={(code) => set({ personality: code, personality_source: 'picked' })} />}
+      </section>
+      <ToySettings value={value} onChange={set} />
+    </div>
+  );
+}
+
+// Voices change rarely; one request per page is enough.
+let voicesOnce = null;
+function useVoices() {
+  const [state, setState] = useState({ voices: [], failed: false });
+  useEffect(() => {
+    let live = true;
+    voicesOnce ??= api.voices().then((out) => out.voices ?? []).catch((err) => {
+      voicesOnce = null;
+      throw err;
+    });
+    voicesOnce.then((voices) => live && setState({ voices, failed: false }), () => live && setState({ voices: [], failed: true }));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return state;
+}
+
+// How Buddy talks, as opposed to who Buddy is: language, voice, memory and
+// mood. Only the drawer shows these; the add-toy wizard keeps the defaults.
+export function ToySettings({ value, onChange }) {
+  const { t } = useI18n();
+  const { voices, failed } = useVoices();
+  const s = settingsOf(value);
+  const fallback = defaultVoice(voices);
+  const pinned = s.mood_pin !== null;
+  return (
+    <div className="profile-editor settings">
+      <p className="eyebrow">{t('settingsTitle')}</p>
+      <section className="pe-section">
+        <p className="pe-label" id="conv-lang">{t('convLang')}</p>
+        <div className="seg" role="group" aria-labelledby="conv-lang">
+          <button type="button" aria-pressed={s.language === 'vi'} onClick={() => onChange({ language: 'vi' })}>{t('langVi')}</button>
+          <button type="button" aria-pressed={s.language === 'en'} onClick={() => onChange({ language: 'en' })}>{t('langEn')}</button>
+        </div>
+        <p className="feed-sub">{t('convLangHelp')}</p>
+      </section>
+      <section className="pe-section">
+        <label className="pe-label" htmlFor="buddy-voice">{t('voiceLabel')}</label>
+        <select id="buddy-voice" className="input" value={s.voice_id ?? ''} onChange={(e) => onChange({ voice_id: e.target.value || null })}>
+          <option value="">{fallback ? t('voiceDefault', { name: fallback.label }) : t('voiceDefaultPlain')}</option>
+          {/* The default voice is already the first option (null, which follows a
+              later change of default); listing it again would look identical
+              but pin it. It stays only when this toy has pinned it already. */}
+          {voices.filter((v) => !v.is_default || v.id === s.voice_id).map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+          {s.voice_id && !voices.some((v) => v.id === s.voice_id) && <option value={s.voice_id}>{s.voice_id}</option>}
+        </select>
+        {failed && <p className="msg bad">{t('voicesFailed')}</p>}
+      </section>
+      <section className="pe-section">
+        <label className="switch-row" htmlFor="buddy-learn">
+          <span><span className="pe-label">{t('learnLabel')}</span><span className="feed-sub">{t('learnHelp')}</span></span>
+          <input id="buddy-learn" type="checkbox" role="switch" className="switch" checked={s.learn} onChange={(e) => onChange({ learn: e.target.checked })} />
+        </label>
+      </section>
+      <section className="pe-section">
+        <p className="pe-label" id="buddy-mood">{t('moodLabel')}</p>
+        <div className="seg" role="group" aria-labelledby="buddy-mood">
+          <button type="button" aria-pressed={!pinned} onClick={() => onChange({ mood_pin: null })}>{t('moodAuto')}</button>
+          <button type="button" aria-pressed={pinned} onClick={() => onChange({ mood_pin: pinned ? s.mood_pin : MOOD_START })}>{t('moodPinned')}</button>
+        </div>
+        {pinned && (
+          <div className="mood-pin">
+            <input type="range" className="range" min="0" max="100" step="1" value={s.mood_pin} aria-label={t('moodValue', { n: s.mood_pin })}
+              onChange={(e) => onChange({ mood_pin: clampMood(e.target.value) })} />
+            <div className="mood-scale"><span>{t('moodLow')}</span><b>{t('moodValue', { n: s.mood_pin })}</b><span>{t('moodHigh')}</span></div>
+          </div>
+        )}
+        <p className="feed-sub">{pinned ? t('moodPinnedHelp') : t('moodAutoHelp')}</p>
       </section>
     </div>
   );

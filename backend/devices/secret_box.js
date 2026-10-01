@@ -14,6 +14,17 @@ export function newDeviceSecret() {
   return randomBytes(SECRET_LEN);
 }
 
+// The credential the web toy signs with. It is derived from the device
+// secret and the current ownership (family and claim time), never the
+// factory secret itself, so an unpair and any new claim (even by the same
+// family) turn every copy a browser kept into a dead key, while the physical
+// toy keeps working. HKDF is one-way: holding it reveals nothing about the
+// device secret. A rotation of the device secret kills it too.
+export function webToySecret(deviceSecret, { familyId, claimedAt }) {
+  const info = `lb-web-toy:${familyId}:${new Date(claimedAt).getTime()}`;
+  return Buffer.from(hkdfSync('sha256', deviceSecret, '', info, SECRET_LEN));
+}
+
 // One env var, two purposes, two unrelated subkeys via HKDF: the wrap key
 // never touches claim codes and vice versa.
 export function makeSecretBox(kek) {

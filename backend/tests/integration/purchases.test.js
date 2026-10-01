@@ -131,6 +131,7 @@ test('an out-of-credit toy is sleepy until the family buys a pack, then it answe
 
   const accepted = await sim.turnStart(ws);
   assert.equal(accepted.type, 'turn_accepted');
+  sim.sendFrames(ws, 5);
   const { done } = await sim.turnEnd(ws);
   assert.equal(done.status, 'completed');
   assert.equal((await api('GET', '/api/wallet', { token: p.token })).body.balance, 19);

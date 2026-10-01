@@ -1,0 +1,26 @@
+{
+  "name": "littlebuddy-brain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Buddy's conversation brain: STT, memory, prompt, LLM and TTS behind one internal HTTP API",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "dev": "node --watch --env-file=.env server.js",
+    "migrate": "node --env-file=.env scripts/migrate.js",
+    "pretest": "node --import ./tests/helpers/env.js scripts/check_db.js",
+    "test": "node --test --test-concurrency=1 --import ./tests/helpers/env.js \"tests/**/*.test.js\"",
+    "test:unit": "node --test --import ./tests/helpers/env.js \"tests/unit/**/*.test.js\"",
+    "import:poc": "node --env-file=.env scripts/import_poc.js",
+    "seed:botlife": "node --env-file=.env scripts/seed_botlife.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "express": "^5.1.0",
+    "openai": "^7.4.0",
+    "pg": "^8.16.0"
+  }
+}

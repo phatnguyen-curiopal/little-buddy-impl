@@ -5,8 +5,9 @@ import * as families from '../store/family.js';
 import * as ledger from '../store/ledger.js';
 import * as conversations from '../store/conversation.js';
 import * as turns from '../store/turn.js';
+import * as profiles from '../store/profile.js';
 import * as registry from '../devices/registry.js';
-import { checkTurn, denialFor } from '../gate/ask_gate.js';
+import { checkTurn, denialFor, languageOf, DEFAULT_LANGUAGE } from '../gate/ask_gate.js';
 import log from '../lib/log.js';
 
 // A turn is one button press. Admission reserves one credit by writing an
@@ -14,17 +15,21 @@ import log from '../lib/log.js';
 // once; anything else releases the reservation without charging.
 
 // Accepted rows older than this are crash leftovers: they neither reserve a
-// credit nor can they still be completed.
-const staleAfterSec = () => config.turnMaxSec + 60;
+// credit nor can they still be completed. config.js sizes it to outlast the
+// longest turn plus the brain's timeout.
+export const staleAfterSec = () => config.turnStaleSec;
 
-function denied(reason) {
-  return { ok: false, reason, ...denialFor(reason) };
+function denied(reason, language) {
+  return { ok: false, reason, language, ...denialFor(reason, language) };
 }
 
 export async function startTurn({ deviceId }) {
   // Fresh read on purpose: ws.device is the status at upgrade time, and a
   // pause or unpair since then must be seen on this very press.
-  const device = await registry.getById(deviceId);
+  const [device, profile] = await Promise.all([registry.getById(deviceId), profiles.findByDevice(pool, deviceId)]);
+  // An unclaimed toy's profile may still be the previous owner's; it has no
+  // language of its own until claimed.
+  const language = device?.family_id ? languageOf(profile?.language) : DEFAULT_LANGUAGE;
 
   if (!device || device.status !== 'active' || !device.family_id) {
     const verdict = checkTurn({ device });
@@ -35,7 +40,7 @@ export async function startTurn({ deviceId }) {
       await turns.insertDenied(pool, { id: randomUUID(), familyId: device.family_id, deviceId, childId: device.child_id, reason });
     }
     log.info('turn_denied', { device_id: deviceId, reason });
-    return denied(reason);
+    return denied(reason, language);
   }
 
   return withTransaction(async (tx) => {
@@ -48,10 +53,10 @@ export async function startTurn({ deviceId }) {
     if (!verdict.ok) {
       await turns.insertDenied(tx, { id: randomUUID(), familyId: device.family_id, deviceId, childId: device.child_id, reason: verdict.reason });
       log.info('turn_denied', { device_id: deviceId, reason: verdict.reason });
-      return denied(verdict.reason);
+      return denied(verdict.reason, language);
     }
 
-    let conversation = await conversations.findOpenForDevice(tx, deviceId, device.family_id, config.conversationIdleSec);
+    let conversation = await conversations.findOpenForDevice(tx, deviceId, device.family_id, device.child_id, config.conversationIdleSec);
     if (conversation) await conversations.touch(tx, conversation.id);
     else conversation = await conversations.insert(tx, { familyId: device.family_id, deviceId, childId: device.child_id });
 
@@ -63,8 +68,18 @@ export async function startTurn({ deviceId }) {
       childId: device.child_id,
     });
     log.info('turn_accepted', { device_id: deviceId, turn_id: turn.id, conversation_id: conversation.id });
-    return { ok: true, turnId: turn.id, conversationId: conversation.id, familyId: device.family_id, childId: device.child_id };
+    return { ok: true, turnId: turn.id, conversationId: conversation.id, familyId: device.family_id, childId: device.child_id, language };
   });
+}
+
+// "New conversation" from the toy. Scoped to the toy's current family, so
+// it can never end another family's conversation.
+export async function endConversation({ deviceId }) {
+  const device = await registry.getById(deviceId);
+  if (!device?.family_id) return 0;
+  const n = await conversations.endOpenForDevice(pool, deviceId, device.family_id);
+  log.info('conversation_ended', { device_id: deviceId, count: n });
+  return n;
 }
 
 // The debit rides in the same transaction as the completion, and the

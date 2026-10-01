@@ -1,6 +1,6 @@
-// Every expression Buddy's screen can show. The backend emits a subset
-// today (listening, happy, confused, sleepy); the rest are ready for the
-// model's emotion header when the real pipeline lands.
+// Every expression Buddy's screen can show. With the brain, the model tags
+// each answer with one of these; the mock pipeline emits only listening,
+// happy, confused and sleepy.
 export const EMOTIONS = [
   'neutral', 'listening', 'thinking', 'happy', 'excited', 'laughing', 'love',
   'curious', 'surprised', 'wink', 'shy', 'confused', 'sad', 'sleepy',

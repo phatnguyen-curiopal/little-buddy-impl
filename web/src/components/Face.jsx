@@ -96,7 +96,7 @@ function parts(e, t) {
         <circle cx="40" cy="34" r="6.5" fill="currentColor" />
         <path d="M71 32 H89" {...S} />
         <path d="M42 59 L50 53 L58 59 L66 53 L74 59" {...S} strokeWidth="5" />
-        <text className="f-q" x="97" y="26" fontFamily="Lexend, sans-serif" fontWeight="700" fontSize="22" fill="currentColor">?</text>
+        <text className="f-q" x="97" y="26" fontFamily="Space Grotesk, sans-serif" fontWeight="700" fontSize="22" fill="currentColor">?</text>
       </>);
     case 'sad':
       return (<>
@@ -109,8 +109,8 @@ function parts(e, t) {
       return (<>
         <path d="M29 35 Q40 42 51 35 M69 35 Q80 42 91 35" {...S} />
         <path d="M54 57 Q60 60 66 57" {...S} />
-        <text className="f-z" x="96" y="22" fontFamily="Lexend, sans-serif" fontWeight="700" fontSize="15" fill="currentColor">z</text>
-        <text className="f-z f-z--late" x="104" y="12" fontFamily="Lexend, sans-serif" fontWeight="700" fontSize="11" fill="currentColor">z</text>
+        <text className="f-z" x="96" y="22" fontFamily="Space Grotesk, sans-serif" fontWeight="700" fontSize="15" fill="currentColor">z</text>
+        <text className="f-z f-z--late" x="104" y="12" fontFamily="Space Grotesk, sans-serif" fontWeight="700" fontSize="11" fill="currentColor">z</text>
       </>);
     default:
       return (<>

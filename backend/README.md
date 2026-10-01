@@ -3,7 +3,13 @@
 Node.js 22 + Express 5, PostgreSQL (pgvector) là nguồn dữ liệu bền, Redis chỉ
 giữ trạng thái nóng có TTL. Bước này gồm: sổ đăng ký thiết bị, xác thực thiết
 bị bằng HMAC, tài khoản phụ huynh (JWT), ghép thiết bị vào gia đình, công tắc
-tắt thiết bị (phụ huynh và vận hành), và các script cho nhà máy.
+tắt thiết bị (phụ huynh và vận hành), credit và lượt hỏi, hồ sơ Buddy, đồ chơi
+trên web, và các script cho nhà máy.
+
+Phần "não" của Buddy (nhận giọng nói, trí nhớ, prompt, mô hình, đọc câu trả
+lời) là một dịch vụ riêng ở `brain/`. Backend chỉ gửi mã và giá trị (ai đang
+nói, Buddy nào, cài đặt nào) qua HTTP nội bộ, không bao giờ gửi chữ của
+prompt; hợp đồng nằm ở `brain/docs/contract.md`.
 
 ## Biến môi trường (`.env`, mẫu ở `.env.example`)
 
@@ -27,9 +33,25 @@ tắt thiết bị (phụ huynh và vận hành), và các script cho nhà máy.
 | `DEVICE_HEARTBEAT_UNCLAIMED_SEC` | `5` | Chu kỳ heartbeat khi chưa ghép |
 | `DEVICE_AUTH_FAIL_LIMIT` | `30` | Số lần xác thực hỏng mỗi phút trước khi khóa tạm |
 | `TRUST_PROXY` | `0` | Đặt `1` khi chạy sau nginx/pm2 |
+| `WELCOME_CREDITS` | `10` | Credit tặng cho gia đình mới |
+| `TURN_MAX_SEC` | `120` | Một lượt nói dài tối đa bao nhiêu giây; audio quá mức này bị bỏ. Với `PROVIDER_MODE=brain` tối đa 196 (brain nhận thân tối đa 6 MB) |
+| `CONVERSATION_IDLE_SEC` | `300` | Các lượt cách nhau ít hơn chừng này thuộc cùng một cuộc trò chuyện |
+| `PROVIDER_MODE` | `mock` | `mock` (câu trả lời mẫu, không cần gì thêm) hoặc `brain` (gọi dịch vụ `brain/`) |
+| `BRAIN_URL` | `http://127.0.0.1:8080` | Địa chỉ dịch vụ brain |
+| `BRAIN_TOKEN` | giá trị dev | Phải trùng `BRAIN_TOKEN` trong `brain/.env`; ở production với `brain` thì từ chối giá trị mặc định hoặc ngắn hơn 32 ký tự |
+| `BRAIN_TIMEOUT_MS` | `45000` | Chờ brain tối đa (1000 đến 300000); quá hạn thì lượt thất bại với câu nói mẫu, không trừ credit |
+| `WEB_TOY` | `on` (production: `off`) | Cho phép phụ huynh chơi với đồ chơi ngay trên web (lộ bí mật thiết bị cho chủ) |
+| `PAYMENT_PROVIDER` | `demo` (production: `disabled`) | `demo` bị từ chối ở production |
 
 Server từ chối khởi động ở production khi bất kỳ ràng buộc nào ở trên bị vi
-phạm (`config.js`).
+phạm (`config.js`). Các biến trong `.env.example` được chia nhóm: server,
+database và redis, bí mật xác thực, thiết bị, credit và lượt hỏi, brain,
+thanh toán.
+
+Một lượt `accepted` quá `TURN_MAX_SEC + max(60, BRAIN_TIMEOUT_MS/1000 + 15)`
+giây bị coi là bỏ quên (không còn giữ credit, không hoàn tất được nữa), nên
+một câu trả lời chậm nhưng vẫn trong hạn của brain không bao giờ bị quét mất.
+Lời gọi brain cũng không bao giờ được chờ quá 10 giây trước mốc đó.
 
 ## Script
 
@@ -43,7 +65,7 @@ phạm (`config.js`).
 | `npm run seed` | Tạo gia đình demo (`demo@littlebuddy.local` / `demo-password`), một thiết bị đã ghép, một chưa ghép; ghi `.env.device` |
 | `npm run provision -- --label L --count N --hardware-rev R` | Tạo lô thiết bị, ghi manifest cho nhà máy vào `manifests/L.csv` |
 | `npm run provision -- --rotate <device_id>` | Xoay bí mật một thiết bị, bí mật cũ còn hiệu lực 7 ngày |
-| `npm run e2e` | Thiết bị mô phỏng đi hết vòng đời với server thật |
+| `npm run e2e` | Thiết bị mô phỏng đi hết vòng đời với server thật (luôn dùng `PROVIDER_MODE=mock`, không cần brain) |
 
 ## Vòng đời một thiết bị
 
@@ -69,8 +91,14 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
    tính cách (`ENFP` mặc định) và nguồn (`quiz`, `picked`, `default`). Không
    gửi `profile` thì dùng mặc định Buddy / bạn thân / ENFP. Mỗi lần ghép đều
    ghi đè hồ sơ, nên đồ chơi đổi chủ không mang theo tên và tính cách cũ.
-   Bảng `personalities` giữ mô tả tính cách (lấy từ prototype) cho prompt sau
-   này; pipeline mock hiện chưa dùng hồ sơ.
+   Hồ sơ còn có **cài đặt trò chuyện**: ngôn ngữ (`vi` mặc định hoặc `en`,
+   độc lập với ngôn ngữ giao diện web), giọng (`voice_id`, `null` là giọng
+   mặc định trong bảng `voices`), học từ các cuộc trò chuyện (`learn`, mặc
+   định tắt) và tâm trạng ghim (`mood_pin` 0 đến 100, `null` là tự động; 0 là
+   một giá trị ghim thật). Mỗi lần ghép cũng đặt lại các cài đặt này về mặc
+   định. Bảng `personalities` chỉ còn là dữ liệu tham khảo: mọi chữ của prompt
+   (cách xưng hô của từng vai, tính cách, tâm trạng) thuộc về `brain/`;
+   `personalization/roles.js` chỉ giữ mã vai và nhãn.
 3. **Heartbeat** (`POST /v1/heartbeat`, có chữ ký): thiết bị biết trạng thái
    của mình và chu kỳ heartbeat tiếp theo.
 4. **Stream** (`GET /v1/stream` WebSocket, chữ ký trong query string): mọi
@@ -85,8 +113,47 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
    `WELCOME_CREDITS` (mặc định 10); vận hành cấp thêm qua
    `POST /admin/families/:id/credits`. Chi tiết giao thức: `docs/device_auth.md`
    mục 7.
+
+   Một lượt có thể là giọng nói (các khung PCM16 16 kHz gửi sau
+   `turn_accepted`, được gom lại tối đa `TURN_MAX_SEC` giây, mỗi tin nhắn tối
+   đa 64 KB) hoặc chữ gõ (`turn_end` kèm `text`, 1 đến 2000 ký tự). Với
+   `PROVIDER_MODE=brain`, `pipeline/brain.js` đọc hồ sơ, bé và cài đặt, rồi gọi
+   `POST /v1/turns` của brain; câu trả lời về đồ chơi theo thứ tự `answer`
+   (kèm `heard`), `audio` + các khung PCM + `audio_end`, rồi mới trừ credit và
+   gửi `turn_done`. Brain không nghe được gì (`no_speech`) thì đồ chơi vẫn nói
+   câu "chưa nghe rõ" nhưng lượt bị bỏ, không trừ credit. Brain lỗi hoặc quá
+   hạn thì nói câu mẫu, lượt `failed`, không trừ. Công tắc tắt hay rớt kết nối
+   giữa lúc brain đang nghĩ thì hủy luôn lời gọi brain, không nói gì thêm,
+   không trừ. Câu từ chối và câu mẫu theo ngôn ngữ trò chuyện của đồ chơi.
+
+   Trí nhớ trong brain gắn với **bé** (`child:<id>`) khi đồ chơi đã gán bé,
+   nếu không thì với **đồ chơi trong gia đình này** (`device:<id>:<family id>`).
+   `conversation_new` kết thúc cuộc trò chuyện đang mở; đổi bé được gán cũng
+   bắt đầu cuộc trò chuyện mới.
 5. **Gỡ ghép** (`DELETE /api/devices/:id`): thiết bị về `provisioned`, mã in
-   trên thẻ dùng lại được cho chủ mới.
+   trên thẻ dùng lại được cho chủ mới. Sau khi commit, backend nhờ brain xóa
+   trí nhớ của `device:<id>:<family id>` (cố gắng hết sức: brain không trả lời
+   thì chỉ ghi log, việc gỡ ghép vẫn thành công).
+
+## Đồ chơi trên web
+
+Phụ huynh có thể trò chuyện với đồ chơi của mình ngay trên dashboard mà
+không cần đồ chơi thật: trình duyệt đóng vai đồ chơi.
+`POST /api/devices/:id/secret` trả `{device_id, secret_hex}` (kèm
+`Cache-Control: no-store`) chỉ cho gia đình sở hữu và chỉ khi đồ chơi đang
+`active`; mọi trường hợp khác là `404 device_not_found`. Giới hạn 30 lần/giờ
+mỗi phụ huynh. `secret_hex` không phải bí mật gốc của nhà máy mà là khóa
+riêng cho đồ chơi trên web, dẫn xuất (HKDF) từ bí mật gốc, gia đình sở hữu
+và thời điểm ghép. Khi gỡ ghép hoặc đồ chơi được ghép lại (kể cả bởi cùng gia
+đình), khóa cũ hết hiệu lực, nên chủ cũ không thể ký thay đồ chơi; đồ chơi
+thật vẫn dùng bí mật gốc như trước. Mỗi lần lấy khóa được ghi
+`secret_revealed_at` trên thiết bị (dấu này bật khóa web, gỡ ghép hoặc xoay
+bí mật xóa dấu) và sự kiện `secret_revealed`; vận hành thấy dấu này trong
+`/admin/devices`. Đây là đường giải mã bí mật thứ hai, bên cạnh việc kiểm
+tra chữ ký. Trình duyệt sau
+đó ký `/v1` như firmware (không gửi heartbeat), nên mỗi lượt vẫn qua ask gate
+và trừ credit như đồ chơi thật. `WEB_TOY=off` tắt tính năng
+(`403 web_toy_disabled`); `GET /api/me` trả `web_toy` để web ẩn nút Trò chuyện.
 
 Chi tiết giao thức chữ ký cho firmware: `docs/device_auth.md`.
 
@@ -104,12 +171,14 @@ Cách nhanh nhất để bấm thử bằng tay là console ở `frontend/` (`np
 | POST | `/api/auth/login` | `{email, password}`. 401 `invalid_credentials` (giống nhau cho sai mật khẩu và email lạ). 10 lần/15 phút |
 | POST | `/api/auth/refresh` | `{refresh_token}` → cặp token mới; dùng lại token cũ sẽ thu hồi mọi phiên (`refresh_token_reused`) |
 | POST | `/api/auth/logout` | `{refresh_token}` → 204 |
-| GET | `/api/me` | Tài khoản và gia đình |
-| POST / GET | `/api/children` | `{name, birth_year}` |
+| GET | `/api/me` | Tài khoản, gia đình và `web_toy` (true/false) |
+| POST / GET | `/api/children` | `{name, birth_year}`, `birth_year` từ 2000 đến năm hiện tại |
 | POST | `/api/devices/claim` | `{claim_code, child_id?, profile?}` → `{device}` (có `device.profile`). Hồ sơ sai: 400 `validation_error`, `details` liệt kê từng trường |
 | GET | `/api/devices` | Thiết bị của gia đình |
 | PATCH | `/api/devices/:id` | `{child_id}` (uuid hoặc null) |
-| PATCH | `/api/devices/:id/profile` | `{name?, role?, personality?, personality_source?}` → `{device}`. Ghi sự kiện `profile_updated`; 409 `device_revoked` |
+| PATCH | `/api/devices/:id/profile` | Bất kỳ tập con nào của `{name, role, personality, personality_source, language, voice_id, learn, mood_pin}` → `{device}`. `mood_pin: null` bỏ ghim, `voice_id: null` về giọng mặc định; giọng không tồn tại là 400. Ghi sự kiện `profile_updated`; 409 `device_revoked` |
+| POST | `/api/devices/:id/secret` | `{device_id, secret_hex}` cho đồ chơi trên web (xem mục trên) |
+| GET | `/api/voices` | `{voices: [{id, label, is_default}]}` |
 | POST | `/api/devices/:id/disable` | `{reason?}`. 409 `device_not_active` |
 | POST | `/api/devices/:id/enable` | 403 `disabled_by_operator` nếu vận hành đã tắt |
 | DELETE | `/api/devices/:id` | Gỡ ghép → 204 |
@@ -133,7 +202,7 @@ Thiết bị của gia đình khác luôn là `404 device_not_found`, không bao
 |---|---|---|
 | GET | `/v1/time` | Không cần chữ ký → `{server_time}` |
 | POST | `/v1/heartbeat` | `{firmware_version?, uptime_s?}` → `{status, server_time, heartbeat_interval_s}` |
-| WS | `/v1/stream` | Chỉ thiết bị `active`; gửi `{type:"ready"}` khi mở |
+| WS | `/v1/stream` | Mọi thiết bị chưa bị thu hồi; gửi `{type:"ready"}` khi mở. Giao thức lượt hỏi: `docs/device_auth.md` mục 7 |
 
 Mã lỗi thiết bị: `auth_missing`, `auth_ts_skew`, `auth_unknown_device`,
 `auth_bad_signature`, `auth_replay` (401); `device_not_claimed`,
@@ -145,13 +214,14 @@ Mã lỗi thiết bị: `auth_missing`, `auth_ts_skew`, `auth_unknown_device`,
 | Method | Đường dẫn | Ghi chú |
 |---|---|---|
 | GET | `/admin/batches` | Lô kèm số thiết bị và số đang active |
-| GET | `/admin/devices` | Lọc `status`, `batch_id`, `family_id`; `limit` tối đa 200, `offset` |
+| GET | `/admin/devices` | Lọc `status`, `batch_id`, `family_id`; `limit` tối đa 200, `offset`. Có `secret_revealed_at` |
 | POST | `/admin/devices/:id/disable` | `{reason}` bắt buộc |
 | POST | `/admin/devices/:id/enable` | |
 | POST | `/admin/devices/:id/revoke` | `{reason}` trong `lost / stolen / compromised / retired` |
 | POST | `/admin/devices/:id/reissue-claim-code` | Chỉ với thiết bị `provisioned`; trả mã mới một lần |
 | POST | `/admin/families/:id/credits` | `{amount, kind? grant|refund, reason}` → `{balance}` |
 | GET | `/admin/families/:id/wallet` | Số dư và sổ credit của một gia đình |
+| POST | `/admin/voices` | `{id, label, sort?, is_default?}` thêm (201) hoặc sửa (200) một giọng; `is_default: true` chuyển giọng mặc định sang giọng này |
 
 Không có endpoint provision qua HTTP: bí mật thiết bị chỉ đi từ CLI ra manifest.
 
@@ -164,8 +234,12 @@ lib/                   log (che thông tin nhạy cảm), HttpError, validate
 middleware/            request id, error, require_parent, require_admin, rate_limit, device_auth
 auth/                  password (scrypt), tokens (JWT + refresh), service
 devices/               secret_box, claim_code, serial, signing, registry, hmac_auth, sim_client
-personalization/       roles.js: bốn vai, cách xưng hô, kiểm tra hồ sơ Buddy
+personalization/       roles.js: mã và nhãn bốn vai, kiểm tra hồ sơ và cài đặt Buddy
+gate/ask_gate.js       quyết định mỗi lần bấm nút; câu từ chối và câu mẫu theo ngôn ngữ
+turns/                 service (nhận lượt, trừ credit), deadline (hạn chờ brain)
+pipeline/              mock (câu mẫu) và brain (gọi dịch vụ brain/), chọn theo PROVIDER_MODE
 ws/stream.js           WebSocket /v1/stream, đóng socket khi thiết bị bị chặn
+ws/turns.js            giao thức lượt hỏi: gom audio, chữ gõ, gửi audio về, hủy lời gọi brain
 routes/                device (/v1), dashboard (/api), admin (/admin)
 store/                 db, redis, migrate, các module SQL theo bảng, migrations/
 scripts/               check_services, migrate, provision_batch, seed_demo, e2e_device_flow
@@ -182,6 +256,9 @@ tests/                 helpers/, fixtures/, unit/, integration/
 - `pretest` kiểm tra Postgres và Redis trong 2 giây; Docker tắt thì báo
   `docker compose up -d` và thoát mã 1.
 - Vector chữ ký chuẩn: `tests/fixtures/hmac_vectors.json`.
+- Test không bao giờ cần brain thật: `tests/helpers/brain_stub.js` là một brain
+  giả. File chạy `PROVIDER_MODE=brain` (`brain_pipeline.test.js`) đặt biến môi
+  trường trước lần import `config.js` đầu tiên, giống `device_auth_off.test.js`.
 
 ## Khắc phục sự cố
 
@@ -193,3 +270,4 @@ tests/                 helpers/, fixtures/, unit/, integration/
 | `database "littlebuddy_test" does not exist` | Volume cũ hơn script init: helper test tự tạo; hoặc `docker compose down -v` rồi `up -d` |
 | `config: ... refusing to boot` | Đang chạy production với secret mặc định hoặc `DEVICE_AUTH=off` |
 | Mọi POST `/v1` trả `auth_bad_signature` | Firmware ký sai canonical string; so với vector trong `docs/device_auth.md` |
+| Lượt hỏi nào cũng nhận câu mẫu "thử lại sau" | `PROVIDER_MODE=brain` nhưng brain chưa chạy, hoặc `BRAIN_TOKEN` hai bên khác nhau; xem log `pipeline_failed` (trường `code`) |

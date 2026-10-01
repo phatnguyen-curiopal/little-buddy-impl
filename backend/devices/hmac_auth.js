@@ -108,6 +108,8 @@ export async function verifyDeviceRequest({ method, path, deviceId, ts, nonce, s
   const canonical = canonicalString({ method, path, deviceId: id, ts, nonce, bodyHash });
   let match = safeEqualHex(sign(found.secret, canonical), sig);
   if (!match && found.prevSecret) match = safeEqualHex(sign(found.prevSecret, canonical), sig);
+  // The web toy's ownership-scoped credential (registry.revealSecret).
+  if (!match && found.webSecret) match = safeEqualHex(sign(found.webSecret, canonical), sig);
   if (!match) {
     await recordFailure([`id:${id}`]);
     log.warn('device_auth_failed', { device_id: id, code: 'auth_bad_signature' });

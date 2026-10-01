@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Little Buddy Parents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --ground: #F3F6F4;
+    --surface: #FFFFFF;
+    --surface-2: #E9EFEC;
+    --ink: #1B2826;
+    --muted: #5B6966;
+    --line: #D6DFDB;
+    --brand: #127A6E;
+    --brand-ink: #FFFFFF;
+    --brand-soft: #D7EFEA;
+    --coin: #C9860C;
+    --coin-strong: #D99414;
+    --coin-soft: #FCF1D8;
+    --warn: #9A5D08;
+    --warn-soft: #FBEBD0;
+    --bad: #B83F35;
+    --bad-soft: #F8E1DE;
+    --face-awake: #CFEDE6;
+    --face-sleep: #DDE3E1;
+    --face-ink: #1B2826;
+    --shadow: 0 1px 2px rgba(20, 40, 36, 0.06), 0 6px 20px rgba(20, 40, 36, 0.06);
+    --display: "Baloo 2", "Nunito", "Segoe UI", system-ui, sans-serif;
+    --body: "Be Vietnam Pro", "Segoe UI", Roboto, system-ui, sans-serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #111816;
+      --surface: #182220;
+      --surface-2: #1F2B28;
+      --ink: #E5EEEB;
+      --muted: #97A7A3;
+      --line: #2A3835;
+      --brand: #3DB5A3;
+      --brand-ink: #0B1614;
+      --brand-soft: #183A35;
+      --coin: #F0B53E;
+      --coin-strong: #F0B53E;
+      --coin-soft: #3A2E14;
+      --warn: #E3A548;
+      --warn-soft: #3A2A12;
+      --bad: #E47A70;
+      --bad-soft: #3D211E;
+      --face-awake: #1F4A43;
+      --face-sleep: #2A3533;
+      --face-ink: #E5EEEB;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #111816;
+    --surface: #182220;
+    --surface-2: #1F2B28;
+    --ink: #E5EEEB;
+    --muted: #97A7A3;
+    --line: #2A3835;
+    --brand: #3DB5A3;
+    --brand-ink: #0B1614;
+    --brand-soft: #183A35;
+    --coin: #F0B53E;
+    --coin-strong: #F0B53E;
+    --coin-soft: #3A2E14;
+    --warn: #E3A548;
+    --warn-soft: #3A2A12;
+    --bad: #E47A70;
+    --bad-soft: #3D211E;
+    --face-awake: #1F4A43;
+    --face-sleep: #2A3533;
+    --face-ink: #E5EEEB;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 8px; }
+
+  .shell {
+    max-width: 520px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 0 96px;
+  }
+  .shell.pushed { padding-block-end: 32px; }
+
+  .proto {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    padding-block: 10px 0;
+  }
+  .proto b { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 11px; }
+
+  .topbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-block: 12px;
+    background: var(--ground);
+  }
+  .wordmark { font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1; color: var(--brand); }
+  .topbar h1 { font-family: var(--display); font-weight: 600; font-size: 21px; line-height: 1.1; margin: 0; flex: 1; text-wrap: balance; }
+  .back {
+    width: 38px; height: 38px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--surface);
+    display: grid; place-items: center;
+  }
+  .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); margin-left: auto; }
+  .lang button { border: 0; background: none; padding: 5px 11px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .lang button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+
+  h2 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0; line-height: 1.2; }
+  .section { display: flex; flex-direction: column; gap: 12px; margin-block: 22px 0; }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .link { background: none; border: 0; color: var(--brand); font-weight: 600; font-size: 14px; padding: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  p { margin: 0; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+  .balance {
+    background: var(--coin-soft);
+    border: 1px solid transparent;
+    border-radius: 22px;
+    padding: 18px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+    align-items: center;
+  }
+  .coin {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--coin-strong);
+    display: grid; place-items: center;
+    color: #FFF8E6; font-family: var(--display); font-weight: 700; font-size: 22px;
+    box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.12);
+
+  }
+  .balance-num { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 0.9; font-variant-numeric: tabular-nums; }
+  .balance-num small { font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--muted); margin-left: 6px; }
+  .balance-hint { grid-column: 1 / -1; font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .balance .btn { grid-column: 1 / -1; margin-top: 10px; }
+
+  .banner { border-radius: 14px; padding: 11px 14px; font-size: 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .banner.warn { background: var(--warn-soft); color: var(--warn); }
+  .banner.bad { background: var(--bad-soft); color: var(--bad); }
+  .banner.brand { background: var(--brand-soft); color: var(--ink); }
+
+  .btn {
+    border: 1px solid transparent; border-radius: 14px; padding: 11px 16px;
+    font-weight: 600; font-size: 15px; line-height: 1.2;
+    display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+  }
+  .btn.primary { background: var(--brand); color: var(--brand-ink); }
+  .btn.coin-btn { background: var(--coin-strong); color: #2A1D02; }
+  .btn.ghost { background: var(--surface); border-color: var(--line); }
+  .btn.danger { background: transparent; border-color: var(--bad); color: var(--bad); }
+  .btn.danger-solid { background: var(--bad); color: #FFF; }
+  .btn.small { padding: 7px 12px; font-size: 13px; border-radius: 11px; }
+  .btn.block { width: 100%; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+
+  .toys { display: grid; gap: 10px; }
+  .toy {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px;
+    text-align: left; width: 100%;
+  }
+  .toy-name { font-weight: 600; }
+  .toy-meta { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+  .add-toy {
+    display: flex; gap: 12px; align-items: center; justify-content: center;
+    border: 1.5px dashed var(--line); border-radius: 18px; padding: 14px; background: transparent;
+    color: var(--brand); font-weight: 600; width: 100%;
+  }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.ok { color: var(--brand); background: var(--brand-soft); }
+  .pill.sleep { color: var(--muted); background: var(--surface-2); }
+  .pill.warn { color: var(--warn); background: var(--warn-soft); }
+  .pill.bad { color: var(--bad); background: var(--bad-soft); }
+
+  .feed { display: grid; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .feed-item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 12px 14px; align-items: start; }
+  .feed-item + .feed-item { border-top: 1px solid var(--line); }
+  .dot { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; margin-top: 2px; }
+  .dot.ok { background: var(--brand-soft); color: var(--brand); }
+  .dot.sleep { background: var(--surface-2); color: var(--muted); }
+  .dot.warn { background: var(--warn-soft); color: var(--warn); }
+  .feed-title { font-weight: 600; font-size: 14px; }
+  .feed-sub { font-size: 13px; color: var(--muted); }
+  .quote { font-size: 14px; margin-top: 4px; }
+  .delta { font-family: var(--display); font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .delta.neg { color: var(--ink); }
+  .delta.pos { color: var(--brand); }
+  .delta.zero { color: var(--muted); font-size: 13px; font-family: var(--body); font-weight: 500; }
+  .empty { padding: 20px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+  .packs { display: grid; gap: 10px; }
+  .pack {
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; text-align: left; width: 100%;
+  }
+  .pack.best { border-color: var(--coin-strong); }
+  .pack-name { font-family: var(--display); font-weight: 600; font-size: 18px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pack-credits { font-size: 14px; color: var(--muted); }
+  .pack-price { grid-row: 1 / span 2; grid-column: 2; font-family: var(--display); font-weight: 700; font-size: 18px; text-align: right; font-variant-numeric: tabular-nums; }
+  .badge { font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #2A1D02; background: var(--coin-strong); padding: 2px 8px; border-radius: 999px; }
+
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface-2); border-radius: 12px; padding: 3px; }
+  .seg button { border: 0; background: none; padding: 7px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 13px; font-weight: 600; }
+  .input, select.input {
+    width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 11px 12px; font-size: 16px;
+  }
+  .input:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
+  .code-input {
+    font-family: var(--mono); font-size: 28px; letter-spacing: 0.18em; text-align: center; text-transform: uppercase; padding: 16px 10px;
+  }
+  .msg { font-size: 13px; min-height: 20px; }
+  .msg.bad { color: var(--bad); }
+  .form { display: grid; gap: 14px; }
+
+  .choices { display: grid; gap: 8px; }
+  .choice {
+    display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
+    background: var(--surface); width: 100%; text-align: left;
+  }
+  .choice[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--brand-ink); background: var(--brand);
+  }
+  .avatar.alt { background: var(--coin-strong); color: #2A1D02; }
+
+  .hero-face { display: grid; justify-items: center; gap: 10px; padding-block: 12px 4px; text-align: center; }
+  .hero-face h2 { font-size: 24px; }
+  .rows { display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 14px; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .k { color: var(--muted); font-size: 14px; }
+  .row .v { font-weight: 500; text-align: right; }
+  .mono { font-family: var(--mono); font-size: 13px; }
+  .row select.input { width: auto; padding: 7px 10px; font-size: 14px; }
+
+  .steps { display: flex; gap: 6px; }
+  .steps span { height: 4px; flex: 1; border-radius: 4px; background: var(--line); }
+  .steps span.on { background: var(--brand); }
+
+  .confirm { border: 1px solid var(--bad); background: var(--bad-soft); border-radius: 16px; padding: 14px; display: grid; gap: 12px; }
+  .confirm .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .summary { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .summary .total { font-family: var(--display); font-weight: 700; font-size: 22px; }
+  .check { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+  .check input { width: 18px; height: 18px; accent-color: var(--brand); }
+  .spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--brand); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  details.tools { margin-top: 26px; border: 1px dashed var(--line); border-radius: 16px; padding: 10px 14px; }
+  details.tools summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .tools-body { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--surface); border-top: 1px solid var(--line);
+  }
+  .tabbar-inner { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .tab {
+    border: 0; background: none; padding: 9px 4px 10px; display: grid; justify-items: center; gap: 2px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted);
+  }
+  .tab[aria-current="page"] { color: var(--brand); }
+  .tab svg { width: 22px; height: 22px; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); z-index: 20;
+    background: var(--ink); color: var(--ground); padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 500;
+    box-shadow: var(--shadow); max-width: calc(100% - 32px);
+  }
+
+  .auth { display: grid; gap: 18px; padding-block: 28px 0; }
+  .auth-hero { display: grid; justify-items: center; gap: 8px; text-align: center; }
+  .auth-hero .wordmark { font-size: 32px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 2.4s; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell" id="shell">
+  <div class="proto"><b id="proto-label"></b><span id="proto-note"></span></div>
+  <main id="app"></main>
+</div>
+<nav class="tabbar" id="tabbar" aria-label="Main"></nav>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const T = {
+    vi: {
+      proto: 'Bản mẫu', protoNote: 'Dữ liệu ví dụ, không có tiền thật',
+      navHome: 'Trang chủ', navCredits: 'Lượt hỏi', navActivity: 'Hoạt động', navFamily: 'Gia đình',
+      hi: 'Chào {name}', back: 'Quay lại',
+      balanceLabel: 'lượt hỏi', balanceHint: '1 lượt = 1 câu trả lời của Buddy. Mọi Buddy trong nhà dùng chung.',
+      buy: 'Mua thêm lượt',
+      low: 'Sắp hết lượt. Khi hết, Buddy sẽ nhẹ nhàng rủ bé nghỉ một chút.',
+      out: 'Đã hết lượt. Bé bấm nút sẽ nghe Buddy nói: “Mình nghỉ một chút nhé!”',
+      toys: 'Đồ chơi của nhà mình', addToy: 'Thêm đồ chơi', noToys: 'Chưa có Buddy nào. Thêm Buddy bằng mã trên thẻ trong hộp.',
+      awake: 'Đang thức', paused: 'Đang nghỉ', pausedSupport: 'Hỗ trợ đã tạm dừng',
+      seen: 'Kết nối {t}', forChild: 'Buddy của {name}', noChild: 'Chưa chọn bé',
+      pause: 'Cho nghỉ', wake: 'Đánh thức', paused_toast: 'Buddy đang nghỉ', woke_toast: 'Buddy đã thức dậy',
+      recent: 'Gần đây', seeAll: 'Xem tất cả',
+      addTitle: 'Thêm đồ chơi',
+      codeTitle: 'Nhập mã trên thẻ trong hộp',
+      codeHelp: 'Mã gồm 8 ký tự, dạng XXXX-XXXX. Mã không bao giờ có chữ O, I, L, U và số 0, 1 nên bạn không lo nhìn nhầm.',
+      codeBad: 'Mã không có ký tự “{c}”. Bạn xem lại thẻ giúp mình nhé.',
+      codeInvalid: 'Mã này chưa khớp với Buddy nào, hoặc đã được thêm vào gia đình khác. Bạn xem lại thẻ nhé.',
+      codeDemo: 'Bản mẫu: mã nào đúng định dạng cũng được. Nhập ABCD-EFGH để xem trường hợp mã sai.',
+      next: 'Tiếp tục', checking: 'Đang kiểm tra…',
+      childTitle: 'Buddy này dành cho bé nào?', childHelp: 'Bạn có thể đổi sau trong phần cài đặt của Buddy.',
+      later: 'Để sau', addChildInline: 'Thêm bé', childName: 'Tên bé', birthYear: 'Năm sinh', save: 'Lưu',
+      doneTitle: 'Buddy đã sẵn sàng!',
+      doneBody: 'Trong vài giây, màn hình của Buddy sẽ chuyển sang khuôn mặt vui. Bé chỉ cần bấm nút và hỏi.',
+      goHome: 'Về trang chủ',
+      toyFor: 'Dành cho', serial: 'Số seri', lastSeen: 'Kết nối lần cuối', firmware: 'Phần mềm', status: 'Trạng thái',
+      pauseExplain: 'Khi Buddy nghỉ, bé bấm nút sẽ nghe: “Mình nghỉ một chút nhé, lát nữa chơi tiếp!” Không trừ lượt.',
+      supportExplain: 'Bộ phận hỗ trợ đã tạm dừng Buddy này. Liên hệ hỗ trợ để bật lại.',
+      remove: 'Gỡ khỏi gia đình',
+      removeAsk: 'Gỡ Buddy này khỏi gia đình? Lịch sử vẫn được giữ. Mã trên thẻ dùng lại được, ví dụ khi bạn tặng Buddy cho người khác.',
+      removeYes: 'Gỡ Buddy', cancel: 'Huỷ', removed: 'Đã gỡ Buddy', saved: 'Đã lưu',
+      creditsTitle: 'Lượt hỏi', choosePack: 'Chọn gói', perAnswer: '≈ {p} mỗi câu trả lời', best: 'Tiết kiệm nhất',
+      credits: '{n} lượt',
+      pack_starter: 'Gói Khởi đầu', pack_family: 'Gói Gia đình', pack_big: 'Hộp lớn',
+      history: 'Lịch sử',
+      l_welcome: 'Quà chào mừng', l_purchase: 'Mua {pack}', l_debit: 'Buddy trả lời {n} câu', l_grant: 'Hỗ trợ tặng thêm',
+      payTitle: 'Xác nhận mua', payNote: 'Thanh toán thử trong bản mẫu. Không có tiền thật nào bị trừ.',
+      payDecline: 'Giả lập thẻ bị từ chối', pay: 'Thanh toán {price}', paying: 'Đang xử lý thanh toán…',
+      paidTitle: 'Đã thêm {n} lượt', paidBody: 'Mọi Buddy trong nhà dùng được ngay. Số lượt hiện có: {b}.',
+      declinedTitle: 'Thanh toán chưa thành công', declinedBody: 'Thẻ bị từ chối nên chưa có lượt nào được thêm. Bạn có thể thử lại hoặc dùng thẻ khác.',
+      tryAgain: 'Thử lại', done: 'Xong', pack: 'Gói', total: 'Tổng cộng',
+      activityTitle: 'Hoạt động', fAll: 'Tất cả', fAnswered: 'Đã trả lời', fNot: 'Không trả lời',
+      answered: 'Buddy đã trả lời {name}', notAnswered: 'Buddy không trả lời {name}',
+      r_disabled: 'Buddy đang nghỉ', r_no_credits: 'Hết lượt hỏi', r_abandoned: 'Bé chưa hỏi xong',
+      noCharge: 'Không trừ', noTurns: 'Chưa có câu hỏi nào.',
+      activityNote: 'Đây là câu trả lời của Buddy. Lời bé nói không được hiển thị ở đây.',
+      familyTitle: 'Gia đình', children: 'Các bé', age: '{n} tuổi', buddies: '{n} Buddy', noBuddy: 'Chưa có Buddy',
+      addChild: 'Thêm bé', account: 'Tài khoản', language: 'Ngôn ngữ', email: 'Email', familyName: 'Tên gia đình',
+      signOut: 'Đăng xuất',
+      signIn: 'Đăng nhập', register: 'Tạo tài khoản', password: 'Mật khẩu', pwHint: 'Ít nhất 8 ký tự',
+      registerNote: 'Gia đình mới được tặng 10 lượt hỏi để bắt đầu.',
+      authTag: 'Người bạn nhỏ biết lắng nghe của bé',
+      badLogin: 'Email hoặc mật khẩu chưa đúng.', badEmail: 'Email chưa đúng định dạng.', shortPw: 'Mật khẩu cần ít nhất 8 ký tự.', needFamily: 'Nhập tên gia đình giúp mình nhé.',
+      tools: 'Công cụ bản mẫu', simAsk: 'Mô phỏng: bé hỏi 1 câu', simSupport: 'Mô phỏng: hỗ trợ tạm dừng Buddy', reset: 'Khôi phục dữ liệu mẫu',
+      simAnswered: 'Buddy vừa trả lời, trừ 1 lượt', simDenied: 'Buddy không trả lời: {r}',
+      needName: 'Nhập tên bé giúp mình nhé.',
+      now: 'vừa xong', mins: '{n} phút trước', hours: '{n} giờ trước', yesterday: 'hôm qua', days: '{n} ngày trước',
+    },
+    en: {
+      proto: 'Prototype', protoNote: 'Example data, no real money',
+      navHome: 'Home', navCredits: 'Credits', navActivity: 'Activity', navFamily: 'Family',
+      hi: 'Hi {name}', back: 'Back',
+      balanceLabel: 'credits', balanceHint: '1 credit = 1 answer from Buddy. Shared by every Buddy at home.',
+      buy: 'Buy credits',
+      low: 'Running low. When credits run out, Buddy gently tells your child it is break time.',
+      out: 'Out of credits. When your child presses the button, Buddy says “Time for a little break!”',
+      toys: 'Your toys', addToy: 'Add a toy', noToys: 'No Buddy yet. Add one with the code on the card in the box.',
+      awake: 'Awake', paused: 'Resting', pausedSupport: 'Paused by support',
+      seen: 'Seen {t}', forChild: "{name}'s Buddy", noChild: 'No child selected',
+      pause: 'Pause', wake: 'Wake up', paused_toast: 'Buddy is resting', woke_toast: 'Buddy is awake',
+      recent: 'Recent', seeAll: 'See all',
+      addTitle: 'Add a toy',
+      codeTitle: 'Enter the code from the card in the box',
+      codeHelp: 'It has 8 characters, like XXXX-XXXX. Codes never use O, I, L, U, 0 or 1, so there is nothing to mix up.',
+      codeBad: 'Codes never use “{c}”. Please check the card.',
+      codeInvalid: "That code doesn't match a Buddy, or it's already in another family. Please check the card.",
+      codeDemo: 'Prototype: any well-formed code works. Type ABCD-EFGH to see a wrong code.',
+      next: 'Continue', checking: 'Checking…',
+      childTitle: 'Who is this Buddy for?', childHelp: "You can change this later in Buddy's settings.",
+      later: 'Later', addChildInline: 'Add a child', childName: "Child's name", birthYear: 'Birth year', save: 'Save',
+      doneTitle: 'Buddy is ready!',
+      doneBody: "In a few seconds Buddy's screen switches to a happy face. Your child just presses the button and asks.",
+      goHome: 'Back to home',
+      toyFor: 'For', serial: 'Serial', lastSeen: 'Last connected', firmware: 'Firmware', status: 'Status',
+      pauseExplain: 'While Buddy rests, pressing the button plays “Time for a little break. Let\'s play again later!” No credits are used.',
+      supportExplain: 'Support paused this Buddy. Contact support to turn it back on.',
+      remove: 'Remove from family',
+      removeAsk: 'Remove this Buddy from your family? Its history stays. The card code works again, for example if you give Buddy to someone else.',
+      removeYes: 'Remove Buddy', cancel: 'Cancel', removed: 'Buddy removed', saved: 'Saved',
+      creditsTitle: 'Credits', choosePack: 'Choose a pack', perAnswer: '≈ {p} per answer', best: 'Best value',
+      credits: '{n} credits',
+      pack_starter: 'Starter', pack_family: 'Family', pack_big: 'Big box',
+      history: 'History',
+      l_welcome: 'Welcome gift', l_purchase: 'Bought {pack}', l_debit: 'Buddy answers ({n})', l_grant: 'Added by support',
+      payTitle: 'Confirm purchase', payNote: 'Demo payment in the prototype. No real money moves.',
+      payDecline: 'Simulate a declined card', pay: 'Pay {price}', paying: 'Processing payment…',
+      paidTitle: '{n} credits added', paidBody: 'Every Buddy at home can use them right away. You now have {b}.',
+      declinedTitle: "Payment didn't go through", declinedBody: 'The card was declined, so no credits were added. Try again or use another card.',
+      tryAgain: 'Try again', done: 'Done', pack: 'Pack', total: 'Total',
+      activityTitle: 'Activity', fAll: 'All', fAnswered: 'Answered', fNot: 'Not answered',
+      answered: 'Buddy answered {name}', notAnswered: "Buddy didn't answer {name}",
+      r_disabled: 'Buddy was resting', r_no_credits: 'Out of credits', r_abandoned: "Question wasn't finished",
+      noCharge: 'Free', noTurns: 'No questions yet.',
+      activityNote: "These are Buddy's answers. What your child said is not shown here.",
+      familyTitle: 'Family', children: 'Children', age: '{n} years old', buddies: 'Buddy × {n}', noBuddy: 'No Buddy yet',
+      addChild: 'Add a child', account: 'Account', language: 'Language', email: 'Email', familyName: 'Family name',
+      signOut: 'Sign out',
+      signIn: 'Sign in', register: 'Create account', password: 'Password', pwHint: 'At least 8 characters',
+      registerNote: 'New families get 10 free credits to start.',
+      authTag: "Your child's little friend who listens",
+      badLogin: 'Email or password is incorrect.', badEmail: "That email doesn't look right.", shortPw: 'Password needs at least 8 characters.', needFamily: 'Please enter a family name.',
+      tools: 'Prototype tools', simAsk: 'Simulate: child asks 1 question', simSupport: 'Simulate: support pauses a Buddy', reset: 'Reset example data',
+      simAnswered: 'Buddy answered, 1 credit used', simDenied: "Buddy didn't answer: {r}",
+      needName: "Please enter the child's name.",
+      now: 'just now', mins: '{n} min ago', hours: '{n} h ago', yesterday: 'yesterday', days: '{n} days ago',
+    },
+  };
+
+  const PACKS = [
+    { id: 'starter', credits: 20, price: 49000 },
+    { id: 'family', credits: 60, price: 129000 },
+    { id: 'big', credits: 150, price: 299000 },
+  ];
+  const ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
+  const MIN = 60000;
+  const DAY = 86400000;
+  const YEAR = 2026;
+  const SAMPLE_ANSWERS = [
+    'Cá voi xanh là loài vật lớn nhất Trái Đất, dài bằng ba chiếc xe buýt đó!',
+    'Cầu vồng có bảy màu: đỏ, cam, vàng, lục, lam, chàm, tím.',
+    'Mặt Trăng sáng vì nó phản chiếu ánh sáng của Mặt Trời.',
+    'Kiến có thể nâng vật nặng gấp nhiều lần cơ thể của nó!',
+    'Khủng long bạo chúa có hàm răng to bằng quả chuối.',
+  ];
+
+  function example() {
+    const now = Date.now();
+    return {
+      signedIn: true,
+      parent: { name: 'Lan', email: 'lan.nguyen@example.com' },
+      familyName: 'Nhà Minh An',
+      children: [
+        { id: 'c1', name: 'Bông', year: 2020 },
+        { id: 'c2', name: 'Tít', year: 2018 },
+      ],
+      toys: [
+        { id: 't1', serial: 'DEMO-0001', status: 'active', by: null, child: 'c1', seen: now - 2 * MIN, fw: '1.0.3' },
+        { id: 't2', serial: '2026W38A-0042', status: 'disabled', by: 'parent', child: 'c2', seen: now - 40 * MIN, fw: '1.0.3' },
+      ],
+      ledger: [
+        { id: 'l4', kind: 'debit', n: 7, at: now - 20 * MIN },
+        { id: 'l3', kind: 'debit', n: 16, at: now - 3 * DAY },
+        { id: 'l2', kind: 'purchase', pack: 'starter', delta: 20, at: now - 5 * DAY },
+        { id: 'l1', kind: 'welcome', delta: 10, at: now - 9 * DAY },
+      ],
+      turns: [
+        { id: 'u1', toy: 't1', child: 'c1', status: 'completed', answer: SAMPLE_ANSWERS[0], at: now - 5 * MIN },
+        { id: 'u2', toy: 't1', child: 'c1', status: 'completed', answer: SAMPLE_ANSWERS[1], at: now - 12 * MIN },
+        { id: 'u3', toy: 't2', child: 'c2', status: 'denied', reason: 'disabled', at: now - 38 * MIN },
+        { id: 'u4', toy: 't1', child: 'c1', status: 'abandoned', at: now - 3 * 60 * MIN },
+        { id: 'u5', toy: 't2', child: 'c2', status: 'completed', answer: SAMPLE_ANSWERS[4], at: now - 26 * 60 * MIN },
+        { id: 'u6', toy: 't1', child: 'c1', status: 'completed', answer: SAMPLE_ANSWERS[2], at: now - 27 * 60 * MIN },
+      ],
+    };
+  }
+
+  let lang = 'vi';
+  try { lang = localStorage.getItem('lb-lang') || 'vi'; } catch { /* storage may be unavailable */ }
+
+  let D = example();
+  const S = {
+    route: 'home', param: null,
+    add: null, pay: null, confirmRemove: false, filter: 'all', authMode: 'login', authError: null, childFormOpen: false,
+  };
+  let seq = 100;
+  const uid = (p) => `${p}${++seq}`;
+
+  const t = (key, vars = {}) => (T[lang][key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const vnd = (n) => new Intl.NumberFormat(lang === 'vi' ? 'vi-VN' : 'en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n);
+  const balance = () => D.ledger.reduce((s, r) => s + (r.kind === 'debit' ? -r.n : r.delta), 0);
+  const child = (id) => D.children.find((c) => c.id === id);
+  const toy = (id) => D.toys.find((x) => x.id === id);
+
+  function rel(ts) {
+    const m = Math.floor((Date.now() - ts) / MIN);
+    if (m < 1) return t('now');
+    if (m < 60) return t('mins', { n: m });
+    const h = Math.floor(m / 60);
+    if (h < 24) return t('hours', { n: h });
+    const d = Math.floor(h / 24);
+    return d === 1 ? t('yesterday') : t('days', { n: d });
+  }
+
+  // The toy's LCD face, drawn small. Awake smiles; resting has closed eyes.
+  function face(state, size = 48) {
+    const awake = state === 'awake';
+    const bg = awake ? 'var(--face-awake)' : 'var(--face-sleep)';
+    const eyes = awake
+      ? '<circle cx="23" cy="28" r="3.4" fill="var(--face-ink)"/><circle cx="41" cy="28" r="3.4" fill="var(--face-ink)"/>'
+      : '<path d="M18 29 Q23 32 28 29 M36 29 Q41 32 46 29" fill="none" stroke="var(--face-ink)" stroke-width="2.6" stroke-linecap="round"/>';
+    const mouth = awake
+      ? '<path d="M24 38 Q32 46 40 38" fill="none" stroke="var(--face-ink)" stroke-width="2.6" stroke-linecap="round"/>'
+      : '<path d="M29 41 Q32 42.5 35 41" fill="none" stroke="var(--face-ink)" stroke-width="2.4" stroke-linecap="round"/>';
+    const z = awake ? '' : '<text x="48" y="19" font-family="Baloo 2, sans-serif" font-weight="700" font-size="12" fill="var(--face-ink)">z</text>';
+    return `<svg viewBox="0 0 64 64" width="${size}" height="${size}" aria-hidden="true"><rect x="4" y="6" width="56" height="52" rx="18" fill="${bg}"/>${eyes}${mouth}${z}</svg>`;
+  }
+
+  const ICONS = {
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
+    credits: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.5 10h4a1.8 1.8 0 010 3.6h-3" stroke-linecap="round"/></svg>',
+    activity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h9"/></svg>',
+    family: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.3"/><path d="M3.5 19c.8-3.2 3-5 5.5-5s4.7 1.8 5.5 5M14.5 19c.4-2 1.5-3.3 3-3.3s2.6 1.3 3 3.3"/></svg>',
+    back: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+    check: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 14.5A7.5 7.5 0 019.5 5a7.5 7.5 0 109.5 9.5z"/></svg>',
+    dash: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M7 12h10"/></svg>',
+  };
+
+  function toyState(x) {
+    if (x.status === 'active') return { face: 'awake', pill: `<span class="pill ok">${t('awake')}</span>` };
+    if (x.by === 'admin') return { face: 'sleep', pill: `<span class="pill bad">${t('pausedSupport')}</span>` };
+    return { face: 'sleep', pill: `<span class="pill sleep">${t('paused')}</span>` };
+  }
+  const toyName = (x) => (child(x.child) ? t('forChild', { name: esc(child(x.child).name) }) : 'Buddy');
+
+  function topbar(title, { back = false } = {}) {
+    const langSwitch = `<div class="lang" role="group" aria-label="Language">
+      <button type="button" data-act="lang" data-v="vi" aria-pressed="${lang === 'vi'}">VI</button>
+      <button type="button" data-act="lang" data-v="en" aria-pressed="${lang === 'en'}">EN</button></div>`;
+    if (back) {
+      return `<header class="topbar"><button type="button" class="back" data-act="back" aria-label="${t('back')}">${ICONS.back}</button><h1>${title}</h1>${langSwitch}</header>`;
+    }
+    return `<header class="topbar"><span class="wordmark">Little Buddy</span>${langSwitch}</header>`;
+  }
+
+  function balanceCard({ withButton = true } = {}) {
+    const b = balance();
+    return `<section class="balance" aria-label="${t('balanceLabel')}">
+      <div class="coin">${ICONS.credits.replace('<svg', '<svg width="26" height="26"')}</div>
+      <div class="balance-num">${b}<small>${t('balanceLabel')}</small></div>
+      <p class="balance-hint">${t('balanceHint')}</p>
+      ${withButton ? `<button type="button" class="btn coin-btn" data-act="go" data-r="credits">${t('buy')}</button>` : ''}
+    </section>`;
+  }
+
+  function lowBanner() {
+    const b = balance();
+    if (b === 0) return `<div class="banner bad">${t('out')}</div>`;
+    if (b <= 5) return `<div class="banner warn">${t('low')}</div>`;
+    return '';
+  }
+
+  function toyCard(x) {
+    const st = toyState(x);
+    const action = x.status === 'active'
+      ? `<button type="button" class="btn ghost small" data-act="pause" data-id="${x.id}">${t('pause')}</button>`
+      : x.by === 'parent'
+        ? `<button type="button" class="btn primary small" data-act="wake" data-id="${x.id}">${t('wake')}</button>`
+        : '';
+    return `<div class="toy" data-act="open-toy" data-id="${x.id}" role="button" tabindex="0">
+      ${face(st.face)}
+      <div><div class="toy-name">${toyName(x)}</div><div class="toy-meta">${st.pill}<span>${t('seen', { t: rel(x.seen) })}</span></div></div>
+      ${action}
+    </div>`;
+  }
+
+  function turnItem(u) {
+    const c = child(u.child);
+    const name = c ? esc(c.name) : '';
+    if (u.status === 'completed') {
+      return `<div class="feed-item"><div class="dot ok">${ICONS.check}</div>
+        <div><div class="feed-title">${t('answered', { name })}</div><div class="feed-sub">${rel(u.at)}</div><p class="quote">“${esc(u.answer)}”</p></div>
+        <div class="delta neg">-1</div></div>`;
+    }
+    const reason = u.status === 'abandoned' ? t('r_abandoned') : t(`r_${u.reason}`);
+    const cls = u.reason === 'no_credits' ? 'warn' : 'sleep';
+    const icon = u.status === 'abandoned' ? ICONS.dash : ICONS.moon;
+    return `<div class="feed-item"><div class="dot ${cls}">${icon}</div>
+      <div><div class="feed-title">${t('notAnswered', { name })}</div><div class="feed-sub">${reason} · ${rel(u.at)}</div></div>
+      <div class="delta zero">${t('noCharge')}</div></div>`;
+  }
+
+  function viewHome() {
+    const recent = [...D.turns].sort((a, b) => b.at - a.at).slice(0, 3);
+    return `${topbar('')}
+      <p class="muted" style="margin-block:2px 14px">${t('hi', { name: esc(D.parent.name) })} · ${esc(D.familyName)}</p>
+      <div class="section" style="margin-top:0">${balanceCard()}${lowBanner()}</div>
+      <div class="section">
+        <div class="section-head"><h2>${t('toys')}</h2></div>
+        <div class="toys">
+          ${D.toys.length ? D.toys.map(toyCard).join('') : `<p class="muted small">${t('noToys')}</p>`}
+          <button type="button" class="add-toy" data-act="start-add">+ ${t('addToy')}</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>${t('recent')}</h2>${recent.length ? `<button type="button" class="link" data-act="go" data-r="activity">${t('seeAll')}</button>` : ''}</div>
+        <div class="feed">${recent.length ? recent.map(turnItem).join('') : `<div class="empty">${t('noTurns')}</div>`}</div>
+      </div>
+      <details class="tools"><summary>${t('tools')}</summary>
+        <div class="tools-body">
+          <button type="button" class="btn ghost small" data-act="sim-ask">${t('simAsk')}</button>
+          <button type="button" class="btn ghost small" data-act="sim-support">${t('simSupport')}</button>
+          <button type="button" class="btn ghost small" data-act="reset">${t('reset')}</button>
+        </div>
+      </details>`;
+  }
+
+  function viewCredits() {
+    const packs = PACKS.map((p) => `<button type="button" class="pack ${p.id === 'big' ? 'best' : ''}" data-act="choose-pack" data-id="${p.id}">
+        <div class="pack-name">${t(`pack_${p.id}`)}${p.id === 'big' ? `<span class="badge">${t('best')}</span>` : ''}</div>
+        <div class="pack-credits">${t('credits', { n: p.credits })} · ${t('perAnswer', { p: vnd(Math.round(p.price / p.credits)) })}</div>
+        <div class="pack-price">${vnd(p.price)}</div>
+      </button>`).join('');
+    const rows = D.ledger.map((r) => {
+      let label;
+      let delta;
+      if (r.kind === 'debit') { label = t('l_debit', { n: r.n }); delta = -r.n; }
+      else if (r.kind === 'purchase') { label = t('l_purchase', { pack: t(`pack_${r.pack}`) }); delta = r.delta; }
+      else if (r.kind === 'grant') { label = t('l_grant'); delta = r.delta; }
+      else { label = t('l_welcome'); delta = r.delta; }
+      return `<div class="feed-item"><div class="dot ${delta > 0 ? 'ok' : 'sleep'}">${delta > 0 ? '+' : ICONS.dash}</div>
+        <div><div class="feed-title">${label}</div><div class="feed-sub">${rel(r.at)}</div></div>
+        <div class="delta ${delta > 0 ? 'pos' : 'neg'}">${delta > 0 ? '+' : ''}${delta}</div></div>`;
+    }).join('');
+    return `${topbar('')}
+      <div class="section" style="margin-top:4px">${balanceCard({ withButton: false })}${lowBanner()}</div>
+      <div class="section"><h2>${t('choosePack')}</h2><div class="packs">${packs}</div></div>
+      <div class="section"><h2>${t('history')}</h2><div class="feed">${rows}</div></div>`;
+  }
+
+  function viewPay() {
+    const p = PACKS.find((x) => x.id === S.pay.pack);
+    if (S.pay.phase === 'processing') {
+      return `${topbar(t('payTitle'), { back: true })}<div class="hero-face"><div class="spinner" role="progressbar" aria-label="${t('paying')}"></div><p>${t('paying')}</p></div>`;
+    }
+    if (S.pay.phase === 'paid') {
+      return `${topbar(t('payTitle'), { back: true })}
+        <div class="hero-face">${face('awake', 96)}<h2>${t('paidTitle', { n: p.credits })}</h2><p class="muted">${t('paidBody', { b: balance() })}</p></div>
+        <button type="button" class="btn primary block" data-act="go" data-r="credits" style="margin-top:18px">${t('done')}</button>`;
+    }
+    if (S.pay.phase === 'declined') {
+      return `${topbar(t('payTitle'), { back: true })}
+        <div class="banner bad" style="margin-top:6px"><div><b>${t('declinedTitle')}</b><br>${t('declinedBody')}</div></div>
+        <div class="section"><button type="button" class="btn primary block" data-act="pay-retry">${t('tryAgain')}</button>
+        <button type="button" class="btn ghost block" data-act="go" data-r="credits">${t('cancel')}</button></div>`;
+    }
+    return `${topbar(t('payTitle'), { back: true })}
+      <div class="card summary" style="margin-top:6px">
+        <span class="muted">${t('pack')}</span><b>${t(`pack_${p.id}`)}</b>
+        <span class="muted">${t('balanceLabel')}</span><b>+${p.credits}</b>
+        <span class="muted">${t('total')}</span><span class="total">${vnd(p.price)}</span>
+      </div>
+      <div class="section">
+        <div class="banner brand">${t('payNote')}</div>
+        <label class="check" for="decline"><input type="checkbox" id="decline" ${S.pay.decline ? 'checked' : ''}> ${t('payDecline')}</label>
+        <button type="button" class="btn coin-btn block" data-act="pay">${t('pay', { price: vnd(p.price) })}</button>
+      </div>`;
+  }
+
+  function viewActivity() {
+    const list = [...D.turns].sort((a, b) => b.at - a.at).filter((u) => (S.filter === 'all' ? true : S.filter === 'answered' ? u.status === 'completed' : u.status !== 'completed'));
+    const seg = ['all', 'answered', 'not'].map((f) => `<button type="button" data-act="filter" data-v="${f}" aria-pressed="${S.filter === f}">${t(f === 'all' ? 'fAll' : f === 'answered' ? 'fAnswered' : 'fNot')}</button>`).join('');
+    return `${topbar('')}
+      <div class="section" style="margin-top:4px"><h2>${t('activityTitle')}</h2><div class="seg" role="group">${seg}</div>
+      <div class="feed">${list.length ? list.map(turnItem).join('') : `<div class="empty">${t('noTurns')}</div>`}</div>
+      <p class="muted small">${t('activityNote')}</p></div>`;
+  }
+
+  function childForm(id) {
+    const years = Array.from({ length: 11 }, (_, i) => YEAR - 1 - i).map((y) => `<option value="${y}" ${y === 2020 ? 'selected' : ''}>${y}</option>`).join('');
+    return `<form class="form card" id="${id}" novalidate>
+      <div class="field"><label for="${id}-name">${t('childName')}</label><input class="input" id="${id}-name" name="name" maxlength="40" autocomplete="off"></div>
+      <div class="field"><label for="${id}-year">${t('birthYear')}</label><select class="input" id="${id}-year" name="year">${years}</select></div>
+      <p class="msg bad" id="${id}-msg"></p>
+      <button type="submit" class="btn primary">${t('save')}</button>
+    </form>`;
+  }
+
+  function viewFamily() {
+    const kids = D.children.map((c, i) => {
+      const n = D.toys.filter((x) => x.child === c.id).length;
+      return `<div class="row"><div style="display:flex;gap:12px;align-items:center"><span class="avatar ${i % 2 ? 'alt' : ''}">${esc(c.name.slice(0, 1))}</span>
+        <div><div style="font-weight:600">${esc(c.name)}</div><div class="muted small">${t('age', { n: YEAR - c.year })}</div></div></div>
+        <span class="muted small">${n ? t('buddies', { n }) : t('noBuddy')}</span></div>`;
+    }).join('');
+    return `${topbar('')}
+      <div class="section" style="margin-top:4px">
+        <div class="section-head"><h2>${t('children')}</h2>${S.childFormOpen ? '' : `<button type="button" class="link" data-act="open-child-form">+ ${t('addChild')}</button>`}</div>
+        ${D.children.length ? `<div class="rows">${kids}</div>` : ''}
+        ${S.childFormOpen ? childForm('family-child') : ''}
+      </div>
+      <div class="section">
+        <h2>${t('account')}</h2>
+        <div class="rows">
+          <div class="row"><span class="k">${t('email')}</span><span class="v">${esc(D.parent.email)}</span></div>
+          <div class="row"><span class="k">${t('familyName')}</span><span class="v">${esc(D.familyName)}</span></div>
+          <div class="row"><span class="k">${t('language')}</span>
+            <div class="lang" role="group" aria-label="${t('language')}" style="margin:0">
+              <button type="button" data-act="lang" data-v="vi" aria-pressed="${lang === 'vi'}">Tiếng Việt</button>
+              <button type="button" data-act="lang" data-v="en" aria-pressed="${lang === 'en'}">English</button></div></div>
+        </div>
+        <button type="button" class="btn ghost" data-act="sign-out">${t('signOut')}</button>
+      </div>`;
+  }
+
+  function viewAdd() {
+    const a = S.add;
+    const steps = ['code', 'child', 'done'].map((s, i) => `<span class="${['code', 'child', 'done'].indexOf(a.step) >= i ? 'on' : ''}"></span>`).join('');
+    const head = `${topbar(t('addTitle'), { back: a.step !== 'done' })}<div class="steps" aria-hidden="true">${steps}</div>`;
+    if (a.step === 'code') {
+      const formatted = a.code.length > 4 ? `${a.code.slice(0, 4)}-${a.code.slice(4)}` : a.code;
+      return `${head}
+        <form class="section form" id="code-form" novalidate>
+          <h2>${t('codeTitle')}</h2>
+          <input class="input code-input" id="claim-code" value="${esc(formatted)}" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="code-msg">
+          <p class="msg ${a.error ? 'bad' : 'muted'}" id="code-msg">${a.error ? esc(a.error) : t('codeHelp')}</p>
+          <button type="submit" class="btn primary block" id="code-next" ${codeReady(a.code) && !a.checking ? '' : 'disabled'}>${a.checking ? t('checking') : t('next')}</button>
+          <p class="muted small">${t('codeDemo')}</p>
+        </form>`;
+    }
+    if (a.step === 'child') {
+      const choices = D.children.map((c, i) => `<button type="button" class="choice" data-act="pick-child" data-id="${c.id}" aria-pressed="${a.child === c.id}">
+          <span class="avatar ${i % 2 ? 'alt' : ''}">${esc(c.name.slice(0, 1))}</span><span><b>${esc(c.name)}</b><br><span class="muted small">${t('age', { n: YEAR - c.year })}</span></span></button>`).join('');
+      return `${head}
+        <div class="section">
+          <div class="hero-face">${face('awake', 72)}</div>
+          <h2>${t('childTitle')}</h2><p class="muted small">${t('childHelp')}</p>
+          <div class="choices">${choices}</div>
+          ${S.childFormOpen ? childForm('add-child') : `<button type="button" class="link" data-act="open-child-form" style="justify-self:start">+ ${t('addChildInline')}</button>`}
+          <button type="button" class="btn primary block" data-act="finish-add" ${a.child ? '' : 'disabled'}>${t('next')}</button>
+          <button type="button" class="btn ghost block" data-act="finish-add" data-skip="1">${t('later')}</button>
+        </div>`;
+    }
+    const x = toy(a.toyId);
+    return `${head}
+      <div class="hero-face" style="padding-top:24px">${face('awake', 112)}<h2>${t('doneTitle')}</h2><p class="muted">${t('doneBody')}</p>
+      <p class="mono muted">${esc(x.serial)}</p></div>
+      <button type="button" class="btn primary block" data-act="go" data-r="home" style="margin-top:18px">${t('goHome')}</button>`;
+  }
+
+  function viewToy() {
+    const x = toy(S.param);
+    if (!x) { S.route = 'home'; return viewHome(); }
+    const st = toyState(x);
+    const options = [`<option value="">${t('noChild')}</option>`, ...D.children.map((c) => `<option value="${c.id}" ${x.child === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)].join('');
+    let action = '';
+    if (x.status === 'active') action = `<button type="button" class="btn ghost block" data-act="pause" data-id="${x.id}">${t('pause')}</button><p class="muted small">${t('pauseExplain')}</p>`;
+    else if (x.by === 'parent') action = `<button type="button" class="btn primary block" data-act="wake" data-id="${x.id}">${t('wake')}</button><p class="muted small">${t('pauseExplain')}</p>`;
+    else action = `<div class="banner bad">${t('supportExplain')}</div>`;
+    const remove = S.confirmRemove
+      ? `<div class="confirm"><p>${t('removeAsk')}</p><div class="actions"><button type="button" class="btn danger-solid" data-act="remove" data-id="${x.id}">${t('removeYes')}</button><button type="button" class="btn ghost" data-act="cancel-remove">${t('cancel')}</button></div></div>`
+      : `<button type="button" class="btn danger" data-act="ask-remove">${t('remove')}</button>`;
+    return `${topbar(toyName(x), { back: true })}
+      <div class="hero-face">${face(st.face, 104)}${st.pill}</div>
+      <div class="section">${action}</div>
+      <div class="section">
+        <div class="rows">
+          <div class="row"><label class="k" for="toy-child">${t('toyFor')}</label><select class="input" id="toy-child" data-id="${x.id}">${options}</select></div>
+          <div class="row"><span class="k">${t('lastSeen')}</span><span class="v">${rel(x.seen)}</span></div>
+          <div class="row"><span class="k">${t('serial')}</span><span class="v mono">${esc(x.serial)}</span></div>
+          <div class="row"><span class="k">${t('firmware')}</span><span class="v mono">${esc(x.fw)}</span></div>
+        </div>
+      </div>
+      <div class="section">${remove}</div>`;
+  }
+
+  function viewAuth() {
+    const mode = S.authMode;
+    const seg = `<div class="seg" role="group"><button type="button" data-act="auth-mode" data-v="login" aria-pressed="${mode === 'login'}">${t('signIn')}</button><button type="button" data-act="auth-mode" data-v="register" aria-pressed="${mode === 'register'}">${t('register')}</button></div>`;
+    const familyField = mode === 'register' ? `<div class="field"><label for="auth-family">${t('familyName')}</label><input class="input" id="auth-family" name="family" autocomplete="off"></div>` : '';
+    return `<div class="auth">
+      <div style="display:flex;justify-content:flex-end">${topbar('').match(/<div class="lang"[\s\S]*?<\/div>/)[0]}</div>
+      <div class="auth-hero">${face('awake', 88)}<span class="wordmark">Little Buddy</span><p class="muted">${t('authTag')}</p></div>
+      ${seg}
+      <form class="form" id="auth-form" novalidate>
+        ${familyField}
+        <div class="field"><label for="auth-email">${t('email')}</label><input class="input" id="auth-email" name="email" type="email" autocomplete="email" value="${mode === 'login' ? 'lan.nguyen@example.com' : ''}"></div>
+        <div class="field"><label for="auth-password">${t('password')}</label><input class="input" id="auth-password" name="password" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" value="${mode === 'login' ? 'bong-2020!' : ''}"><span class="muted small">${t('pwHint')}</span></div>
+        <p class="msg bad">${S.authError ? esc(S.authError) : ''}</p>
+        <button type="submit" class="btn primary block">${mode === 'login' ? t('signIn') : t('register')}</button>
+        ${mode === 'register' ? `<p class="muted small" style="text-align:center">${t('registerNote')}</p>` : ''}
+      </form>
+    </div>`;
+  }
+
+  const TABS = [['home', 'navHome'], ['credits', 'navCredits'], ['activity', 'navActivity'], ['family', 'navFamily']];
+
+  function render() {
+    document.documentElement.lang = lang;
+    document.getElementById('proto-label').textContent = t('proto');
+    document.getElementById('proto-note').textContent = t('protoNote');
+    const app = document.getElementById('app');
+    const nav = document.getElementById('tabbar');
+    const shell = document.getElementById('shell');
+    let html;
+    let tabbed = true;
+    if (!D.signedIn) { html = viewAuth(); tabbed = false; }
+    else {
+      switch (S.route) {
+        case 'credits': html = viewCredits(); break;
+        case 'activity': html = viewActivity(); break;
+        case 'family': html = viewFamily(); break;
+        case 'add': html = viewAdd(); tabbed = false; break;
+        case 'toy': html = viewToy(); tabbed = false; break;
+        case 'pay': html = viewPay(); tabbed = false; break;
+        default: html = viewHome();
+      }
+    }
+    app.innerHTML = html;
+    nav.hidden = !tabbed;
+    shell.classList.toggle('pushed', !tabbed);
+    nav.innerHTML = `<div class="tabbar-inner">${TABS.map(([r, k]) => `<button type="button" class="tab" data-act="go" data-r="${r}" ${S.route === r ? 'aria-current="page"' : ''}>${ICONS[r]}<span>${t(k)}</span></button>`).join('')}</div>`;
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 2400);
+  }
+
+  function go(route, param = null) {
+    S.route = route;
+    S.param = param;
+    S.confirmRemove = false;
+    S.childFormOpen = false;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  const codeReady = (raw) => raw.length === 8 && [...raw].every((c) => ALPHABET.includes(c));
+
+  function onCodeInput(el) {
+    const raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    el.value = raw.length > 4 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
+    S.add.code = raw;
+    S.add.error = null;
+    const bad = [...raw].find((c) => !ALPHABET.includes(c));
+    const msg = document.getElementById('code-msg');
+    msg.className = `msg ${bad ? 'bad' : 'muted'}`;
+    msg.textContent = bad ? t('codeBad', { c: bad }) : t('codeHelp');
+    document.getElementById('code-next').disabled = !codeReady(raw);
+  }
+
+  function addLedgerDebit() {
+    const top = D.ledger[0];
+    if (top && top.kind === 'debit' && Date.now() - top.at < 6 * 60 * MIN) { top.n += 1; top.at = Date.now(); }
+    else D.ledger.unshift({ id: uid('l'), kind: 'debit', n: 1, at: Date.now() });
+  }
+
+  // The same rules the backend's ask gate applies, so the prototype behaves
+  // like the real toy: a resting Buddy or an empty wallet means no answer
+  // and no charge.
+  function simulateAsk() {
+    const x = D.toys.find((y) => y.status === 'active') ?? D.toys[0];
+    if (!x) return;
+    x.seen = Date.now();
+    let reason = null;
+    if (x.status !== 'active') reason = 'disabled';
+    else if (balance() < 1) reason = 'no_credits';
+    if (reason) {
+      D.turns.push({ id: uid('u'), toy: x.id, child: x.child, status: 'denied', reason, at: Date.now() });
+      toast(t('simDenied', { r: t(`r_${reason}`) }));
+    } else {
+      D.turns.push({ id: uid('u'), toy: x.id, child: x.child, status: 'completed', answer: SAMPLE_ANSWERS[seq % SAMPLE_ANSWERS.length], at: Date.now() });
+      addLedgerDebit();
+      toast(t('simAnswered'));
+    }
+    render();
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act;
+    const id = el.dataset.id;
+    switch (act) {
+      case 'go': go(el.dataset.r); break;
+      case 'back':
+        if (S.route === 'add' && S.add.step === 'child') { S.add.step = 'code'; S.childFormOpen = false; render(); }
+        else if (S.route === 'pay') go('credits');
+        else go('home');
+        break;
+      case 'lang':
+        lang = el.dataset.v;
+        try { localStorage.setItem('lb-lang', lang); } catch { /* optional */ }
+        render();
+        break;
+      case 'open-toy': go('toy', id); break;
+      case 'pause': {
+        e.stopPropagation();
+        const x = toy(id); x.status = 'disabled'; x.by = 'parent'; render(); toast(t('paused_toast')); break;
+      }
+      case 'wake': {
+        e.stopPropagation();
+        const x = toy(id); x.status = 'active'; x.by = null; x.seen = Date.now(); render(); toast(t('woke_toast')); break;
+      }
+      case 'ask-remove': S.confirmRemove = true; render(); break;
+      case 'cancel-remove': S.confirmRemove = false; render(); break;
+      case 'remove':
+        D.toys = D.toys.filter((x) => x.id !== id);
+        go('home');
+        toast(t('removed'));
+        break;
+      case 'start-add':
+        S.add = { step: 'code', code: '', error: null, child: null, toyId: null, checking: false };
+        go('add');
+        setTimeout(() => document.getElementById('claim-code')?.focus(), 0);
+        break;
+      case 'pick-child': S.add.child = id; render(); break;
+      case 'finish-add': {
+        const x = toy(S.add.toyId);
+        x.child = el.dataset.skip ? null : S.add.child;
+        S.add.step = 'done';
+        S.childFormOpen = false;
+        render();
+        break;
+      }
+      case 'open-child-form':
+        S.childFormOpen = true;
+        render();
+        setTimeout(() => document.querySelector('[name="name"]')?.focus(), 0);
+        break;
+      case 'choose-pack': S.pay = { pack: id, decline: false, phase: 'confirm' }; go('pay'); break;
+      case 'pay': {
+        S.pay.decline = document.getElementById('decline').checked;
+        S.pay.phase = 'processing';
+        render();
+        setTimeout(() => {
+          if (S.pay.decline) S.pay.phase = 'declined';
+          else {
+            const p = PACKS.find((x) => x.id === S.pay.pack);
+            D.ledger.unshift({ id: uid('l'), kind: 'purchase', pack: p.id, delta: p.credits, at: Date.now() });
+            S.pay.phase = 'paid';
+          }
+          render();
+        }, 1300);
+        break;
+      }
+      case 'pay-retry': S.pay.phase = 'confirm'; render(); break;
+      case 'filter': S.filter = el.dataset.v; render(); break;
+      case 'sign-out': D.signedIn = false; S.authMode = 'login'; S.authError = null; render(); break;
+      case 'auth-mode': S.authMode = el.dataset.v; S.authError = null; render(); break;
+      case 'sim-ask': simulateAsk(); break;
+      case 'sim-support': {
+        const x = D.toys.find((y) => y.status === 'active');
+        if (x) { x.status = 'disabled'; x.by = 'admin'; render(); }
+        break;
+      }
+      case 'reset': D = example(); go('home'); break;
+      default: break;
+    }
+  });
+
+  // Cards are role="button": Enter and Space open them too.
+  document.addEventListener('keydown', (e) => {
+    const el = e.target.closest?.('.toy[data-act]');
+    if (el && e.target === el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); go('toy', el.dataset.id); }
+  });
+
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'claim-code') onCodeInput(e.target);
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'toy-child') {
+      toy(e.target.dataset.id).child = e.target.value || null;
+      render();
+      toast(t('saved'));
+    }
+  });
+
+  document.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (f.id === 'code-form') {
+      if (!codeReady(S.add.code)) return;
+      S.add.checking = true;
+      render();
+      setTimeout(() => {
+        S.add.checking = false;
+        // ABCD-EFGH plays the part of a code that matches no toy.
+        if (S.add.code === 'ABCDEFGH') { S.add.error = t('codeInvalid'); render(); document.getElementById('claim-code')?.focus(); return; }
+        const n = String(40 + D.toys.length + seq).padStart(4, '0');
+        const x = { id: uid('t'), serial: `2026W38A-${n}`, status: 'active', by: null, child: null, seen: Date.now(), fw: '1.0.3' };
+        D.toys.push(x);
+        S.add.toyId = x.id;
+        S.add.step = 'child';
+        S.add.child = D.children[0]?.id ?? null;
+        render();
+      }, 700);
+      return;
+    }
+    if (f.id === 'add-child' || f.id === 'family-child') {
+      const name = f.elements.name.value.trim();
+      if (!name) { document.getElementById(`${f.id}-msg`).textContent = t('needName'); return; }
+      const c = { id: uid('c'), name, year: Number(f.elements.year.value) };
+      D.children.push(c);
+      S.childFormOpen = false;
+      if (f.id === 'add-child') S.add.child = c.id;
+      render();
+      toast(t('saved'));
+      return;
+    }
+    if (f.id === 'auth-form') {
+      const email = f.elements.email.value.trim();
+      const password = f.elements.password.value;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { S.authError = t(S.authMode === 'login' ? 'badLogin' : 'badEmail'); render(); return; }
+      if (password.length < 8) { S.authError = t(S.authMode === 'login' ? 'badLogin' : 'shortPw'); render(); return; }
+      if (S.authMode === 'register') {
+        const familyName = f.elements.family.value.trim();
+        if (!familyName) { S.authError = t('needFamily'); render(); return; }
+        // A brand new family: 10 welcome credits, nothing else yet.
+        D = { signedIn: true, parent: { name: email.split('@')[0], email }, familyName, children: [], toys: [], ledger: [{ id: uid('l'), kind: 'welcome', delta: 10, at: Date.now() }], turns: [] };
+      } else {
+        D.signedIn = true;
+      }
+      S.authError = null;
+      go('home');
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

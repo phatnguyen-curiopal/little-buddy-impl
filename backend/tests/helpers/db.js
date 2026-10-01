@@ -49,7 +49,7 @@ export async function migrate() {
 
 // Reference data seeded by migrations; truncating it would leave later tests
 // with nothing to buy.
-const KEEP = ['schema_migrations', 'credit_packs', 'personalities'];
+const KEEP = ['schema_migrations', 'credit_packs', 'personalities', 'voices'];
 
 // The table list is queried, so new tables need no edit here.
 export async function resetDb() {
@@ -57,9 +57,18 @@ export async function resetDb() {
     `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND NOT (tablename = ANY($1))`,
     [KEEP],
   );
-  if (tables.rowCount === 0) return;
+  if (tables.rowCount === 0) return resetVoices();
   const names = tables.rows.map((r) => `"${r.tablename}"`).join(', ');
   await pool.query(`TRUNCATE ${names} RESTART IDENTITY CASCADE`);
+  await resetVoices();
+}
+
+// Voices are kept like other reference data, but tests add some through
+// /admin; back to exactly what migration 006 seeded.
+export const SEEDED_VOICE = '1rqNHUqUbBGpY3OyzPMI';
+async function resetVoices() {
+  await pool.query('DELETE FROM voices WHERE id <> $1', [SEEDED_VOICE]);
+  await pool.query(`UPDATE voices SET label = 'Giọng mặc định', sort = 0, is_default = true WHERE id = $1`, [SEEDED_VOICE]);
 }
 
 export async function resetRedis() {

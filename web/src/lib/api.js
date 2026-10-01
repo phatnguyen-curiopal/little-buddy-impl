@@ -136,7 +136,13 @@ export const api = {
   devices: () => request('GET', '/api/devices'),
   claim: (body) => request('POST', '/api/devices/claim', { body }),
   setChild: (id, childId) => request('PATCH', `/api/devices/${id}`, { body: { child_id: childId } }),
+  // patch: any of name, role, personality, personality_source, language
+  // (vi|en), voice_id (null = the default voice), learn, mood_pin (0..100,
+  // null = automatic).
   updateProfile: (id, patch) => request('PATCH', `/api/devices/${id}/profile`, { body: patch }),
+  voices: () => request('GET', '/api/voices'),
+  // Owner-only; the web toy keeps the answer in memory for this page only.
+  revealSecret: (id) => request('POST', `/api/devices/${id}/secret`, { body: {} }),
   pause: (id) => request('POST', `/api/devices/${id}/disable`, { body: {} }),
   resume: (id) => request('POST', `/api/devices/${id}/enable`, { body: {} }),
   unpair: (id) => request('DELETE', `/api/devices/${id}`),

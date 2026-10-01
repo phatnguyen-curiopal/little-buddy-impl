@@ -3,8 +3,10 @@ import { pool, withTransaction } from '../store/db.js';
 import * as devices from '../store/device.js';
 import * as childrenStore from '../store/child.js';
 import * as profiles from '../store/profile.js';
-import { DEFAULT_PROFILE, validateProfile } from '../personalization/roles.js';
-import { newDeviceSecret, wrapSecret, unwrapSecret, claimCodeHash } from './secret_box.js';
+import { DEFAULT_PROFILE, validateProfile, isVoiceFkError, unknownVoice } from '../personalization/roles.js';
+import { pipeline } from '../pipeline/index.js';
+import log from '../lib/log.js';
+import { newDeviceSecret, wrapSecret, unwrapSecret, claimCodeHash, webToySecret } from './secret_box.js';
 import { newClaimCode, normalizeClaimCode, formatClaimCode } from './claim_code.js';
 import { serialFor, isBatchLabel, MAX_PER_BATCH } from './serial.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/http_error.js';
@@ -117,15 +119,27 @@ export async function provisionBatch({ label, hardwareRev, count, notes = null, 
   }
 }
 
-// The profile (name, role, personality) is written in the same transaction,
-// so a claimed toy always has one; omitted means the defaults.
+// A voice id of the right shape that names no voice fails the foreign key
+// inside the transaction; the parent sees it as a field error, not a 500.
+async function mapVoiceError(promise) {
+  try {
+    return await promise;
+  } catch (err) {
+    if (isVoiceFkError(err)) throw unknownVoice();
+    throw err;
+  }
+}
+
+// The profile (name, role, personality and conversation settings) is
+// written in the same transaction, so a claimed toy always has one; omitted
+// fields mean the defaults.
 export async function claimByCode({ familyId, claimCode, childId = null, profile = null, actorId = null }) {
   const normalized = normalizeClaimCode(claimCode);
   if (!normalized) throw badRequest('validation_error', 'claim code must be 8 letters or digits');
   const chosen = profile ? validateProfile(profile) : DEFAULT_PROFILE;
   const hash = claimCodeHash(normalized);
 
-  return withTransaction(async (tx) => {
+  return mapVoiceError(withTransaction(async (tx) => {
     const row = await devices.findByClaimHashForUpdate(tx, hash);
     // A retry after a lost response must not look like a bad code. Only the
     // owning family gets its toy back, unchanged; nothing is written, so the
@@ -152,20 +166,20 @@ export async function claimByCode({ familyId, claimCode, childId = null, profile
       detail: { family_id: familyId, child_id: childId },
     });
     return devices.findInFamily(tx, row.id, familyId);
-  });
+  }));
 }
 
 // Rename Buddy, change how it speaks to the child, or its personality.
 export async function updateProfile({ deviceId, familyId, patch, actorId = null }) {
   const clean = validateProfile(patch, { partial: true });
-  return withTransaction(async (tx) => {
+  return mapVoiceError(withTransaction(async (tx) => {
     const row = await lockDevice(tx, deviceId, familyId);
     if (row.status === STATUS.REVOKED) throw conflict('device_revoked', 'device is revoked');
     // Toys claimed before profiles existed have no row yet.
     const updated = await profiles.update(tx, row.id, clean) ?? await profiles.upsert(tx, row.id, { ...DEFAULT_PROFILE, ...clean });
     await devices.insertEvent(tx, { deviceId: row.id, event: 'profile_updated', actorKind: 'parent', actorId, detail: { fields: Object.keys(clean) } });
     return updated && devices.findInFamily(tx, row.id, familyId);
-  });
+  }));
 }
 
 export async function assignChild({ deviceId, familyId, childId }) {
@@ -238,6 +252,12 @@ export async function unpair({ deviceId, familyId, actorId = null }) {
     return next;
   });
   onDeviceBlocked(updated.id, STATUS.PROVISIONED);
+  // What the toy learned about this family (when no child was assigned) is
+  // theirs, not the next owner's. Best-effort: the unpair has committed and
+  // must not fail because the brain is down, so a miss is only logged.
+  pipeline.wipeDeviceSubject({ deviceId: updated.id, familyId }).catch((err) =>
+    log.warn('brain_wipe_failed', { device_id: updated.id, code: err.code ?? 'error' }),
+  );
   return updated;
 }
 
@@ -290,14 +310,43 @@ export async function heartbeat({ deviceId, firmwareVersion = null }) {
   await devices.touchSeen(pool, deviceId, firmwareVersion);
 }
 
-// Only devices/hmac_auth.js calls this: it is the one path that decrypts.
+// The web toy: the owning family's browser plays the toy, signing /v1 so a
+// demo turn goes through the same gate and credits. It gets a credential
+// derived for this ownership (secret_box.webToySecret), not the factory
+// secret: a former owner who kept it cannot sign as the toy once it is
+// unpaired or claimed again. Only an active toy of the caller's family;
+// everything else is the same 404, so the endpoint cannot probe which ids
+// exist. The reveal is stamped on the device (it is also what switches the
+// web credential on in getForAuth) and in its events.
+export async function revealSecret({ deviceId, familyId, actorId = null }) {
+  return withTransaction(async (tx) => {
+    const row = await devices.findInFamilyForUpdate(tx, deviceId, familyId);
+    if (!row || row.status !== STATUS.ACTIVE) throw notFound('device_not_found', 'device not found');
+    const secret = webToySecret(unwrapSecret(row.id, row.secret_enc), { familyId: row.family_id, claimedAt: row.claimed_at });
+    await devices.markSecretRevealed(tx, row.id);
+    await devices.insertEvent(tx, { deviceId: row.id, event: 'secret_revealed', actorKind: 'parent', actorId });
+    return { device_id: row.id, secret_hex: secret.toString('hex') };
+  });
+}
+
+// A web credential is honoured only while the family it was derived for
+// still owns the toy (active, or paused so the page can show why it is
+// quiet) and only after a reveal; unpair clears both.
+function webSecretFor(row, secret) {
+  if (!row.secret_revealed_at || !row.family_id || !row.claimed_at) return null;
+  if (row.status !== STATUS.ACTIVE && row.status !== STATUS.DISABLED) return null;
+  return webToySecret(secret, { familyId: row.family_id, claimedAt: row.claimed_at });
+}
+
+// devices/hmac_auth.js calls this to verify a signature; revealSecret above
+// is the only other path that decrypts.
 export async function getForAuth(deviceId) {
   const row = await devices.findById(pool, deviceId);
   if (!row) return null;
   const secret = unwrapSecret(row.id, row.secret_enc);
   const prevValid = row.secret_prev_enc && row.secret_prev_expires_at && row.secret_prev_expires_at.getTime() > Date.now();
   const prevSecret = prevValid ? unwrapSecret(row.id, row.secret_prev_enc) : null;
-  return { device: toPublic(row), secret, prevSecret };
+  return { device: toPublic(row), secret, prevSecret, webSecret: webSecretFor(row, secret) };
 }
 
 export async function getInFamily({ deviceId, familyId }) {

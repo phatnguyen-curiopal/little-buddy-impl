@@ -6,6 +6,7 @@ import * as redisStore from './store/redis.js';
 import log from './lib/log.js';
 import { attachStream } from './ws/stream.js';
 import { sweepStale } from './turns/service.js';
+import { pipeline } from './pipeline/index.js';
 
 const SHUTDOWN_GRACE_MS = 10_000;
 
@@ -20,11 +21,17 @@ await sweepStale();
 setInterval(() => sweepStale().catch((err) => log.warn('turns_sweep_failed', { err_message: err.message })), 60_000).unref();
 
 server.listen(config.port, () => {
-  log.info('server_listening', { port: config.port, node_env: config.nodeEnv, device_auth: config.deviceAuth });
+  log.info('server_listening', { port: config.port, node_env: config.nodeEnv, device_auth: config.deviceAuth, provider_mode: config.providerMode, web_toy: config.webToy });
   if (config.deviceAuth === 'off') {
     // Loud on purpose: a server running like this accepts any device id.
     log.warn('device_auth_off', { note: 'signature checks are disabled; never run like this outside local dev' });
   }
+  // Warn only: the brain may simply start after us, and turns report their
+  // own failures; this just makes a BRAIN_TOKEN mismatch visible up front.
+  pipeline.probe().then(({ ok, code }) => {
+    if (ok) log.info('provider_ready', { provider_mode: config.providerMode, code });
+    else log.warn('provider_probe_failed', { provider_mode: config.providerMode, code });
+  });
 });
 
 let shuttingDown = false;

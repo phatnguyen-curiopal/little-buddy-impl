@@ -4,6 +4,7 @@ import { burst } from '../components/Confetti.js';
 import { CloseButton, Icon, Layer, Pill, useErrorText, useToast } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { api } from '../lib/api.js';
+import { navigate } from '../lib/router.js';
 import { relativeTime, vnd, age } from '../lib/format.js';
 import { useFamilyData } from './data.jsx';
 import { toyLook, useToyName } from './parts.jsx';
@@ -65,7 +66,7 @@ export function ToyDrawer({ id, onClose }) {
         <ProfileEditor value={draft} onChange={(p) => { setDraft(p); setNameError(''); }} nameError={nameError} />
         {error && <p className="msg bad">{error}</p>}
         <div className="actions">
-          <button type="button" className="btn apricot" disabled={busy} onClick={saveProfile}>{busy ? t('saving') : t('saveProfile')}</button>
+          <button type="button" className="btn pop" disabled={busy} onClick={saveProfile}>{busy ? t('saving') : t('saveProfile')}</button>
           <button type="button" className="btn ghost" disabled={busy} onClick={() => { setDraft(null); setError(''); }}>{t('cancel')}</button>
         </div>
       </Layer>
@@ -83,12 +84,17 @@ export function ToyDrawer({ id, onClose }) {
           <button type="button" className="btn ghost self-start" onClick={() => { setDraft(profile); setError(''); setNameError(''); }}>{t('editProfile')}</button>
         )}
       </div>
+      {device.status === 'active' && d.me?.web_toy === true && (
+        <button type="button" className="btn pop block sheen" onClick={() => { onClose(); navigate(`/app/talk?toy=${encodeURIComponent(device.id)}`); }}>
+          {t('talkTo', { name: profile.name })}
+        </button>
+      )}
       {device.status === 'active' && (<>
         <button type="button" className="btn ghost block" disabled={busy} onClick={() => act(() => api.pause(device.id), t('pausedToast'))}>{t('pause')}</button>
         <p className="muted small">{t('pauseExplain')}</p>
       </>)}
       {device.status === 'disabled' && device.disabled_by === 'parent' && (<>
-        <button type="button" className="btn apricot block" disabled={busy} onClick={() => act(() => api.resume(device.id), t('wokeToast'))}>{t('wake')}</button>
+        <button type="button" className="btn pop block" disabled={busy} onClick={() => act(() => api.resume(device.id), t('wokeToast'))}>{t('wake')}</button>
         <p className="muted small">{t('pauseExplain')}</p>
       </>)}
       {device.status === 'disabled' && device.disabled_by === 'admin' && <div className="banner bad">{Icon.alert}<span>{t('supportExplain')}</span></div>}
@@ -248,7 +254,7 @@ export function AddToyModal({ onClose }) {
             <div className="hero-screen"><Face emotion="curious" /></div>
             <div><h3 className="step-title">{t('leaveT')}</h3><p className="muted small">{t('leaveB')}</p></div>
             {error && <p className="msg bad">{error}</p>}
-            <button type="button" className="btn apricot lg block" data-autofocus disabled={busy} onClick={() => { setLeaving(false); setError(''); }}>{t('keepGoing')}</button>
+            <button type="button" className="btn pop lg block" data-autofocus disabled={busy} onClick={() => { setLeaving(false); setError(''); }}>{t('keepGoing')}</button>
             <button type="button" className="btn ghost block" disabled={busy} onClick={saveAndClose}>{busy ? t('saving') : t('saveAndClose')}</button>
           </div>
         ) : (<>
@@ -258,7 +264,7 @@ export function AddToyModal({ onClose }) {
               <input className={`input code-input ${error ? 'shake' : ''}`} value={formatCode(code)} onChange={onCode} placeholder="XXXX-XXXX" maxLength={9}
                 autoComplete="off" autoCapitalize="characters" spellCheck="false" aria-describedby="code-msg" data-autofocus aria-label={t('codeTitle')} />
               <p id="code-msg" className={`msg ${bad || error ? 'bad' : 'muted'}`}>{bad ? t('codeBad', { c: bad }) : error || t('codeHelp')}</p>
-              <button type="submit" className="btn apricot lg block" disabled={!codeReady(code)}>{t('next')}</button>
+              <button type="submit" className="btn pop lg block" disabled={!codeReady(code)}>{t('next')}</button>
             </form>
           )}
 
@@ -280,7 +286,7 @@ export function AddToyModal({ onClose }) {
                 ? <ChildForm onDone={async (c) => { await d.reload(); setChild(c.id); setAdding(false); }} />
                 : <button type="button" className="link self-start" onClick={() => setAdding(true)}>+ {t('addChildInline')}</button>}
               {error && <p className="msg bad">{error}</p>}
-              <button type="button" className="btn apricot lg block" disabled={busy || !child} onClick={() => claim(child)}>{busy ? t('checking') : t('next')}</button>
+              <button type="button" className="btn pop lg block" disabled={busy || !child} onClick={() => claim(child)}>{busy ? t('checking') : t('next')}</button>
               <button type="button" className="btn ghost block" disabled={busy} onClick={() => claim(null)}>{t('later')}</button>
               <button type="button" className="link self-start" disabled={busy} onClick={() => go('code')}>{t('back')}</button>
             </div>
@@ -288,11 +294,11 @@ export function AddToyModal({ onClose }) {
 
           {step === 'name' && (
             <div className="form">
-              {!reviewed && <div className="banner mint">{Icon.check}<span>{t('addedB')}</span></div>}
+              {!reviewed && <div className="banner brand">{Icon.check}<span>{t('addedB')}</span></div>}
               <div className="hero-screen"><Face emotion="excited" /></div>
               <h3 className="step-title">{t('nameStepT')}</h3>
               <NameField value={draft.name} onChange={(name) => { set({ name }); setNameError(''); }} error={nameError} autoFocus />
-              <button type="button" className="btn apricot lg block" onClick={nameNext}>{t('next')}</button>
+              <button type="button" className="btn pop lg block" onClick={nameNext}>{t('next')}</button>
               {!reviewed && <button type="button" className="btn ghost block" onClick={requestClose}>{t('later')}</button>}
             </div>
           )}
@@ -301,7 +307,7 @@ export function AddToyModal({ onClose }) {
             <div className="form">
               <div><h3 className="step-title">{t('roleStepT')}</h3><p className="muted small">{t('roleStepB')}</p></div>
               <RolePicker value={draft.role} onChange={(role) => set({ role })} autoFocus />
-              <button type="button" className="btn apricot lg block" onClick={() => forward('personality')}>{t('next')}</button>
+              <button type="button" className="btn pop lg block" onClick={() => forward('personality')}>{t('next')}</button>
               <button type="button" className="link self-start" onClick={() => go('name')}>{t('back')}</button>
             </div>
           )}
@@ -335,7 +341,7 @@ export function AddToyModal({ onClose }) {
             <div className="form">
               <h3 className="step-title">{t('personalityStepT', { name: draft.name.trim() || 'Buddy' })}</h3>
               <PersonalityPicker value={draft.personality} onPick={(code) => set({ personality: code, personality_source: 'picked' })} />
-              <button type="button" className="btn apricot lg block sticky-cta" onClick={() => go('review')}>{t('next')}</button>
+              <button type="button" className="btn pop lg block sticky-cta" onClick={() => go('review')}>{t('next')}</button>
               <button type="button" className="link self-start" onClick={() => go('personality')}>{t('back')}</button>
             </div>
           )}
@@ -351,7 +357,7 @@ export function AddToyModal({ onClose }) {
               <h2>{t('readyNamed', { name: draft.name.trim() })}</h2>
               <p className="muted">{t('readyB')}</p>
               {device && <p className="mono muted">{device.serial}</p>}
-              <button type="button" className="btn apricot lg block" data-autofocus onClick={onClose}>{t('done')}</button>
+              <button type="button" className="btn pop lg block" data-autofocus onClick={onClose}>{t('done')}</button>
             </div>
           )}
         </>)}
@@ -372,7 +378,7 @@ function ReviewStep({ draft, busy, error, onEnter, onEdit, onSave }) {
       <div><h3 className="step-title">{t('reviewStepT')}</h3><p className="muted small">{t('reviewStepB')}</p></div>
       <ProfileSummary profile={draft} onEdit={onEdit} />
       {error && <p className="msg bad">{error}</p>}
-      <button type="button" className="btn apricot lg block" data-autofocus disabled={busy} onClick={onSave}>{busy ? t('saving') : t('saveProfile')}</button>
+      <button type="button" className="btn pop lg block" data-autofocus disabled={busy} onClick={onSave}>{busy ? t('saving') : t('saveProfile')}</button>
     </div>
   );
 }
@@ -421,10 +427,10 @@ export function PayModal({ pack: initial, onClose }) {
             <span className="muted">{t('add')}</span><b>+{t('credits', { n: pack.credits })}</b>
             <span className="muted">{t('total')}</span><span className="big">{vnd(pack.price_amount, lang)}</span>
           </div>
-          <div className="banner mint">{Icon.alert}<span>{t('payNote')}</span></div>
+          <div className="banner brand">{Icon.alert}<span>{t('payNote')}</span></div>
           <label className="check" htmlFor="decline"><input id="decline" type="checkbox" checked={decline} onChange={(e) => setDecline(e.target.checked)} /> {t('payDecline')}</label>
           {error && <p className="msg bad">{error}</p>}
-          <button type="button" className="btn apricot lg block sheen" data-autofocus onClick={pay}>{t('pay', { price: vnd(pack.price_amount, lang) })}</button>
+          <button type="button" className="btn pop lg block sheen" data-autofocus onClick={pay}>{t('pay', { price: vnd(pack.price_amount, lang) })}</button>
         </div>
       )}
       {phase === 'processing' && <div className="center pad"><div className="spinner" role="progressbar" aria-label={t('paying')} /><p>{t('paying')}</p></div>}
@@ -433,14 +439,14 @@ export function PayModal({ pack: initial, onClose }) {
           <div className="hero-screen full"><Face emotion="love" /></div>
           <h2>{t('paidT', { n: pack.credits })}</h2>
           <p className="muted">{t('paidB', { b: balance })}</p>
-          <button type="button" className="btn apricot lg block" data-autofocus onClick={onClose}>{t('done')}</button>
+          <button type="button" className="btn pop lg block" data-autofocus onClick={onClose}>{t('done')}</button>
         </div>
       )}
       {phase === 'declined' && (
         <div className="form">
           <div className="hero-screen"><Face emotion="sad" /></div>
           <div className="banner bad">{Icon.alert}<span><b>{t('declinedT')}</b><br />{t('declinedB')}</span></div>
-          <button type="button" className="btn apricot lg block" data-autofocus onClick={() => { setDecline(false); setPhase('confirm'); }}>{t('tryAgain')}</button>
+          <button type="button" className="btn pop lg block" data-autofocus onClick={() => { setDecline(false); setPhase('confirm'); }}>{t('tryAgain')}</button>
           <button type="button" className="btn ghost block" onClick={onClose}>{t('cancel')}</button>
         </div>
       )}

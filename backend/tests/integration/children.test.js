@@ -54,6 +54,13 @@ test('validation: name bounds and birth_year range', async () => {
   assert.equal(badYear.status, 400);
   assert.deepEqual(badYear.body.error.details.map((d) => d.field), ['birth_year']);
 
+  const nextYear = new Date().getUTCFullYear() + 1;
+  const future = await api('POST', '/api/children', { token: p.token, body: { name: 'X', birth_year: nextYear } });
+  assert.equal(future.status, 400, 'a year still to come is a typo');
+  assert.deepEqual(future.body.error.details.map((d) => d.field), ['birth_year']);
+  const thisYear = await api('POST', '/api/children', { token: p.token, body: { name: 'X', birth_year: nextYear - 1 } });
+  assert.equal(thisYear.status, 201);
+
   const noAuth = await api('POST', '/api/children', { body: { name: 'X', birth_year: 2020 } });
   assert.equal(noAuth.status, 401);
 });

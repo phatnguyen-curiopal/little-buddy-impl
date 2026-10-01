@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Face from './Face.jsx';
+import ToyShell from './ToyShell.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { reducedMotion, usePointerLook } from '../lib/motion.js';
 
@@ -132,19 +132,14 @@ export default function Toy() {
 
   return (
     <div className="stage" ref={ref}>
-      <div className={`toy toy--${phase}`}>
-        <div className="ear l" /><div className="ear r" />
-        <div className="toy-body" />
-        <div className="screen"><Face emotion={emotion} look={phase === 'idle' ? look : null} /></div>
-        <div className="mic-ring" aria-hidden="true" />
-        <button
-          type="button"
-          className="press"
-          onClick={tap}
-          aria-pressed={phase === 'listening'}
-          aria-label={phase === 'listening' ? t('toyTapStop') : t('toyTap')}
-        />
-      </div>
+      <ToyShell
+        phase={phase}
+        emotion={emotion}
+        look={phase === 'idle' ? look : null}
+        onTap={tap}
+        pressed={phase === 'listening'}
+        label={phase === 'listening' ? t('toyTapStop') : t('toyTap')}
+      />
 
       <div className="talk" aria-live="polite">
         <div className="status"><i className={`status-dot status-dot--${phase}`} />{status}</div>

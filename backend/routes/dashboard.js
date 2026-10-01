@@ -8,10 +8,12 @@ import * as children from '../store/child.js';
 import * as registry from '../devices/registry.js';
 import * as deviceStore from '../store/device.js';
 import { isUuid } from '../lib/validate.js';
-import { badRequest, notFound } from '../lib/http_error.js';
+import { badRequest, forbidden, notFound } from '../lib/http_error.js';
 import * as billing from '../billing/ledger.js';
 import * as buying from '../billing/purchases.js';
 import * as turns from '../turns/service.js';
+import * as voices from '../store/voice.js';
+import config from '../config.js';
 
 // Everything the parent web app calls, mounted at /api. Never mixed with the
 // device API: a device secret must not be able to reach any of these.
@@ -62,14 +64,17 @@ dashboardRouter.post('/auth/logout', async (req, res) => {
   res.status(204).end();
 });
 
+// web_toy tells the web whether to offer "talk to Buddy" at all.
 dashboardRouter.get('/me', requireParent, async (req, res) => {
-  res.json(await auth.me(req.parent.id));
+  res.json({ ...(await auth.me(req.parent.id)), web_toy: config.webToy });
 });
 
 dashboardRouter.post('/children', requireParent, async (req, res) => {
+  // A year still in the future is a typo; the brain drops such a year from
+  // the prompt, so refusing it here is what lets the parent notice.
   const body = validateBody(req.body, {
     name: { type: 'string', required: true, min: 1, max: 40 },
-    birth_year: { type: 'int', required: true, min: 2000, max: 2100 },
+    birth_year: { type: 'int', required: true, min: 2000, max: new Date().getUTCFullYear() },
   });
   const child = await children.insert(pool, { familyId: req.familyId, name: body.name, birthYear: body.birth_year });
   res.status(201).json({ child: children.toDto(child) });
@@ -109,6 +114,28 @@ dashboardRouter.post('/devices/claim', requireParent, claimLimit, async (req, re
 dashboardRouter.patch('/devices/:id/profile', requireParent, async (req, res) => {
   const row = await registry.updateProfile({ deviceId: deviceId(req), familyId: req.familyId, patch: req.body, actorId: req.parent.id });
   res.json(deviceResponse(row));
+});
+
+// A browser revealing the secret re-reveals after a failed reconnect, not
+// per turn, so a few dozen an hour is plenty and bounds a stolen session.
+const revealLimit = rateLimit({ name: 'reveal', limit: 30, windowSec: 3600, key: (req) => req.parent.id });
+
+function requireWebToy(req, res, next) {
+  if (!config.webToy) return next(forbidden('web_toy_disabled', 'the web toy is switched off'));
+  next();
+}
+
+// The web toy: the parent's browser becomes the toy and signs /v1 itself.
+// no-store because the body is a credential.
+dashboardRouter.post('/devices/:id/secret', requireParent, requireWebToy, revealLimit, async (req, res) => {
+  const result = await registry.revealSecret({ deviceId: deviceId(req), familyId: req.familyId, actorId: req.parent.id });
+  res.set('Cache-Control', 'no-store');
+  res.json(result);
+});
+
+dashboardRouter.get('/voices', requireParent, async (req, res) => {
+  const rows = await voices.list(pool);
+  res.json({ voices: rows.map(voices.toDto) });
 });
 
 dashboardRouter.get('/devices', requireParent, async (req, res) => {

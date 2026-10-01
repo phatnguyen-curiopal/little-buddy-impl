@@ -1,39 +1,45 @@
-/* Palette from the approved v2 prototype. The hero, safety band and toy
-   screens stay deep ocean in both themes on purpose: Buddy glows on it. */
+/* Palette follows curiopal.com: bright blue brand, navy ink, cool greys,
+   the same blue as the "pop" accent. The hero, safety band and toy screens stay
+   navy in both themes on purpose: Buddy glows on it. */
 :root {
   color-scheme: light;
-  --ground: #F3F6F7;
+  --ground: #F7F9FC;
   --surface: #FFFFFF;
-  --surface-2: #E8EEF0;
-  --ink: #10212B;
-  --muted: #56666F;
-  --line: #D5DEE2;
-  --ocean: #10212B;
-  --ocean-2: #183342;
-  --on-ocean: #EAF2F4;
-  --on-ocean-muted: #A9BDC5;
-  --apricot: #FF9F4A;
-  --apricot-deep: #D96F14;
-  --apricot-ink: #2B1502;
-  --apricot-soft: #FFEBD8;
-  --mint: #4FBF9F;
-  --mint-soft: #DDF3EC;
-  --mint-ink: #0E5A48;
-  --sky: #79B4EE;
-  --chart: #2E9E80;
+  --surface-2: #EEF2F8;
+  --ink: #0B1220;
+  --muted: #5B6B82;
+  --line: #DDE4EE;
+  --ocean: #0B1220;
+  --ocean-2: #111A2E;
+  --on-ocean: #E8EEFA;
+  --on-ocean-muted: #A3B3CE;
+  --pop: #2F6BFF;
+  --pop-deep: #1A56C4;
+  --pop-ink: #FFFFFF;
+  --pop-soft: #E3ECFF;
+  --pop-on-dark: #5B8CFF;
+  --brand: #2F6BFF;
+  --brand-soft: #E3ECFF;
+  --brand-ink: #1A56C4;
+  --sky: #8FB2FF;
+  --chart: #2F6BFF;
   --warn: #8F5A0F;
   --warn-soft: #FBEBD0;
   --bad: #B93F35;
   --bad-soft: #F8E1DE;
-  --screen: #0B1C24;
-  --glow: #7CF0CD;
-  --glow-dim: #5B7580;
-  --shadow-sm: 0 1px 2px rgba(16, 33, 43, 0.06), 0 4px 14px rgba(16, 33, 43, 0.05);
-  --shadow-md: 0 14px 34px -14px rgba(16, 33, 43, 0.28);
-  --shadow-lg: 0 24px 60px -18px rgba(16, 33, 43, 0.35);
-  --display: "Lexend", "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
-  --body: "Be Vietnam Pro", "Segoe UI", Roboto, system-ui, sans-serif;
+  --screen: #0A1426;
+  --glow: #9DBBFF;
+  --glow-dim: #56647E;
+  --shadow-sm: 0 1px 2px rgba(11, 18, 32, 0.06), 0 4px 14px rgba(11, 18, 32, 0.05);
+  --shadow-md: 0 14px 34px -14px rgba(11, 18, 32, 0.28);
+  --shadow-lg: 0 24px 60px -18px rgba(11, 18, 32, 0.35);
+  --display: "Space Grotesk", "Inter", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
   --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --glare-a: 0.26;
+  --glare-b: 0.18;
+  --glare-c: 0.16;
+  --dots: 0.06;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -41,25 +47,29 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --ground: #0B161D;
-    --surface: #13212A;
-    --surface-2: #1A2C37;
-    --ink: #E8EFF1;
-    --muted: #9DB0B8;
-    --line: #24394A;
-    --ocean: #0E2330;
-    --ocean-2: #163647;
-    --apricot: #FFAE66;
-    --apricot-deep: #E58A38;
-    --apricot-soft: #3B2614;
-    --mint: #5CCBAA;
-    --mint-soft: #173A33;
-    --mint-ink: #9FE5D0;
-    --chart: #38A487;
+    --ground: #070C18;
+    --surface: #0F1729;
+    --surface-2: #16213A;
+    --ink: #E6ECF7;
+    --muted: #94A3BD;
+    --line: #22304D;
+    --ocean: #0A1122;
+    --ocean-2: #111D38;
+    --pop: #2F6BFF;
+    --pop-deep: #1A56C4;
+    --pop-soft: #16264D;
+    --brand: #5B8CFF;
+    --brand-soft: #16264D;
+    --brand-ink: #A9C1FF;
+    --chart: #5B8CFF;
     --warn: #E3A548;
     --warn-soft: #3A2A12;
     --bad: #E47A70;
     --bad-soft: #3D211E;
+    --glare-a: 0.26;
+    --glare-b: 0.16;
+    --glare-c: 0.16;
+    --dots: 0;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.25);
     --shadow-md: 0 14px 34px -14px rgba(0, 0, 0, 0.6);
     --shadow-lg: 0 24px 60px -18px rgba(0, 0, 0, 0.7);

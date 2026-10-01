@@ -7,6 +7,9 @@ export const ROUTES = [
   { name: 'register', path: '/register', area: 'guest' },
   { name: 'overview', path: '/app', area: 'app' },
   { name: 'toys', path: '/app/toys', area: 'app' },
+  // The web toy; ?toy=<device id> picks which Buddy. Hidden from the nav
+  // when the backend has WEB_TOY off.
+  { name: 'talk', path: '/app/talk', area: 'app' },
   { name: 'credits', path: '/app/credits', area: 'app' },
   { name: 'activity', path: '/app/activity', area: 'app' },
   { name: 'family', path: '/app/family', area: 'app' },

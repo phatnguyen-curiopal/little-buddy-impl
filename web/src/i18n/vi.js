@@ -17,7 +17,7 @@ export default {
   trust: 'Tặng 10 câu trả lời khi tạo tài khoản · Không thu phí hằng tháng',
 
   // hero toy
-  toyIdle: 'Chạm nút cam để hỏi thử Buddy', toyListening: 'Buddy đang nghe…', toySilence: 'Bé đã ngừng nói, Buddy đang chờ thêm một chút…',
+  toyIdle: 'Chạm nút xanh để hỏi thử Buddy', toyListening: 'Buddy đang nghe…', toySilence: 'Bé đã ngừng nói, Buddy đang chờ thêm một chút…',
   toyHeard: 'Buddy nhận ra bé đã nói xong', toyStopped: 'Bé chạm nút lần nữa nên Buddy thôi nghe', toyThinking: 'Buddy đang nghĩ…',
   toyAnswer: 'Chạm lần nữa để hỏi câu khác', toyTap: 'Chạm để bắt đầu nói với Buddy', toyTapStop: 'Chạm để nói xong', asked: 'Bé hỏi',
   demo1q: 'Vì sao bầu trời lại có màu xanh?', demo1a: 'Vì ánh sáng Mặt Trời gặp không khí thì phần màu xanh bị tán ra khắp nơi, nên nhìn đâu mình cũng thấy xanh đó!',
@@ -89,7 +89,7 @@ export default {
   needFamily: 'Nhập tên gia đình giúp mình nhé.', badEmail: 'Email chưa đúng định dạng.', shortPw: 'Mật khẩu cần ít nhất 8 ký tự.',
 
   // app
-  appNav: 'Điều hướng', nav_overview: 'Tổng quan', nav_toys: 'Đồ chơi', nav_credits: 'Lượt hỏi', nav_activity: 'Hoạt động', nav_family: 'Gia đình',
+  appNav: 'Điều hướng', nav_overview: 'Tổng quan', nav_toys: 'Đồ chơi', nav_credits: 'Lượt hỏi', nav_activity: 'Hoạt động', nav_family: 'Gia đình', nav_talk: 'Trò chuyện',
   hi: 'Chào {name}', signOut: 'Đăng xuất', addToy: 'Thêm đồ chơi', loadFailed: 'Chưa tải được dữ liệu. Kiểm tra kết nối rồi thử lại nhé.',
   notFoundT: 'Không tìm thấy trang này',
   balLabel: 'Lượt hỏi còn lại', balUnit: 'lượt', balHint: '1 lượt = 1 câu trả lời. Mọi Buddy trong nhà dùng chung.', buy: 'Mua thêm lượt',
@@ -172,6 +172,41 @@ export default {
   pq11: 'Buddy thích hỏi bé những câu như…', pq11a: '“Vì sao?” và “Làm thế nào?”', pq11b: '“Bé thấy thế nào?” và “Ai sẽ vui nhỉ?”',
   pq12: 'Khi bé đổi ý giữa chừng, Buddy…', pq12a: 'Nhắc bé làm xong việc đang dở đã', pq12b: 'Vui vẻ đổi theo bé ngay',
 
+  // talk (the web toy)
+  talkTo: 'Trò chuyện với {name}', talkPick: 'Chọn Buddy', talkLog: 'Cuộc trò chuyện',
+  talkConnecting: 'Đang kết nối với {name}…', talkIdle: 'Chạm nút xanh để nói với {name}, hoặc nhắn tin bên cạnh',
+  talkStarting: '{name} chuẩn bị nghe…', talkSpeakNow: 'Nói đi, {name} đang nghe', talkListening: '{name} đang nghe… Chạm lần nữa khi nói xong',
+  talkThinking: '{name} đang nghĩ…', talkAnswered: '{name} đã trả lời', talkSpeaking: '{name} đang nói…',
+  talkDenied: '{name} chưa trả lời được lúc này. Lý do có trong trang Hoạt động.',
+  talkAsleep: '{name} đang nghỉ. Đánh thức {name} trong trang Đồ chơi để trò chuyện.', talkOffline: 'Chưa kết nối được với {name}.',
+  talkReconnect: 'Kết nối lại', talkGoToys: 'Đến trang Đồ chơi', talkTapStart: 'Chạm để nói với {name}',
+  talkHeard: '{name} nghe được', talkTyped: 'Tin nhắn', talkEmpty: 'Chưa có gì ở đây. Chạm nút để nói, hoặc nhắn một câu cho {name}.',
+  talkNewConv: 'Cuộc trò chuyện mới', talkNewConvStarted: 'Bắt đầu cuộc trò chuyện mới',
+  talkInputLabel: 'Tin nhắn cho Buddy', talkInputPh: 'Nhắn cho {name}…', talkSend: 'Gửi',
+  talkDemoNote: 'Trang này đóng vai đồ chơi: mỗi câu trả lời trừ 1 lượt như Buddy thật.',
+  talkMicNote: 'Trình duyệt này không dùng được micro ở đây. Bạn vẫn nhắn tin được.',
+  talkInsecure: 'Trò chuyện với {name} trên web cần https hoặc localhost. Hãy mở trang này bằng một trong hai địa chỉ đó.',
+  talkCancelling: 'Chờ một chút…',
+  talkNoToyT: 'Chưa có Buddy nào đang thức', talkNoToyB: 'Đánh thức một Buddy trong trang Đồ chơi để trò chuyện ngay trên trang này.',
+  talkOffT: 'Trò chuyện trên web đang tắt', talkOffB: 'Máy chủ này chưa bật tính năng trò chuyện với Buddy trên web.',
+  talkErr_mic_denied: 'Trình duyệt chưa cho dùng micro. Cho phép micro ở thanh địa chỉ, hoặc nhắn tin bên cạnh.',
+  talkErr_mic_unavailable: 'Không mở được micro. Kiểm tra micro của máy, hoặc nhắn tin bên cạnh.',
+  talkErr_no_speech: '{name} chưa nghe thấy gì nên không trừ lượt. Chạm nút rồi nói nhé.',
+  talkErr_turn_in_flight: 'Chờ {name} trả lời xong đã nhé.',
+
+  // conversation settings (drawer)
+  settingsTitle: 'Khi trò chuyện', convLang: 'Ngôn ngữ trò chuyện', convLangHelp: 'Ngôn ngữ Buddy nói và nghe, không phụ thuộc ngôn ngữ của trang web.',
+  langVi: 'Tiếng Việt', langEn: 'English',
+  voiceLabel: 'Giọng nói', voiceDefault: 'Mặc định ({name})', voiceDefaultPlain: 'Giọng mặc định', voicesFailed: 'Chưa tải được danh sách giọng nói.',
+  learnLabel: 'Học từ các cuộc trò chuyện',
+  learnHelp: 'Khi bật, Buddy nhớ tên, sở thích và chuyện bé kể để lần sau trò chuyện tự nhiên hơn. Khi tắt, Buddy không lưu lại gì.',
+  moodLabel: 'Tâm trạng của Buddy', moodAuto: 'Tự động', moodPinned: 'Ghim',
+  moodAutoHelp: 'Mỗi ngày Buddy có một tâm trạng riêng, như một người bạn thật.',
+  moodPinnedHelp: 'Tâm trạng này được giữ nguyên cho đến khi bạn chọn lại Tự động.',
+  moodLow: 'Trầm', moodHigh: 'Rất vui', moodValue: '{n}/100',
+  sumLang_vi: 'Nói tiếng Việt', sumLang_en: 'Nói tiếng Anh', sumLearnOn: 'Học từ trò chuyện', sumLearnOff: 'Không lưu trò chuyện',
+  sumMoodAuto: 'Tâm trạng tự động', sumMoodPin: 'Tâm trạng ghim {n}/100',
+
   // errors
   err_generic: 'Có lỗi xảy ra. Bạn thử lại sau ít phút nhé.', err_network_error: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
   err_rate_limited: 'Bạn thử hơi nhiều lần. Chờ khoảng {s} giây rồi thử lại nhé.', err_invalid_credentials: 'Email hoặc mật khẩu chưa đúng.',
@@ -183,4 +218,5 @@ export default {
   err_purchase_not_pending: 'Giao dịch này đã được xử lý.', err_unauthorized: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.',
   err_token_expired: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.', err_refresh_token_reused: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.',
   err_no_session: 'Bạn đăng nhập lại nhé.', err_internal_error: 'Máy chủ gặp trục trặc. Bạn thử lại sau ít phút nhé.', err_http_error: 'Có lỗi xảy ra. Bạn thử lại nhé.',
+  err_web_toy_disabled: 'Trò chuyện trên web đang tắt.',
 };

@@ -1,22 +1,40 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkTurn, denialFor, DENIALS, REASONS } from '../../gate/ask_gate.js';
+import { checkTurn, denialFor, failedAnswer, languageOf, DENIALS, FAILED_ANSWERS, LANGUAGES, REASONS } from '../../gate/ask_gate.js';
 
 const active = { status: 'active', family_id: 'fam' };
 
-test('a child cannot tell out of credits from a break: identical payloads', () => {
-  assert.deepEqual(DENIALS.no_credits, DENIALS.disabled);
-  assert.deepEqual(JSON.stringify(denialFor('no_credits')), JSON.stringify(denialFor('disabled')));
-  assert.deepEqual(DENIALS.daily_limit, DENIALS.disabled);
-  assert.deepEqual(DENIALS.quiet_hours, DENIALS.disabled);
+test('a child cannot tell out of credits from a break: identical payloads, in every language', () => {
+  for (const lang of LANGUAGES) {
+    const d = DENIALS[lang];
+    assert.deepEqual(d.no_credits, d.disabled);
+    assert.deepEqual(JSON.stringify(denialFor('no_credits', lang)), JSON.stringify(denialFor('disabled', lang)));
+    assert.deepEqual(d.daily_limit, d.disabled);
+    assert.deepEqual(d.quiet_hours, d.disabled);
+  }
 });
 
 test('denials carry only an emotion and a sentence, never a reason or a money word', () => {
-  for (const reason of REASONS) {
-    const d = denialFor(reason);
-    assert.deepEqual(Object.keys(d).sort(), ['emotion', 'say']);
+  for (const lang of LANGUAGES) {
+    for (const reason of REASONS) {
+      const d = denialFor(reason, lang);
+      assert.deepEqual(Object.keys(d).sort(), ['emotion', 'say']);
+    }
   }
-  assert.doesNotMatch(JSON.stringify(DENIALS), /\b(credits?|money|pay|paid|buy|balance|wallet|purchase|coins?|price)\b/i);
+  assert.doesNotMatch(JSON.stringify(DENIALS.en), /(credits?|money|pay|paid|buy|balance|wallet|purchase|coins?|price)/i);
+  // Keys like no_credits are codes the toy never sees; only the spoken lines matter.
+  const viLines = Object.values(DENIALS.vi).map((d) => d.say).join(' ');
+  assert.doesNotMatch(viLines, /(tiền|xu|mua|trả|thanh toán|số dư|ví|giá|credit)/i);
+});
+
+test('lines follow the conversation language; unknown falls back to Vietnamese', () => {
+  assert.notEqual(denialFor('disabled', 'en').say, denialFor('disabled', 'vi').say);
+  assert.deepEqual(denialFor('disabled'), DENIALS.vi.disabled);
+  assert.deepEqual(denialFor('disabled', 'fr'), DENIALS.vi.disabled);
+  assert.deepEqual(failedAnswer('en'), FAILED_ANSWERS.en);
+  assert.deepEqual(failedAnswer(undefined), FAILED_ANSWERS.vi);
+  assert.equal(languageOf('en'), 'en');
+  assert.equal(languageOf(null), 'vi');
 });
 
 test('check order: status before credits', () => {

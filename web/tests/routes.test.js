@@ -9,6 +9,8 @@ test('paths match routes, trailing slashes and queries ignored', () => {
   assert.equal(matchRoute('/app/credits?x=1').name, 'credits');
   assert.equal(matchRoute('/app/nope').name, 'notFound');
   assert.equal(normalizePath('/login/'), '/login');
+  assert.equal(matchRoute('/app/talk?toy=abc').name, 'talk');
+  assert.equal(matchRoute('/app/talk').area, 'app');
 });
 
 test('signed-out visitors to the app go to login with where they wanted to be', () => {

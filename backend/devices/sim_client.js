@@ -98,14 +98,57 @@ export class SimDevice {
   }
 
   // Resolves { answer, done } for an answered turn, or { error } when the
-  // server reports protocol misuse.
-  async turnEnd(ws) {
+  // server reports protocol misuse. With text, the turn is a typed one.
+  async turnEnd(ws, { text } = {}) {
     const first = SimDevice.nextMessage(ws, ['answer', 'error']);
-    ws.send(JSON.stringify({ type: 'turn_end' }));
+    ws.send(JSON.stringify(text === undefined ? { type: 'turn_end' } : { type: 'turn_end', text }));
     const msg = await first;
     if (msg.type === 'error') return { error: msg };
     const done = await SimDevice.nextMessage(ws, ['turn_done']);
     return { answer: msg, done };
+  }
+
+  // Everything the server sends after turn_end, in order, up to turn_done
+  // or an error: text messages as objects, binary frames as Buffers. What a
+  // toy playing audio sees.
+  endAndCollect(ws, { text, timeoutMs = 5000 } = {}) {
+    return new Promise((resolve, reject) => {
+      const seen = [];
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`timed out after ${seen.length} messages`));
+      }, timeoutMs);
+      const onMessage = (data, isBinary) => {
+        if (isBinary) {
+          seen.push(Buffer.from(data));
+          return;
+        }
+        const msg = JSON.parse(data.toString());
+        seen.push(msg);
+        if (msg.type === 'turn_done' || msg.type === 'error') {
+          cleanup();
+          resolve(seen);
+        }
+      };
+      const onClose = (code) => {
+        cleanup();
+        resolve(Object.assign(seen, { closed: code }));
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        ws.off('message', onMessage);
+        ws.off('close', onClose);
+      };
+      ws.on('message', onMessage);
+      ws.on('close', onClose);
+      ws.send(JSON.stringify(text === undefined ? { type: 'turn_end' } : { type: 'turn_end', text }));
+    });
+  }
+
+  conversationNew(ws) {
+    const reply = SimDevice.nextMessage(ws, ['conversation_started', 'error']);
+    ws.send(JSON.stringify({ type: 'conversation_new' }));
+    return reply;
   }
 
   turnCancel(ws) {

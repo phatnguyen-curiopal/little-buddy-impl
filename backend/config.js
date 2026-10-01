@@ -7,8 +7,16 @@ const DEFAULT_ADMIN_TOKEN = 'dev-admin-token-change-me';
 const KEK_PLACEHOLDER = 'CHANGE_ME';
 const DEV_DATABASE_URL = 'postgres://littlebuddy:littlebuddy@localhost:5432/littlebuddy';
 const DEV_REDIS_URL = 'redis://localhost:6379/0';
+const DEFAULT_BRAIN_URL = 'http://127.0.0.1:8080';
+const DEFAULT_BRAIN_TOKEN = 'dev-brain-token-change-me';
 
 const NODE_ENVS = new Set(['development', 'test', 'production']);
+const PROVIDER_MODES = new Set(['mock', 'brain']);
+// brain/http/turns.js limits a turn body to 6 MB; a voice turn is 32000
+// bytes per second of 16 kHz PCM16.
+const BRAIN_BODY_LIMIT_BYTES = 6 * 1024 * 1024;
+const PCM_BYTES_PER_SEC = 32_000;
+const MAX_BRAIN_TURN_SEC = Math.floor(BRAIN_BODY_LIMIT_BYTES / PCM_BYTES_PER_SEC);
 
 function fail(message) {
   throw new Error(`config: ${message}`);
@@ -57,10 +65,42 @@ export function loadConfig(env = process.env) {
 
   const logLevel = env.LOG_LEVEL || (nodeEnv === 'test' ? 'silent' : 'info');
 
-  // Only the mock pipeline exists; naming another provider here is a typo
-  // until real adapters land, and a typo must not boot.
+  // mock answers without any vendor; brain calls the brain service. A typo
+  // must not boot, since it would silently pick neither.
   const providerMode = (env.PROVIDER_MODE || 'mock').toLowerCase();
-  if (providerMode !== 'mock') fail('PROVIDER_MODE must be mock (no other provider is implemented yet)');
+  if (!PROVIDER_MODES.has(providerMode)) fail(`PROVIDER_MODE must be one of ${[...PROVIDER_MODES].join(', ')}`);
+
+  const brainUrl = env.BRAIN_URL || DEFAULT_BRAIN_URL;
+  let parsedBrainUrl;
+  try {
+    parsedBrainUrl = new URL(brainUrl);
+  } catch {
+    fail('BRAIN_URL must be an http(s) URL');
+  }
+  if (parsedBrainUrl.protocol !== 'http:' && parsedBrainUrl.protocol !== 'https:') fail('BRAIN_URL must be an http(s) URL');
+  const brainToken = env.BRAIN_TOKEN || DEFAULT_BRAIN_TOKEN;
+  // The brain holds every child's memory; a guessable token in front of it
+  // is a leak, so production refuses one whenever the brain is in use.
+  if (isProd && providerMode === 'brain' && (brainToken === DEFAULT_BRAIN_TOKEN || brainToken.length < 32)) {
+    fail('BRAIN_TOKEN is the default or shorter than 32 chars; refusing to boot');
+  }
+  const turnMaxSec = readInt(env, 'TURN_MAX_SEC', 120, 5, 3600);
+  // A full-length voice turn is sent to the brain in one body, and the brain
+  // refuses bodies over 6 MB. Past that, the child would talk for minutes
+  // and then get the failure line, so the mismatch must not boot.
+  if (providerMode === 'brain' && turnMaxSec > MAX_BRAIN_TURN_SEC) {
+    fail(`TURN_MAX_SEC must be at most ${MAX_BRAIN_TURN_SEC} with PROVIDER_MODE=brain (the brain accepts 6 MB of 16 kHz PCM16)`);
+  }
+  const brainTimeoutMs = readInt(env, 'BRAIN_TIMEOUT_MS', 45_000, 1000, 300_000);
+  // An accepted turn older than this is a crash leftover. The margin past
+  // TURN_MAX_SEC always outlasts a brain call (timeout + 15 s), so a slow
+  // but healthy answer is never swept away from under the turn that asked.
+  const turnStaleSec = turnMaxSec + Math.max(60, Math.ceil(brainTimeoutMs / 1000) + 15);
+
+  // The web toy hands a device secret to a browser. Handy everywhere but in
+  // production, where it must be switched on on purpose.
+  const webToy = (env.WEB_TOY || (isProd ? 'off' : 'on')).toLowerCase();
+  if (webToy !== 'on' && webToy !== 'off') fail('WEB_TOY must be on or off');
 
   // The demo payment provider marks any purchase paid on request, so it is
   // free credits for anyone; production gets purchases switched off until a
@@ -90,9 +130,14 @@ export function loadConfig(env = process.env) {
     deviceAuthFailLimit: readInt(env, 'DEVICE_AUTH_FAIL_LIMIT', 30, 1, 100000),
     trustProxy: readInt(env, 'TRUST_PROXY', 0, 0, 10),
     providerMode,
+    brainUrl,
+    brainToken,
+    brainTimeoutMs,
+    webToy: webToy === 'on',
     paymentProvider,
     welcomeCredits: readInt(env, 'WELCOME_CREDITS', 10, 0, 100000),
-    turnMaxSec: readInt(env, 'TURN_MAX_SEC', 120, 5, 3600),
+    turnMaxSec,
+    turnStaleSec,
     conversationIdleSec: readInt(env, 'CONVERSATION_IDLE_SEC', 300, 10, 86400),
   });
 }

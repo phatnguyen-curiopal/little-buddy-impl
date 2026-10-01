@@ -58,7 +58,7 @@ test('an unclaimed toy connects and is turned away kindly, with no turn row', as
   const sim = await simFor(d, srv.baseUrl);
   const { ws } = await sim.openStream();
   const reply = await sim.turnStart(ws);
-  assert.deepEqual(reply, { type: 'turn_denied', ...DENIALS.not_claimed, conversation_open: false });
+  assert.deepEqual(reply, { type: 'turn_denied', ...DENIALS.vi.not_claimed, conversation_open: false });
   assert.equal(reply.reason, undefined);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM turns')).rows[0].n, 0);
   await closeWs(ws);
@@ -187,6 +187,7 @@ test('two toys racing on the last credit: exactly one is admitted', async () => 
   assert.equal(denied.emotion, 'sleepy');
 
   const winner = ra.type === 'turn_accepted' ? { sim: simA, ws: wsA, r: ra } : { sim: simB, ws: wsB, r: rb };
+  winner.sim.sendFrames(winner.ws, 5);
   const { done } = await winner.sim.turnEnd(winner.ws);
   assert.equal(done.status, 'completed');
   assert.equal(await balanceOf(p.familyId), 0);

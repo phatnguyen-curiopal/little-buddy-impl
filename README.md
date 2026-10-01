@@ -45,6 +45,18 @@ npm run seed          # tạo gia đình demo, 1 thiết bị đã ghép, 1 thi�
 npm run dev           # http://localhost:3000/healthz
 ```
 
+Chạy cả bản demo (brain, backend và web) trong một cửa sổ, từ thư mục gốc (mỗi
+thư mục đã `npm install` và có `.env`; `BRAIN_TOKEN` của `backend/.env` và
+`brain/.env` phải trùng nhau):
+
+```powershell
+npm run dev           # brain :8080, backend :3000, web http://localhost:5174/app/talk
+```
+
+Mỗi dòng log có tên dịch vụ ở đầu. Ctrl+C dừng cả ba; một dịch vụ chết thì hai
+dịch vụ kia cũng dừng theo. Nếu cổng nào đang bị chiếm (thường là server cũ
+chưa tắt), lệnh báo rõ và không khởi động gì.
+
 Chạy test (cần container đang chạy; nếu Docker tắt, `npm test` báo lỗi và
 dừng ngay):
 

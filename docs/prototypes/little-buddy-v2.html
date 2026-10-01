@@ -1,0 +1,1670 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Little Buddy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --ground: #F3F6F7;
+    --surface: #FFFFFF;
+    --surface-2: #E8EEF0;
+    --ink: #10212B;
+    --muted: #56666F;
+    --line: #D5DEE2;
+    --ocean: #10212B;
+    --ocean-2: #183342;
+    --on-ocean: #EAF2F4;
+    --on-ocean-muted: #A9BDC5;
+    --apricot: #FF9F4A;
+    --apricot-deep: #D96F14;
+    --apricot-ink: #2B1502;
+    --apricot-soft: #FFEBD8;
+    --mint: #4FBF9F;
+    --mint-soft: #DDF3EC;
+    --mint-ink: #0E5A48;
+    --sky: #79B4EE;
+    --chart: #2E9E80;
+    --warn: #8F5A0F;
+    --warn-soft: #FBEBD0;
+    --bad: #B93F35;
+    --bad-soft: #F8E1DE;
+    --screen: #0B1C24;
+    --glow: #7CF0CD;
+    --glow-dim: #5B7580;
+    --shadow-sm: 0 1px 2px rgba(16, 33, 43, 0.06), 0 4px 14px rgba(16, 33, 43, 0.05);
+    --shadow-lg: 0 24px 60px -18px rgba(16, 33, 43, 0.35);
+    --display: "Lexend", "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+    --body: "Be Vietnam Pro", "Segoe UI", Roboto, system-ui, sans-serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0B161D;
+      --surface: #13212A;
+      --surface-2: #1A2C37;
+      --ink: #E8EFF1;
+      --muted: #9DB0B8;
+      --line: #24394A;
+      --ocean: #0E2330;
+      --ocean-2: #163647;
+      --apricot: #FFAE66;
+      --apricot-deep: #E58A38;
+      --apricot-soft: #3B2614;
+      --mint: #5CCBAA;
+      --mint-soft: #173A33;
+      --mint-ink: #9FE5D0;
+      --chart: #38A487;
+      --warn: #E3A548;
+      --warn-soft: #3A2A12;
+      --bad: #E47A70;
+      --bad-soft: #3D211E;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.25);
+      --shadow-lg: 0 24px 60px -18px rgba(0, 0, 0, 0.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0B161D;
+    --surface: #13212A;
+    --surface-2: #1A2C37;
+    --ink: #E8EFF1;
+    --muted: #9DB0B8;
+    --line: #24394A;
+    --ocean: #0E2330;
+    --ocean-2: #163647;
+    --apricot: #FFAE66;
+    --apricot-deep: #E58A38;
+    --apricot-soft: #3B2614;
+    --mint: #5CCBAA;
+    --mint-soft: #173A33;
+    --mint-ink: #9FE5D0;
+    --chart: #38A487;
+    --warn: #E3A548;
+    --warn-soft: #3A2A12;
+    --bad: #E47A70;
+    --bad-soft: #3D211E;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 24px 60px -18px rgba(0, 0, 0, 0.7);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: inherit; }
+  p { margin: 0; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+  :focus-visible { outline: 2.5px solid var(--sky); outline-offset: 3px; border-radius: 10px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+  .eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: 1.5px solid transparent; border-radius: 999px; padding: 11px 20px;
+    font-weight: 600; font-size: 15px; line-height: 1.2; text-decoration: none; white-space: nowrap;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn.apricot { background: var(--apricot); color: var(--apricot-ink); }
+  .btn.apricot:hover { background: var(--apricot-deep); color: #FFF; }
+  .btn.dark { background: var(--ink); color: var(--ground); }
+  .btn.ghost { background: transparent; border-color: var(--line); }
+  .btn.ghost-light { background: transparent; border-color: rgba(234, 242, 244, 0.28); color: var(--on-ocean); }
+  .btn.ghost-light:hover { border-color: var(--on-ocean); }
+  .btn.danger { background: transparent; border-color: var(--bad); color: var(--bad); }
+  .btn.danger-solid { background: var(--bad); color: #FFF; }
+  .btn.sm { padding: 7px 14px; font-size: 13.5px; }
+  .btn.lg { padding: 15px 26px; font-size: 16px; }
+  .btn.block { width: 100%; }
+  .btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+  .link { background: none; border: 0; padding: 0; color: var(--mint-ink); font-weight: 600; font-size: 14px; text-decoration: none; }
+
+  .lang { display: inline-flex; border-radius: 999px; padding: 3px; background: var(--surface-2); }
+  .lang button { border: 0; background: none; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .lang button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+  .on-ocean .lang { background: rgba(234, 242, 244, 0.08); }
+  .on-ocean .lang button { color: var(--on-ocean-muted); }
+  .on-ocean .lang button[aria-pressed="true"] { background: var(--on-ocean); color: #10212B; }
+
+  /* ---------- Marketing ---------- */
+  .nav {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30;
+    background: var(--ocean); color: var(--on-ocean);
+    border-bottom: 1px solid rgba(234, 242, 244, 0.07);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 22px; height: 66px; }
+  .wordmark { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.02em; text-decoration: none; }
+  .wordmark .dotface { width: 34px; height: 26px; border-radius: 9px; background: var(--screen); color: var(--glow); display: grid; place-items: center; }
+  .wordmark .dotface svg { width: 26px; }
+  .nav-links { display: flex; gap: 22px; margin-left: 12px; }
+  .nav-links a { color: var(--on-ocean-muted); text-decoration: none; font-size: 14.5px; font-weight: 500; }
+  .nav-links a:hover { color: var(--on-ocean); }
+  .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .menu-btn { display: none; margin-left: auto; background: none; border: 1.5px solid rgba(234, 242, 244, 0.28); border-radius: 999px; padding: 7px 14px; color: var(--on-ocean); font-weight: 600; font-size: 14px; }
+  .menu-panel { display: none; }
+  @media (max-width: 859px) {
+    .nav-links, .nav-actions { display: none; }
+    .menu-btn { display: inline-flex; }
+    .nav.open .menu-panel { display: grid; gap: 14px; padding-block: 8px 20px; }
+    .menu-panel a { color: var(--on-ocean); text-decoration: none; font-weight: 500; font-size: 17px; }
+    .menu-panel .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  }
+
+  .hero { position: relative; background: var(--ocean); color: var(--on-ocean); overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(420px 320px at 78% 46%, rgba(79, 191, 159, 0.22), transparent 70%),
+      radial-gradient(520px 380px at 8% 110%, rgba(121, 180, 238, 0.14), transparent 70%);
+  }
+  .hero-inner {
+    position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 40px; align-items: center; padding-block: 72px 96px;
+  }
+  .hero .eyebrow { color: var(--mint); }
+  .hero h1 { font-weight: 700; font-size: clamp(42px, 6.2vw, 78px); line-height: 1.02; letter-spacing: -0.035em; margin-top: 14px; }
+  .hero h1 span { display: block; color: var(--apricot); }
+  .hero-sub { margin-top: 22px; max-width: 34em; font-size: 18px; color: var(--on-ocean-muted); }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+  .trust { display: flex; align-items: center; gap: 10px; margin-top: 22px; font-size: 14px; color: var(--on-ocean-muted); }
+  .trust i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 4px rgba(79, 191, 159, 0.2); }
+  @media (max-width: 899px) {
+    .hero-inner { grid-template-columns: minmax(0, 1fr); padding-block: 48px 64px; gap: 28px; }
+  }
+
+  /* The toy */
+  .stage { position: relative; display: grid; justify-items: center; gap: 18px; }
+  .toy { position: relative; width: min(300px, 72vw); aspect-ratio: 5 / 6; user-select: none; -webkit-user-select: none; }
+  .ear { position: absolute; top: 2%; width: 27%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FFD1A6, #FF9F4A 55%, #E07A1F); }
+  .ear.l { left: 7%; } .ear.r { right: 7%; }
+  .ear::after { content: ""; position: absolute; inset: 26%; border-radius: 50%; background: rgba(120, 50, 0, 0.18); }
+  .toy-body {
+    position: absolute; inset: 10% 0 0 0;
+    border-radius: 46% 46% 40% 40% / 40% 40% 34% 34%;
+    background: radial-gradient(120% 90% at 30% 18%, #FFD1A6 0%, #FF9F4A 42%, #E8801F 100%);
+    box-shadow: inset -16px -22px 34px rgba(120, 50, 0, 0.28), inset 10px 12px 26px rgba(255, 240, 220, 0.35), 0 44px 70px -24px rgba(0, 0, 0, 0.6);
+  }
+  .screen {
+    position: absolute; left: 16%; right: 16%; top: 26%; aspect-ratio: 1.45;
+    border-radius: 30% / 40%; background: var(--screen); color: var(--glow);
+    box-shadow: inset 0 0 0 5px rgba(0, 0, 0, 0.28), 0 0 44px rgba(124, 240, 205, 0.25);
+    display: grid; place-items: center;
+  }
+  .screen svg { width: 76%; filter: drop-shadow(0 0 6px rgba(124, 240, 205, 0.55)); }
+  .screen .eye { transform-box: fill-box; transform-origin: center; animation: blink 5.5s infinite; }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+  .press {
+    position: absolute; left: 50%; bottom: 9%; width: 29%; aspect-ratio: 1; transform: translateX(-50%);
+    border: 0; border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #FFE9D2, #FFA85C 50%, #D96F14 100%);
+    box-shadow: 0 9px 0 #B3560A, 0 16px 26px rgba(0, 0, 0, 0.35);
+    touch-action: none; -webkit-tap-highlight-color: transparent;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+  }
+  .press.down { transform: translateX(-50%) translateY(7px); box-shadow: 0 2px 0 #B3560A, 0 6px 12px rgba(0, 0, 0, 0.3); }
+  .press:focus-visible { outline-offset: 6px; border-radius: 50%; }
+  .bubble {
+    position: relative; max-width: 360px; width: 100%;
+    background: var(--on-ocean); color: #10212B; border-radius: 22px; padding: 14px 18px;
+    font-size: 15.5px; line-height: 1.45; box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.5); min-height: 52px;
+  }
+  .bubble::before { content: ""; position: absolute; top: -8px; left: 50%; width: 16px; height: 16px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 3px; }
+  .bubble .ask { display: block; font-size: 13px; font-weight: 600; color: #3E5460; margin-bottom: 4px; }
+  .bubble .ans { display: block; }
+  .waves { display: inline-flex; gap: 3px; align-items: center; height: 16px; margin-right: 8px; vertical-align: -2px; }
+  .waves i { width: 3px; height: 100%; border-radius: 2px; background: var(--mint-ink); animation: wave 0.9s ease-in-out infinite; }
+  .waves i:nth-child(2) { animation-delay: 0.15s; } .waves i:nth-child(3) { animation-delay: 0.3s; } .waves i:nth-child(4) { animation-delay: 0.45s; }
+  @keyframes wave { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+  .dots { display: inline-flex; gap: 5px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: #3E5460; animation: dot 1s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: 0.15s; } .dots i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes dot { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+  .band { padding-block: 96px; }
+  .band.alt { background: var(--surface); border-block: 1px solid var(--line); }
+  .band-head { display: grid; gap: 12px; max-width: 720px; margin-bottom: 48px; }
+  .band-head h2 { font-size: clamp(30px, 3.8vw, 46px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 700; }
+  .band-head p { font-size: 17.5px; color: var(--muted); max-width: 40em; }
+  section[id] { scroll-margin-top: 80px; }
+  @media (max-width: 639px) { .band { padding-block: 64px; } .band-head { margin-bottom: 32px; } }
+
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 26px; padding: 26px; display: grid; gap: 14px; align-content: start; }
+  .step-top { display: flex; justify-content: space-between; align-items: center; }
+  .step-n { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1; color: var(--apricot-deep); letter-spacing: -0.04em; }
+  .step h3 { font-size: 21px; letter-spacing: -0.015em; }
+  .step p { color: var(--muted); }
+  .chip-screen { width: 84px; height: 58px; border-radius: 16px; background: var(--screen); color: var(--glow); display: grid; place-items: center; }
+  .chip-screen svg { width: 64px; }
+  .chip-screen.dim { color: var(--glow-dim); }
+  .mini-phone { width: 58px; height: 58px; border-radius: 16px; background: var(--mint-soft); color: var(--mint-ink); display: grid; place-items: center; }
+  @media (max-width: 859px) { .steps { grid-template-columns: minmax(0, 1fr); } }
+
+  .bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
+  .tile { border-radius: 28px; padding: 28px; display: grid; gap: 12px; align-content: start; border: 1px solid var(--line); background: var(--ground); }
+  .tile h3 { font-size: 22px; letter-spacing: -0.02em; }
+  .tile p { color: var(--muted); }
+  .tile.a { grid-column: span 4; background: var(--ocean); color: var(--on-ocean); border-color: transparent; }
+  .tile.a p { color: var(--on-ocean-muted); }
+  .tile.b { grid-column: span 2; }
+  .tile.c { grid-column: span 3; }
+  .tile.d { grid-column: span 3; }
+  .say-lines { display: grid; gap: 10px; margin-top: 8px; }
+  .say { justify-self: start; max-width: 100%; padding: 10px 16px; border-radius: 18px; font-size: 15px; }
+  .say.child { background: rgba(234, 242, 244, 0.1); }
+  .say.buddy { justify-self: end; background: var(--apricot); color: var(--apricot-ink); }
+  .faces { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .faces .chip-screen { width: 64px; height: 46px; border-radius: 12px; }
+  .faces .chip-screen svg { width: 48px; }
+  .scenes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+  .scene { aspect-ratio: 1; border-radius: 14px; position: relative; overflow: hidden; }
+  .scene svg { width: 100%; height: 100%; display: block; }
+  .personas { display: flex; gap: 8px; flex-wrap: wrap; }
+  .persona { padding: 7px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-weight: 500; font-size: 14px; }
+  .soon { justify-self: start; font-size: 11.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; background: var(--apricot-soft); color: var(--apricot-deep); }
+  @media (max-width: 899px) { .tile.a, .tile.b, .tile.c, .tile.d { grid-column: span 6; } }
+
+  .safety { background: var(--ocean); color: var(--on-ocean); }
+  .safety .band-head p { color: var(--on-ocean-muted); }
+  .safety .eyebrow { color: var(--mint); }
+  .promises { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .promise { border-radius: 22px; padding: 24px; background: var(--ocean-2); display: grid; gap: 10px; align-content: start; }
+  .promise .ic { width: 42px; height: 42px; border-radius: 12px; background: rgba(79, 191, 159, 0.16); color: var(--glow); display: grid; place-items: center; }
+  .promise h3 { font-size: 18px; letter-spacing: -0.01em; }
+  .promise p { color: var(--on-ocean-muted); font-size: 15px; }
+  @media (max-width: 899px) { .promises { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 599px) { .promises { grid-template-columns: minmax(0, 1fr); } }
+
+  .free { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 18px 22px; border-radius: 22px; background: var(--mint-soft); color: var(--mint-ink); margin-bottom: 20px; font-weight: 500; }
+  .free b { font-family: var(--display); font-size: 20px; }
+  .price-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .price { position: relative; background: var(--surface); border: 1.5px solid var(--line); border-radius: 26px; padding: 28px; display: grid; gap: 6px; align-content: start; }
+  .price.best { border-color: var(--apricot); box-shadow: 0 20px 50px -24px rgba(217, 111, 20, 0.45); }
+  .price h3 { font-size: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .badge { font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: var(--apricot); color: var(--apricot-ink); padding: 3px 10px; border-radius: 999px; }
+  .price-amt { font-family: var(--display); font-weight: 700; font-size: 38px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin-top: 10px; }
+  .price-credits { font-weight: 600; }
+  .price-per { color: var(--muted); font-size: 14px; }
+  .price .btn { margin-top: 18px; }
+  .price-notes { display: flex; gap: 10px 28px; flex-wrap: wrap; margin-top: 22px; color: var(--muted); font-size: 14.5px; }
+  .price-notes span { display: inline-flex; gap: 8px; align-items: center; }
+  .price-notes svg { color: var(--mint); }
+  @media (max-width: 859px) { .price-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .faq { display: grid; gap: 12px; max-width: 820px; }
+  .faq details { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px 22px; }
+  .faq summary { cursor: pointer; font-weight: 600; font-size: 17px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; font-family: var(--display); font-size: 22px; line-height: 1; color: var(--muted); }
+  .faq details[open] summary::after { content: "\2212"; }
+  .faq details p { margin-top: 10px; color: var(--muted); max-width: 62ch; }
+
+  .closing { padding-block: 88px; }
+  .closing-card { border-radius: 36px; background: var(--apricot); color: var(--apricot-ink); padding: clamp(28px, 5vw, 56px); display: flex; gap: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .closing-card h2 { font-size: clamp(28px, 3.6vw, 44px); letter-spacing: -0.03em; max-width: 16ch; }
+  .footer { padding-block: 28px 40px; color: var(--muted); font-size: 13.5px; display: flex; gap: 12px; justify-content: space-between; flex-wrap: wrap; border-top: 1px solid var(--line); }
+
+  /* ---------- App ---------- */
+  .app { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; }
+  .side {
+    position: sticky; top: env(safe-area-inset-top, 0px); height: 100vh; align-self: start;
+    background: var(--surface); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 6px; padding: 22px 14px;
+  }
+  .side .wordmark { padding: 0 10px 18px; color: var(--ink); }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 14px; border: 0; background: none;
+    color: var(--muted); font-weight: 500; font-size: 15px; text-align: left; width: 100%;
+  }
+  .nav-item svg { width: 22px; height: 22px; flex: none; }
+  .nav-item:hover { background: var(--surface-2); color: var(--ink); }
+  .nav-item[aria-current="page"] { background: var(--mint-soft); color: var(--mint-ink); font-weight: 600; }
+  .side-foot { margin-top: auto; display: grid; gap: 10px; padding: 14px 10px 0; border-top: 1px solid var(--line); }
+  .side-foot .who { font-size: 13.5px; }
+  .side-foot .who b { display: block; font-size: 14.5px; }
+  .main { min-width: 0; padding: 30px 36px 56px; }
+  .appbar { display: none; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+  .page-head h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -0.03em; font-weight: 700; margin-top: 4px; }
+  .head-actions { display: flex; gap: 10px; align-items: center; }
+  @media (max-width: 1023px) {
+    .app { grid-template-columns: 78px minmax(0, 1fr); }
+    .side { padding: 18px 10px; align-items: center; }
+    .side .wordmark { padding: 0 0 14px; }
+    .side .wordmark span:last-child, .nav-item span, .side-foot .who { display: none; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .side-foot { padding: 12px 0 0; justify-items: center; }
+    .main { padding: 26px 26px 48px; }
+  }
+  @media (max-width: 639px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+    .side {
+      position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; z-index: 25;
+      flex-direction: row; justify-content: space-around; gap: 0;
+      padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+      border-right: 0; border-top: 1px solid var(--line);
+    }
+    .side .wordmark, .side-foot { display: none; }
+    .nav-item { flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 11px; border-radius: 12px; width: auto; flex: 1; }
+    .nav-item span { display: block; }
+    .nav-item svg { width: 22px; height: 22px; }
+    .main { padding: 0 16px 104px; }
+    .appbar { display: flex; align-items: center; justify-content: space-between; padding-block: 14px; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--ground); z-index: 10; }
+    .appbar .wordmark { color: var(--ink); font-size: 18px; }
+    .head-actions .lang { display: none; }
+    .page-head { margin-bottom: 18px; }
+  }
+
+  .grid-12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px; }
+  .span-4 { grid-column: span 4; } .span-5 { grid-column: span 5; } .span-7 { grid-column: span 7; } .span-8 { grid-column: span 8; } .span-12 { grid-column: span 12; }
+  @media (max-width: 1180px) { .span-4, .span-5, .span-7, .span-8 { grid-column: span 12; } }
+  @media (max-width: 639px) { .grid-12 { gap: 14px; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 22px; min-width: 0; }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .panel-head h2 { font-size: 18px; letter-spacing: -0.015em; }
+  .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 8px 0 14px; }
+  .section-title h2 { font-size: 20px; letter-spacing: -0.02em; }
+
+  .balance { background: var(--apricot-soft); border-color: transparent; display: grid; gap: 10px; align-content: start; }
+  .bal-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .coin { width: 40px; height: 40px; border-radius: 50%; background: var(--apricot); color: var(--apricot-ink); display: grid; place-items: center; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12); }
+  .bal-num { font-family: var(--display); font-weight: 700; font-size: 72px; line-height: 0.95; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+  .bal-num small { font-family: var(--body); font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); margin-left: 8px; }
+  .balance .btn { justify-self: start; margin-top: 6px; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .pill svg { width: 14px; height: 14px; }
+  .pill.ok { background: var(--mint-soft); color: var(--mint-ink); }
+  .pill.rest { background: var(--surface-2); color: var(--muted); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+  .chart-wrap { position: relative; }
+  .chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart-wrap .grid-line { stroke: var(--line); stroke-width: 1; }
+  .chart-wrap .axis { fill: var(--muted); font-size: 12px; font-family: var(--body); }
+  .chart-wrap .axis.today { fill: var(--ink); font-weight: 600; }
+  .chart-wrap .bar { fill: var(--chart); }
+  .chart-wrap .val { fill: var(--ink); font-size: 13px; font-weight: 600; font-family: var(--body); }
+  .chart-wrap .hit { fill: transparent; cursor: default; }
+  .chart-wrap .hit:focus-visible { outline: none; fill: var(--surface-2); fill-opacity: 0.6; }
+  .tip {
+    position: absolute; z-index: 3; pointer-events: none; transform: translate(-50%, calc(-100% - 10px));
+    background: var(--ink); color: var(--ground); padding: 7px 11px; border-radius: 10px; font-size: 13px; white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+  }
+  .total { font-family: var(--display); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  .toy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  .toy-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 14px;
+    display: grid; gap: 12px; text-align: left; cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .toy-card:hover { border-color: var(--mint); box-shadow: var(--shadow-sm); }
+  .tc-screen { height: 104px; border-radius: 18px; background: var(--screen); color: var(--glow); display: grid; place-items: center; }
+  .tc-screen svg { width: 96px; filter: drop-shadow(0 0 6px rgba(124, 240, 205, 0.45)); }
+  .tc-screen.dim { color: var(--glow-dim); }
+  .tc-screen.dim svg { filter: none; }
+  .tc-body { display: grid; gap: 6px; padding-inline: 4px; }
+  .tc-body h3 { font-size: 17px; letter-spacing: -0.01em; }
+  .tc-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .tc-actions { display: flex; gap: 8px; padding-inline: 4px 4px; padding-bottom: 4px; }
+  .add-tile {
+    border: 2px dashed var(--line); border-radius: 24px; background: transparent; min-height: 214px;
+    display: grid; place-items: center; align-content: center; gap: 10px; color: var(--mint-ink); font-weight: 600;
+  }
+  .add-tile:hover { border-color: var(--mint); background: var(--mint-soft); }
+  .plus { width: 44px; height: 44px; border-radius: 50%; background: var(--mint-soft); display: grid; place-items: center; }
+
+  .onboard { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; background: var(--ocean); color: var(--on-ocean); border: 0; }
+  .onboard h2 { font-size: 22px; }
+  .onboard p { color: var(--on-ocean-muted); margin-top: 6px; }
+  .onboard .btn { margin-top: 14px; }
+  @media (max-width: 559px) { .onboard { grid-template-columns: minmax(0, 1fr); } }
+
+  .feed { display: grid; }
+  .feed-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; padding: 14px 2px; align-items: start; }
+  .feed-item + .feed-item { border-top: 1px solid var(--line); }
+  .dot { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; }
+  .dot svg { width: 17px; height: 17px; }
+  .dot.ok { background: var(--mint-soft); color: var(--mint-ink); }
+  .dot.rest { background: var(--surface-2); color: var(--muted); }
+  .dot.warn { background: var(--warn-soft); color: var(--warn); }
+  .dot.coin-dot { background: var(--apricot-soft); color: var(--apricot-deep); }
+  .feed-title { font-weight: 600; font-size: 15px; }
+  .feed-sub { font-size: 13.5px; color: var(--muted); }
+  .quote { margin-top: 6px; font-size: 15px; max-width: 62ch; }
+  .delta { font-family: var(--display); font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .delta.pos { color: var(--mint-ink); }
+  .delta.zero { font-family: var(--body); font-size: 13px; font-weight: 500; color: var(--muted); }
+  .empty { padding: 26px 8px; text-align: center; color: var(--muted); }
+
+  .seg { display: inline-grid; grid-auto-flow: column; background: var(--surface-2); border-radius: 999px; padding: 4px; }
+  .seg button { border: 0; background: none; border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+  .pack-list { display: grid; gap: 12px; }
+  .pack {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; width: 100%; text-align: left;
+    background: var(--ground); border: 1.5px solid var(--line); border-radius: 18px; padding: 16px 18px;
+  }
+  .pack:hover { border-color: var(--apricot); }
+  .pack.best { border-color: var(--apricot); }
+  .pack-name { font-family: var(--display); font-weight: 600; font-size: 18px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pack-sub { font-size: 14px; color: var(--muted); }
+  .pack-price { grid-column: 2; grid-row: 1 / span 2; font-family: var(--display); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; text-align: right; }
+
+  .rows { display: grid; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 13px 2px; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .k { color: var(--muted); font-size: 14.5px; }
+  .row .v { font-weight: 500; text-align: right; }
+  .mono { font-family: var(--mono); font-size: 13.5px; }
+  .kid { display: flex; gap: 12px; align-items: center; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-weight: 700; background: var(--mint); color: #0B2A22; }
+  .avatar.alt { background: var(--apricot); color: var(--apricot-ink); }
+
+  details.tools { margin-top: 28px; border: 1.5px dashed var(--line); border-radius: 18px; padding: 12px 16px; }
+  details.tools summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+  .tools-body { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 14px; font-weight: 600; }
+  .input { width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; padding: 12px 14px; font-size: 16px; }
+  .input:focus { outline: none; border-color: var(--mint); box-shadow: 0 0 0 4px var(--mint-soft); }
+  .code-input { font-family: var(--mono); font-size: clamp(24px, 6vw, 32px); letter-spacing: 0.2em; text-align: center; text-transform: uppercase; padding: 18px 10px; }
+  .msg { font-size: 14px; min-height: 21px; }
+  .msg.bad { color: var(--bad); }
+  .form { display: grid; gap: 16px; }
+  .check { display: flex; gap: 10px; align-items: center; font-size: 15px; }
+  .check input { width: 19px; height: 19px; accent-color: var(--mint); }
+  .banner { border-radius: 16px; padding: 13px 16px; font-size: 14.5px; display: flex; gap: 10px; align-items: flex-start; }
+  .banner svg { flex: none; margin-top: 2px; }
+  .banner.warn { background: var(--warn-soft); color: var(--warn); }
+  .banner.bad { background: var(--bad-soft); color: var(--bad); }
+  .banner.mint { background: var(--mint-soft); color: var(--mint-ink); }
+
+  /* Layers */
+  .scrim {
+    position: fixed; inset: 0; z-index: 60; background: rgba(6, 16, 22, 0.55);
+    display: grid; place-items: center; padding: 16px; animation: fade 0.18s ease;
+  }
+  .scrim.drawer-mode { display: flex; justify-content: flex-end; align-items: stretch; padding: 0; }
+  .modal {
+    width: min(540px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+    background: var(--surface); border-radius: 28px; padding: 26px; box-shadow: var(--shadow-lg); animation: rise 0.22s ease;
+  }
+  .drawer {
+    width: min(460px, 100%); height: 100%; overflow: auto; background: var(--surface);
+    padding: calc(22px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px));
+    box-shadow: var(--shadow-lg); animation: slide 0.24s ease; display: grid; gap: 20px; align-content: start;
+  }
+  .layer-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .drawer .layer-head { margin-bottom: 0; }
+  .layer-head h2 { font-size: 22px; letter-spacing: -0.02em; }
+  .x { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; flex: none; }
+  .stepper { display: flex; gap: 6px; margin-bottom: 22px; }
+  .stepper span { height: 5px; flex: 1; border-radius: 5px; background: var(--line); }
+  .stepper span.on { background: var(--mint); }
+  .hero-screen { height: 150px; border-radius: 24px; background: var(--screen); color: var(--glow); display: grid; place-items: center; }
+  .hero-screen svg { width: 140px; filter: drop-shadow(0 0 8px rgba(124, 240, 205, 0.5)); }
+  .hero-screen.dim { color: var(--glow-dim); }
+  .hero-screen.dim svg { filter: none; }
+  .center { text-align: center; display: grid; gap: 10px; justify-items: center; }
+  .center h2 { font-size: 24px; }
+  .choices { display: grid; gap: 10px; }
+  .choice { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); width: 100%; text-align: left; }
+  .choice[aria-pressed="true"] { border-color: var(--mint); background: var(--mint-soft); }
+  .confirm { border: 1.5px solid var(--bad); background: var(--bad-soft); border-radius: 18px; padding: 16px; display: grid; gap: 12px; }
+  .confirm .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .summary { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 18px; border-radius: 18px; background: var(--ground); }
+  .summary .big { font-family: var(--display); font-weight: 700; font-size: 26px; font-variant-numeric: tabular-nums; }
+  .spinner { width: 44px; height: 44px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--mint); animation: spin 0.8s linear infinite; }
+  .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: 999px; padding: 4px; margin-bottom: 20px; }
+  .auth-tabs button { border: 0; background: none; border-radius: 999px; padding: 9px; font-weight: 600; color: var(--muted); }
+  .auth-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes rise { from { transform: translateY(14px); opacity: 0; } }
+  @keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+  @media (max-width: 639px) {
+    .scrim { padding: 0; place-items: end stretch; }
+    .modal { width: 100%; max-height: 94vh; border-radius: 28px 28px 0 0; padding: 22px 18px calc(24px + env(safe-area-inset-bottom, 0px)); }
+    .drawer { width: 100%; }
+  }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); z-index: 80;
+    background: var(--ink); color: var(--ground); padding: 11px 18px; border-radius: 14px; font-size: 14.5px; font-weight: 500;
+    box-shadow: var(--shadow-lg); max-width: calc(100% - 32px);
+  }
+  @media (max-width: 639px) { .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    .spinner { animation: spin 2.4s linear infinite !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="page"></div>
+<div id="layer"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const T = {
+    vi: {
+      navHow: 'Cách hoạt động', navSafety: 'An toàn', navPricing: 'Bảng giá', navFaq: 'Hỏi đáp', signIn: 'Đăng nhập', start: 'Bắt đầu', menu: 'Menu',
+      heroEyebrow: 'Người bạn AI cho bé 4 đến 8 tuổi',
+      heroA: 'Bấm nút.', heroB: 'Hỏi bất cứ điều gì.',
+      heroSub: 'Little Buddy là người bạn nhỏ biết lắng nghe. Bé giữ nút để hỏi, Buddy trả lời bằng tiếng Việt hoặc tiếng Anh, đúng ngôn ngữ bé vừa nói. Thả nút ra là micro tắt.',
+      ctaStart: 'Bắt đầu miễn phí', ctaHow: 'Xem cách hoạt động',
+      trust: 'Tặng 10 câu trả lời khi tạo tài khoản · Không thu phí hằng tháng',
+      toyHint: 'Giữ nút cam để hỏi thử Buddy', listening: 'Buddy đang nghe…', holdLonger: 'Giữ nút lâu hơn một chút nhé. Buddy chỉ nghe khi nút được giữ.', asked: 'Bé hỏi',
+      howEyebrow: 'Cách hoạt động', howTitle: 'Đơn giản như một cái bấm nút', howSub: 'Không ứng dụng cho bé, không màn hình để lướt. Chỉ một cái nút và một người bạn biết trả lời.',
+      s1t: 'Bé bấm và hỏi', s1b: 'Không có từ khóa đánh thức, không nghe lén. Micro chỉ bật khi bé giữ nút.',
+      s2t: 'Buddy trả lời', s2b: 'Bằng giọng nói ấm áp, đúng ngôn ngữ bé dùng, kèm khuôn mặt thể hiện cảm xúc. Câu hỏi hợp thì có thêm một câu chuyện bằng tranh.',
+      s3t: 'Bố mẹ nắm mọi thứ', s3b: 'Xem Buddy đã trả lời gì, cho Buddy nghỉ khi cần và quản lý lượt hỏi của cả nhà ngay trên điện thoại.',
+      featEyebrow: 'Buddy là ai', featTitle: 'Một người bạn, không phải một màn hình',
+      f1t: 'Nói tiếng Việt và tiếng Anh', f1b: 'Bé hỏi bằng tiếng nào, Buddy trả lời bằng tiếng đó, kể cả khi bé đổi ngôn ngữ giữa câu.',
+      f1c: 'Buddy ơi, cá heo ăn gì?', f1d: 'Cá heo thích ăn cá nhỏ và mực đó!', f1e: 'Why is the moon so bright?', f1f: 'It shines with light from the Sun!',
+      f2t: 'Khuôn mặt biết cảm xúc', f2b: 'Màn hình của Buddy vui, tò mò hay trầm ngâm theo câu chuyện, ngay trước khi Buddy cất lời.',
+      f3t: 'Chuyện kể bằng tranh', f3b: 'Với câu hỏi cần hình dung, Buddy kể thêm một câu chuyện ngắn 4 cảnh ngay trên màn hình.',
+      f4t: 'Chọn tính cách cho Buddy', f4b: 'Mỗi tính cách có giọng nói và cách xưng hô riêng.', soon: 'Sắp có',
+      pFriend: 'Bạn thân', pTeacher: 'Thầy cô', pDad: 'Bố', pMom: 'Mẹ',
+      safeEyebrow: 'An toàn là mặc định', safeTitle: 'Thiết kế cho trẻ nhỏ ngay từ đầu', safeSub: 'Những điều Buddy luôn làm, không cần bố mẹ cài đặt.',
+      sa1t: 'Micro không bao giờ bật sẵn', sa1b: 'Micro mở khi bé bấm nút và tắt khi lượt hỏi kết thúc. Không có từ khóa đánh thức.',
+      sa2t: 'Mọi câu trả lời được kiểm tra', sa2b: 'Câu hỏi và câu trả lời đều đi qua bộ lọc an toàn trước khi Buddy nói.',
+      sa3t: 'Bố mẹ được báo khi cần', sa3b: 'Nếu bé chia sẻ điều đáng lo, bố mẹ nhận được thông báo ngay.',
+      sa4t: 'Không quảng cáo, không chuyện tiền', sa4b: 'Khi hết lượt, Buddy chỉ rủ bé nghỉ một chút. Chuyện mua bán nằm hoàn toàn ở phía bố mẹ.',
+      sa5t: 'Lời của bé là của bé', sa5b: 'Bảng điều khiển chỉ hiện câu trả lời của Buddy, không hiện lời bé nói.',
+      sa6t: 'Bố mẹ nắm quyền', sa6b: 'Cho Buddy nghỉ bất cứ lúc nào. Khi đang nghỉ, bấm nút không tốn lượt.',
+      priceEyebrow: 'Bảng giá', priceTitle: 'Trả theo câu trả lời. Không thu phí hằng tháng.', priceSub: '1 lượt = 1 câu trả lời. Mọi Buddy trong nhà dùng chung một ví lượt hỏi.',
+      freeA: '10 lượt', freeB: 'tặng ngay khi tạo tài khoản để bé làm quen với Buddy.',
+      credits: '{n} lượt', perAnswer: '≈ {p} mỗi câu trả lời', best: 'Tiết kiệm nhất', choose: 'Chọn gói này',
+      pack_starter: 'Khởi đầu', pack_family: 'Gia đình', pack_big: 'Hộp lớn',
+      note1: 'Không tự động gia hạn', note2: 'Dùng chung cho mọi Buddy', note3: 'Chưa trả lời xong thì không trừ lượt',
+      faqEyebrow: 'Hỏi đáp', faqTitle: 'Những điều bố mẹ hay hỏi',
+      q1: 'Hết lượt thì sao?', a1: 'Buddy không trả lời mà nói với bé: “Mình nghỉ một chút nhé, lát nữa chơi tiếp!” Buddy không bao giờ nhắc tới tiền. Bố mẹ mua thêm lượt trên điện thoại là Buddy trả lời tiếp ngay.',
+      q2: 'Buddy có nghe suốt ngày không?', a2: 'Không. Micro chỉ mở khi bé giữ nút. Không có từ khóa đánh thức và không có chế độ nghe nền.',
+      q3: 'Hai bé dùng chung được không?', a3: 'Được. Mỗi bé có thể có Buddy riêng, tất cả dùng chung ví lượt hỏi của gia đình. Bố mẹ chọn Buddy nào dành cho bé nào.',
+      q4: 'Buddy nói những ngôn ngữ nào?', a4: 'Tiếng Việt và tiếng Anh. Buddy trả lời bằng ngôn ngữ bé vừa dùng.',
+      q5: 'Tặng lại Buddy cho người khác được không?', a5: 'Được. Gỡ Buddy khỏi gia đình trong ứng dụng, mã trên thẻ sẽ dùng lại được cho gia đình mới.',
+      closeTitle: 'Sẵn sàng cho câu hỏi đầu tiên của bé?', closeCta: 'Tạo tài khoản',
+      footer: '© 2026 Little Buddy', footerProto: 'Bản mẫu · dữ liệu ví dụ, không có tiền thật',
+      overview: 'Tổng quan', toys: 'Đồ chơi', creditsNav: 'Lượt hỏi', activity: 'Hoạt động', family: 'Gia đình', signOut: 'Đăng xuất',
+      hi: 'Chào {name}',
+      balLabel: 'Lượt hỏi còn lại', balUnit: 'lượt', balHint: '1 lượt = 1 câu trả lời. Mọi Buddy trong nhà dùng chung.', buy: 'Mua thêm lượt',
+      low: 'Sắp hết lượt', out: 'Đã hết lượt',
+      lowLong: 'Sắp hết lượt. Khi hết, Buddy sẽ nhẹ nhàng rủ bé nghỉ một chút.', outLong: 'Đã hết lượt. Bé bấm nút sẽ nghe Buddy nói: “Mình nghỉ một chút nhé!”',
+      chartTitle: 'Câu trả lời tuần này', chartTotal: '{n} câu trả lời', tip: '{d}: {n} câu trả lời', chartTable: 'Số câu trả lời theo ngày',
+      yourToys: 'Đồ chơi của nhà mình', manage: 'Quản lý', addToy: 'Thêm đồ chơi',
+      awake: 'Đang thức', resting: 'Đang nghỉ', support: 'Hỗ trợ đã tạm dừng',
+      seen: 'Kết nối {t}', forChild: 'Buddy của {name}', noChild: 'Chưa chọn bé',
+      pause: 'Cho nghỉ', wake: 'Đánh thức', pausedToast: 'Buddy đang nghỉ', wokeToast: 'Buddy đã thức dậy',
+      recent: 'Gần đây', seeAll: 'Xem tất cả',
+      onboardT: 'Thêm Buddy đầu tiên', onboardB: 'Mở hộp, lấy thẻ có mã 8 ký tự và nhập vào đây. Chưa đến một phút.',
+      tools: 'Công cụ bản mẫu', simAsk: 'Mô phỏng: bé hỏi 1 câu', simSupport: 'Mô phỏng: hỗ trợ tạm dừng Buddy', reset: 'Khôi phục dữ liệu mẫu',
+      simAnswered: 'Buddy vừa trả lời, trừ 1 lượt', simDenied: 'Buddy không trả lời: {r}', noActive: 'Chưa có Buddy nào đang thức',
+      answered: 'Buddy đã trả lời {name}', notAnswered: 'Buddy không trả lời {name}',
+      r_disabled: 'Buddy đang nghỉ', r_no_credits: 'Hết lượt hỏi', r_abandoned: 'Bé chưa hỏi xong',
+      free: 'Không trừ', noTurns: 'Chưa có câu hỏi nào.', activityNote: 'Đây là câu trả lời của Buddy. Lời bé nói không được hiển thị ở đây.',
+      fAll: 'Tất cả', fAnswered: 'Đã trả lời', fNot: 'Không trả lời',
+      packs: 'Chọn gói', history: 'Lịch sử',
+      l_welcome: 'Quà chào mừng', l_purchase: 'Mua gói {pack}', l_debit: 'Buddy trả lời {n} câu',
+      children: 'Các bé', age: '{n} tuổi', buddies: '{n} Buddy', noBuddy: 'Chưa có Buddy', addChild: 'Thêm bé', childName: 'Tên bé', birthYear: 'Năm sinh', save: 'Lưu', saved: 'Đã lưu', needName: 'Nhập tên bé giúp mình nhé.',
+      account: 'Tài khoản', email: 'Email', familyName: 'Tên gia đình', language: 'Ngôn ngữ', noKids: 'Chưa có bé nào.',
+      close: 'Đóng', cancel: 'Huỷ', next: 'Tiếp tục', checking: 'Đang kiểm tra…', later: 'Để sau', done: 'Xong', goToys: 'Xem đồ chơi',
+      addTitle: 'Thêm đồ chơi', codeTitle: 'Nhập mã trên thẻ trong hộp',
+      codeHelp: 'Mã gồm 8 ký tự, dạng XXXX-XXXX. Mã không bao giờ có chữ O, I, L, U và số 0, 1 nên bạn không lo nhìn nhầm.',
+      codeBad: 'Mã không có ký tự “{c}”. Bạn xem lại thẻ giúp mình nhé.',
+      codeInvalid: 'Mã này chưa khớp với Buddy nào, hoặc đã được thêm vào gia đình khác. Bạn xem lại thẻ nhé.',
+      codeDemo: 'Bản mẫu: mã nào đúng định dạng cũng được. Nhập ABCD-EFGH để xem trường hợp mã sai.',
+      childTitle: 'Buddy này dành cho bé nào?', childHelp: 'Bạn có thể đổi lại bất cứ lúc nào.', addChildInline: 'Thêm bé mới',
+      readyT: 'Buddy đã sẵn sàng!', readyB: 'Trong vài giây, màn hình của Buddy sẽ chuyển sang khuôn mặt vui. Bé chỉ cần giữ nút và hỏi.',
+      toyFor: 'Dành cho', lastSeen: 'Kết nối lần cuối', serial: 'Số seri', firmware: 'Phần mềm',
+      pauseExplain: 'Khi Buddy nghỉ, bé bấm nút sẽ nghe: “Mình nghỉ một chút nhé, lát nữa chơi tiếp!” Không trừ lượt.',
+      supportExplain: 'Bộ phận hỗ trợ đã tạm dừng Buddy này. Liên hệ hỗ trợ để bật lại.',
+      remove: 'Gỡ khỏi gia đình', removeAsk: 'Gỡ Buddy này khỏi gia đình? Lịch sử vẫn được giữ. Mã trên thẻ dùng lại được, ví dụ khi bạn tặng Buddy cho người khác.', removeYes: 'Gỡ Buddy', removed: 'Đã gỡ Buddy',
+      payTitle: 'Xác nhận mua', pack: 'Gói', add: 'Thêm', total: 'Tổng cộng', payNote: 'Thanh toán thử trong bản mẫu. Không có tiền thật nào bị trừ.', payDecline: 'Giả lập thẻ bị từ chối', pay: 'Thanh toán {price}', paying: 'Đang xử lý thanh toán…',
+      paidT: 'Đã thêm {n} lượt', paidB: 'Mọi Buddy trong nhà dùng được ngay. Số lượt hiện có: {b}.',
+      declinedT: 'Thanh toán chưa thành công', declinedB: 'Thẻ bị từ chối nên chưa có lượt nào được thêm. Bạn có thể thử lại hoặc dùng thẻ khác.', tryAgain: 'Thử lại',
+      welcomeBack: 'Chào mừng trở lại', createTitle: 'Tạo tài khoản gia đình', password: 'Mật khẩu', pwHint: 'Ít nhất 8 ký tự', register: 'Tạo tài khoản',
+      registerNote: 'Gia đình mới được tặng 10 lượt hỏi để bắt đầu.',
+      badLogin: 'Email hoặc mật khẩu chưa đúng.', badEmail: 'Email chưa đúng định dạng.', shortPw: 'Mật khẩu cần ít nhất 8 ký tự.', needFamily: 'Nhập tên gia đình giúp mình nhé.',
+      now: 'vừa xong', mins: '{n} phút trước', hours: '{n} giờ trước', yesterday: 'hôm qua', days: '{n} ngày trước',
+    },
+    en: {
+      navHow: 'How it works', navSafety: 'Safety', navPricing: 'Pricing', navFaq: 'FAQ', signIn: 'Sign in', start: 'Get started', menu: 'Menu',
+      heroEyebrow: 'An AI friend for children 4 to 8',
+      heroA: 'Press the button.', heroB: 'Ask anything.',
+      heroSub: 'Little Buddy is a little friend who listens. Your child holds the button to ask, and Buddy answers in Vietnamese or English, whichever they just spoke. Let go and the microphone turns off.',
+      ctaStart: 'Start for free', ctaHow: 'See how it works',
+      trust: '10 free answers when you sign up · No monthly fee',
+      toyHint: 'Hold the orange button to try Buddy', listening: 'Buddy is listening…', holdLonger: 'Hold it a little longer. Buddy only listens while the button is held.', asked: 'Your child asked',
+      howEyebrow: 'How it works', howTitle: 'As simple as pressing a button', howSub: 'No app for your child, no screen to scroll. Just one button and a friend with answers.',
+      s1t: 'Your child presses and asks', s1b: 'No wake word, no eavesdropping. The microphone is on only while the button is held.',
+      s2t: 'Buddy answers', s2b: 'In a warm voice, in the language your child used, with a face that shows how Buddy feels. When a question calls for it, a short picture story plays too.',
+      s3t: 'You stay in the loop', s3b: 'See what Buddy answered, let Buddy rest when needed, and manage the family\'s credits from your phone.',
+      featEyebrow: 'Meet Buddy', featTitle: 'A friend, not a screen',
+      f1t: 'Speaks Vietnamese and English', f1b: 'Whatever language your child asks in, Buddy answers in it, even when they switch mid-sentence.',
+      f1c: 'Buddy ơi, cá heo ăn gì?', f1d: 'Cá heo thích ăn cá nhỏ và mực đó!', f1e: 'Why is the moon so bright?', f1f: 'It shines with light from the Sun!',
+      f2t: 'A face with feelings', f2b: "Buddy's screen turns happy, curious or thoughtful with the conversation, right before Buddy speaks.",
+      f3t: 'Picture stories', f3b: 'For questions that need imagining, Buddy adds a short four-scene story on its screen.',
+      f4t: 'Choose a character', f4b: 'Each character has its own voice and way of speaking.', soon: 'Coming soon',
+      pFriend: 'Best friend', pTeacher: 'Teacher', pDad: 'Dad', pMom: 'Mom',
+      safeEyebrow: 'Safe by default', safeTitle: 'Designed for young children from day one', safeSub: 'Things Buddy always does, with nothing for you to configure.',
+      sa1t: 'The microphone is never always on', sa1b: 'It opens when your child presses the button and closes when the turn ends. There is no wake word.',
+      sa2t: 'Every answer is checked', sa2b: 'Questions and answers both pass a safety filter before Buddy speaks.',
+      sa3t: 'You hear about what matters', sa3b: 'If your child shares something worrying, you get an alert right away.',
+      sa4t: 'No ads, no money talk', sa4b: 'Out of credits, Buddy just suggests a little break. Buying stays entirely on the parent side.',
+      sa5t: "Your child's words stay theirs", sa5b: "The dashboard shows Buddy's answers, never what your child said.",
+      sa6t: 'You are in charge', sa6b: 'Let Buddy rest any time. While resting, a button press costs nothing.',
+      priceEyebrow: 'Pricing', priceTitle: 'Pay per answer. No monthly fee.', priceSub: '1 credit = 1 answer. Every Buddy at home shares one credit wallet.',
+      freeA: '10 credits', freeB: 'free when you create an account, so your child can get to know Buddy.',
+      credits: '{n} credits', perAnswer: '≈ {p} per answer', best: 'Best value', choose: 'Choose this pack',
+      pack_starter: 'Starter', pack_family: 'Family', pack_big: 'Big box',
+      note1: 'Never renews automatically', note2: 'Shared by every Buddy', note3: 'Unfinished questions are free',
+      faqEyebrow: 'FAQ', faqTitle: 'What parents ask us',
+      q1: 'What happens when credits run out?', a1: 'Buddy doesn\'t answer and says “Time for a little break, let\'s play again later!” Buddy never mentions money. Buy more on your phone and Buddy answers again right away.',
+      q2: 'Does Buddy listen all day?', a2: 'No. The microphone opens only while your child holds the button. There is no wake word and no background listening.',
+      q3: 'Can siblings share?', a3: 'Yes. Each child can have their own Buddy, and all of them share the family credit wallet. You choose which Buddy belongs to which child.',
+      q4: 'Which languages does Buddy speak?', a4: 'Vietnamese and English. Buddy answers in the language your child just used.',
+      q5: 'Can we give Buddy to someone else?', a5: 'Yes. Remove Buddy from your family in the app, and the code on the card works again for the new family.',
+      closeTitle: "Ready for your child's first question?", closeCta: 'Create an account',
+      footer: '© 2026 Little Buddy', footerProto: 'Prototype · example data, no real money',
+      overview: 'Overview', toys: 'Toys', creditsNav: 'Credits', activity: 'Activity', family: 'Family', signOut: 'Sign out',
+      hi: 'Hi {name}',
+      balLabel: 'Credits left', balUnit: 'credits', balHint: '1 credit = 1 answer. Shared by every Buddy at home.', buy: 'Buy credits',
+      low: 'Running low', out: 'Out of credits',
+      lowLong: 'Running low. When credits run out, Buddy gently tells your child it is break time.', outLong: 'Out of credits. When your child presses the button, Buddy says “Time for a little break!”',
+      chartTitle: 'Answers this week', chartTotal: '{n} answers', tip: '{d}: {n} answers', chartTable: 'Answers per day',
+      yourToys: 'Your toys', manage: 'Manage', addToy: 'Add a toy',
+      awake: 'Awake', resting: 'Resting', support: 'Paused by support',
+      seen: 'Seen {t}', forChild: "{name}'s Buddy", noChild: 'No child selected',
+      pause: 'Pause', wake: 'Wake up', pausedToast: 'Buddy is resting', wokeToast: 'Buddy is awake',
+      recent: 'Recent', seeAll: 'See all',
+      onboardT: 'Add your first Buddy', onboardB: 'Open the box, find the card with the 8-character code and enter it here. It takes under a minute.',
+      tools: 'Prototype tools', simAsk: 'Simulate: child asks 1 question', simSupport: 'Simulate: support pauses a Buddy', reset: 'Reset example data',
+      simAnswered: 'Buddy answered, 1 credit used', simDenied: "Buddy didn't answer: {r}", noActive: 'No Buddy is awake',
+      answered: 'Buddy answered {name}', notAnswered: "Buddy didn't answer {name}",
+      r_disabled: 'Buddy was resting', r_no_credits: 'Out of credits', r_abandoned: "Question wasn't finished",
+      free: 'Free', noTurns: 'No questions yet.', activityNote: "These are Buddy's answers. What your child said is not shown here.",
+      fAll: 'All', fAnswered: 'Answered', fNot: 'Not answered',
+      packs: 'Choose a pack', history: 'History',
+      l_welcome: 'Welcome gift', l_purchase: 'Bought {pack}', l_debit: 'Buddy answers ({n})',
+      children: 'Children', age: '{n} years old', buddies: 'Buddy × {n}', noBuddy: 'No Buddy yet', addChild: 'Add a child', childName: "Child's name", birthYear: 'Birth year', save: 'Save', saved: 'Saved', needName: "Please enter the child's name.",
+      account: 'Account', email: 'Email', familyName: 'Family name', language: 'Language', noKids: 'No children yet.',
+      close: 'Close', cancel: 'Cancel', next: 'Continue', checking: 'Checking…', later: 'Later', done: 'Done', goToys: 'See your toys',
+      addTitle: 'Add a toy', codeTitle: 'Enter the code from the card in the box',
+      codeHelp: 'It has 8 characters, like XXXX-XXXX. Codes never use O, I, L, U, 0 or 1, so there is nothing to mix up.',
+      codeBad: 'Codes never use “{c}”. Please check the card.',
+      codeInvalid: "That code doesn't match a Buddy, or it's already in another family. Please check the card.",
+      codeDemo: 'Prototype: any well-formed code works. Type ABCD-EFGH to see a wrong code.',
+      childTitle: 'Who is this Buddy for?', childHelp: 'You can change this any time.', addChildInline: 'Add a new child',
+      readyT: 'Buddy is ready!', readyB: "In a few seconds Buddy's screen switches to a happy face. Your child just holds the button and asks.",
+      toyFor: 'For', lastSeen: 'Last connected', serial: 'Serial', firmware: 'Firmware',
+      pauseExplain: 'While Buddy rests, pressing the button plays “Time for a little break, let\'s play again later!” No credits are used.',
+      supportExplain: 'Support paused this Buddy. Contact support to turn it back on.',
+      remove: 'Remove from family', removeAsk: 'Remove this Buddy from your family? Its history stays. The card code works again, for example if you give Buddy to someone else.', removeYes: 'Remove Buddy', removed: 'Buddy removed',
+      payTitle: 'Confirm purchase', pack: 'Pack', add: 'Adds', total: 'Total', payNote: 'Demo payment in the prototype. No real money moves.', payDecline: 'Simulate a declined card', pay: 'Pay {price}', paying: 'Processing payment…',
+      paidT: '{n} credits added', paidB: 'Every Buddy at home can use them right away. You now have {b}.',
+      declinedT: "Payment didn't go through", declinedB: 'The card was declined, so no credits were added. Try again or use another card.', tryAgain: 'Try again',
+      welcomeBack: 'Welcome back', createTitle: 'Create a family account', password: 'Password', pwHint: 'At least 8 characters', register: 'Create account',
+      registerNote: 'New families get 10 free credits to start.',
+      badLogin: 'Email or password is incorrect.', badEmail: "That email doesn't look right.", shortPw: 'Password needs at least 8 characters.', needFamily: 'Please enter a family name.',
+      now: 'just now', mins: '{n} min ago', hours: '{n} h ago', yesterday: 'yesterday', days: '{n} days ago',
+    },
+  };
+
+  const QA = {
+    vi: [
+      { q: 'Vì sao bầu trời màu xanh?', a: 'Vì ánh sáng Mặt Trời gặp không khí thì màu xanh bị tán ra khắp nơi, nên mình nhìn đâu cũng thấy xanh đó!' },
+      { q: 'Khủng long to cỡ nào?', a: 'Có loài khủng long dài bằng ba chiếc xe buýt xếp liền nhau luôn!' },
+      { q: 'Vì sao mèo kêu gừ gừ?', a: 'Mèo gừ gừ khi thấy vui và dễ chịu, giống như mèo đang hát một bài hát nhỏ vậy.' },
+    ],
+    en: [
+      { q: 'Why is the sky blue?', a: 'Sunlight bumps into the air and the blue part scatters everywhere, so blue is what we see all around!' },
+      { q: 'How big were dinosaurs?', a: 'Some dinosaurs were as long as three buses parked in a row!' },
+      { q: 'Why do cats purr?', a: 'Cats purr when they feel happy and cosy, a bit like humming a little song.' },
+    ],
+  };
+
+  const PACKS = [
+    { id: 'starter', credits: 20, price: 49000 },
+    { id: 'family', credits: 60, price: 129000 },
+    { id: 'big', credits: 150, price: 299000 },
+  ];
+  const ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
+  const MIN = 60000;
+  const DAY = 86400000;
+  const YEAR = 2026;
+  const ANSWERS = [
+    'Cá voi xanh là loài vật lớn nhất Trái Đất, dài bằng ba chiếc xe buýt đó!',
+    'Cầu vồng có bảy màu: đỏ, cam, vàng, lục, lam, chàm, tím.',
+    'Mặt Trăng sáng vì nó phản chiếu ánh sáng của Mặt Trời.',
+    'Kiến có thể nâng vật nặng gấp nhiều lần cơ thể của nó!',
+    'Khủng long bạo chúa có hàm răng to bằng quả chuối.',
+  ];
+
+  const startOfDay = (ts) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const midday = (daysAgo) => startOfDay(Date.now() - daysAgo * DAY) + 12 * 60 * MIN;
+
+  // Example family. The weekly chart and the ledger read the same debit
+  // rows, so the numbers always agree: 10 + 20 - 23 = 7 credits left.
+  function example() {
+    const now = Date.now();
+    const perDay = [2, 4, 3, 5, 3, 4];
+    const debits = perDay.map((n, i) => ({ id: `d${i}`, kind: 'debit', n, at: midday(6 - i) }));
+    return {
+      parent: { name: 'Lan', email: 'lan.nguyen@example.com' },
+      familyName: 'Nhà Minh An',
+      children: [{ id: 'c1', name: 'Bông', year: 2020 }, { id: 'c2', name: 'Tít', year: 2018 }],
+      toys: [
+        { id: 't1', serial: 'DEMO-0001', status: 'active', by: null, child: 'c1', seen: now - 2 * MIN, fw: '1.0.3' },
+        { id: 't2', serial: '2026W38A-0042', status: 'disabled', by: 'parent', child: 'c2', seen: now - 40 * MIN, fw: '1.0.3' },
+      ],
+      ledger: [
+        { id: 'today', kind: 'debit', n: 2, at: now - 5 * MIN },
+        ...debits.reverse(),
+        { id: 'p1', kind: 'purchase', pack: 'starter', delta: 20, at: startOfDay(now - 7 * DAY) + 20 * 60 * MIN },
+        { id: 'w1', kind: 'welcome', delta: 10, at: now - 9 * DAY },
+      ],
+      turns: [
+        { id: 'u1', toy: 't1', child: 'c1', status: 'completed', answer: ANSWERS[0], at: now - 5 * MIN },
+        { id: 'u2', toy: 't1', child: 'c1', status: 'completed', answer: ANSWERS[1], at: now - 12 * MIN },
+        { id: 'u3', toy: 't2', child: 'c2', status: 'denied', reason: 'disabled', at: now - 38 * MIN },
+        { id: 'u4', toy: 't1', child: 'c1', status: 'abandoned', at: now - 3 * 60 * MIN },
+        { id: 'u5', toy: 't2', child: 'c2', status: 'completed', answer: ANSWERS[4], at: now - 26 * 60 * MIN },
+        { id: 'u6', toy: 't1', child: 'c1', status: 'completed', answer: ANSWERS[2], at: now - 27 * 60 * MIN },
+      ],
+    };
+  }
+
+  let lang = 'vi';
+  try { lang = localStorage.getItem('lb2-lang') || 'vi'; } catch { /* storage is optional */ }
+
+  let D = example();
+  const S = { view: 'marketing', screen: 'overview', layer: null, openerKey: null, filter: 'all', familyForm: false, qi: 0 };
+  let seq = 100;
+  const uid = (p) => `${p}${++seq}`;
+
+  const t = (key, vars = {}) => (T[lang][key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const locale = () => (lang === 'vi' ? 'vi-VN' : 'en-US');
+  const vnd = (n) => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n);
+  const balance = () => D.ledger.reduce((s, r) => s + (r.kind === 'debit' ? -r.n : r.delta), 0);
+  const child = (id) => D.children.find((c) => c.id === id);
+  const toy = (id) => D.toys.find((x) => x.id === id);
+
+  function rel(ts) {
+    const m = Math.floor((Date.now() - ts) / MIN);
+    if (m < 1) return t('now');
+    if (m < 60) return t('mins', { n: m });
+    const h = Math.floor(m / 60);
+    if (h < 24) return t('hours', { n: h });
+    const d = Math.floor(h / 24);
+    return d === 1 ? t('yesterday') : t('days', { n: d });
+  }
+
+  // Buddy's LCD face. Drawn in currentColor so the screen decides the glow.
+  function face(state) {
+    const s = 'fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"';
+    let eyes;
+    let mouth;
+    let extra = '';
+    switch (state) {
+      case 'listen':
+        eyes = '<circle cx="40" cy="33" r="8.5" fill="currentColor"/><circle cx="80" cy="33" r="8.5" fill="currentColor"/>';
+        mouth = `<circle cx="60" cy="58" r="5.5" ${s} stroke-width="5"/>`;
+        extra = `<path d="M9 28 Q2 40 9 52 M111 28 Q118 40 111 52" ${s} stroke-width="4" opacity=".55"/>`;
+        break;
+      case 'think':
+        eyes = '<circle cx="47" cy="25" r="6.5" fill="currentColor"/><circle cx="87" cy="25" r="6.5" fill="currentColor"/>';
+        mouth = `<path d="M50 57 H70" ${s}/>`;
+        break;
+      case 'happy':
+        eyes = `<path d="M29 38 Q40 23 51 38 M69 38 Q80 23 91 38" ${s}/>`;
+        mouth = `<path d="M40 50 Q60 70 80 50" ${s}/>`;
+        break;
+      case 'sleep':
+        eyes = `<path d="M29 35 Q40 42 51 35 M69 35 Q80 42 91 35" ${s}/>`;
+        mouth = `<path d="M54 57 Q60 60 66 57" ${s}/>`;
+        extra = '<text x="98" y="20" font-family="Lexend, sans-serif" font-weight="700" font-size="17" fill="currentColor">z</text>';
+        break;
+      case 'curious':
+        eyes = '<circle cx="40" cy="33" r="6.5" fill="currentColor"/><circle cx="80" cy="33" r="9" fill="currentColor"/>';
+        mouth = `<path d="M48 57 Q56 52 64 57 T78 55" ${s}/>`;
+        break;
+      default:
+        eyes = '<circle class="eye" cx="40" cy="33" r="6.5" fill="currentColor"/><circle class="eye" cx="80" cy="33" r="6.5" fill="currentColor"/>';
+        mouth = `<path d="M46 53 Q60 64 74 53" ${s}/>`;
+    }
+    return `<svg viewBox="0 0 120 80" aria-hidden="true">${extra}${eyes}${mouth}</svg>`;
+  }
+
+  const IC = {
+    overview: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="8" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="14.5" width="7" height="6" rx="2"/></svg>',
+    toys: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="12" rx="5"/><circle cx="9.5" cy="10.5" r="1" fill="currentColor"/><circle cx="14.5" cy="10.5" r="1" fill="currentColor"/><path d="M9 20h6"/></svg>',
+    credits: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.5 10h4a1.8 1.8 0 010 3.6h-3"/></svg>',
+    activity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h9"/></svg>',
+    family: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.3"/><path d="M3.5 19c.8-3.2 3-5 5.5-5s4.7 1.8 5.5 5M14.5 19c.4-2 1.5-3.3 3-3.3s2.6 1.3 3 3.3"/></svg>',
+    out: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12H4M8 8l-4 4 4 4M13 4h5a2 2 0 012 2v12a2 2 0 01-2 2h-5"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    x: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 14.5A7.5 7.5 0 019.5 5a7.5 7.5 0 109.5 9.5z"/></svg>',
+    dash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M7 12h10"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.1"/></svg>',
+    mic: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/><path d="M4 4l16 16"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M8.8 12.2l2.2 2.2 4.2-4.4"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/></svg>',
+    tag: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.5l8-8H20v8.5l-8 8z"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor"/><path d="M4 4l16 16"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"/></svg>',
+    hand: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12V6a1.5 1.5 0 013 0v5M11 11V4.5a1.5 1.5 0 013 0V11M14 11V6a1.5 1.5 0 013 0v7c0 4-2.5 7-6 7-2.5 0-4-1.5-5.5-3.5L3.8 13a1.5 1.5 0 012.3-1.9L8 13"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6.5" y="3" width="11" height="18" rx="3"/><path d="M10.5 17.5h3"/></svg>',
+    tick: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  };
+
+  const langSwitch = () => `<div class="lang" role="group" aria-label="Language">
+    <button type="button" data-act="lang" data-v="vi" aria-pressed="${lang === 'vi'}">VI</button>
+    <button type="button" data-act="lang" data-v="en" aria-pressed="${lang === 'en'}">EN</button></div>`;
+  const wordmark = (href = '#top') => `<a class="wordmark" href="${href}"><span class="dotface">${face('rest')}</span><span>Little Buddy</span></a>`;
+
+  // A picture-story scene: simple shapes, one per tile.
+  function scene(i) {
+    const scenes = [
+      '<rect width="100" height="100" fill="#79B4EE"/><circle cx="72" cy="28" r="12" fill="#FFE08A"/><path d="M0 78 Q30 64 55 76 T100 72 V100 H0z" fill="#2E9E80"/>',
+      '<rect width="100" height="100" fill="#183342"/><circle cx="30" cy="30" r="3" fill="#EAF2F4"/><circle cx="70" cy="20" r="2" fill="#EAF2F4"/><circle cx="55" cy="45" r="16" fill="#E8EFF1"/><circle cx="50" cy="41" r="3" fill="#A9BDC5"/>',
+      '<rect width="100" height="100" fill="#4FBF9F"/><path d="M20 70 Q50 30 80 70z" fill="#FF9F4A"/><circle cx="50" cy="44" r="8" fill="#FFD1A6"/>',
+      '<rect width="100" height="100" fill="#FFEBD8"/><path d="M15 80 L50 30 L85 80z" fill="#D96F14"/><rect x="44" y="60" width="12" height="20" fill="#10212B"/>',
+    ];
+    return `<div class="scene"><svg viewBox="0 0 100 100" aria-hidden="true">${scenes[i]}</svg></div>`;
+  }
+
+  function marketing() {
+    const packs = PACKS.map((p) => `<article class="price ${p.id === 'big' ? 'best' : ''}">
+        <h3>${t(`pack_${p.id}`)}${p.id === 'big' ? `<span class="badge">${t('best')}</span>` : ''}</h3>
+        <div class="price-amt">${vnd(p.price)}</div>
+        <div class="price-credits">${t('credits', { n: p.credits })}</div>
+        <div class="price-per">${t('perAnswer', { p: vnd(Math.round(p.price / p.credits)) })}</div>
+        <button type="button" class="btn ${p.id === 'big' ? 'apricot' : 'ghost'} block" data-act="choose-pack" data-id="${p.id}" data-key="mpack-${p.id}">${t('choose')}</button>
+      </article>`).join('');
+    const faqs = [1, 2, 3, 4, 5].map((n) => `<details><summary>${t(`q${n}`)}</summary><p>${t(`a${n}`)}</p></details>`).join('');
+    const promises = [['mic', 1], ['shield', 2], ['bell', 3], ['tag', 4], ['lock', 5], ['hand', 6]]
+      .map(([ic, n]) => `<div class="promise"><div class="ic">${IC[ic]}</div><h3>${t(`sa${n}t`)}</h3><p>${t(`sa${n}b`)}</p></div>`).join('');
+    return `
+    <header class="nav on-ocean" id="nav">
+      <div class="wrap">
+        <div class="nav-inner">
+          ${wordmark()}
+          <nav class="nav-links" aria-label="Sections">
+            <a href="#how">${t('navHow')}</a><a href="#safety">${t('navSafety')}</a><a href="#pricing">${t('navPricing')}</a><a href="#faq">${t('navFaq')}</a>
+          </nav>
+          <div class="nav-actions">${langSwitch()}
+            <button type="button" class="btn ghost-light sm" data-act="open-auth" data-mode="login" data-key="nav-signin">${t('signIn')}</button>
+            <button type="button" class="btn apricot sm" data-act="open-auth" data-mode="register" data-key="nav-start">${t('start')}</button>
+          </div>
+          <button type="button" class="menu-btn" data-act="menu" aria-expanded="false">${t('menu')}</button>
+        </div>
+        <div class="menu-panel">
+          <a href="#how" data-act="menu-link">${t('navHow')}</a><a href="#safety" data-act="menu-link">${t('navSafety')}</a><a href="#pricing" data-act="menu-link">${t('navPricing')}</a><a href="#faq" data-act="menu-link">${t('navFaq')}</a>
+          <div class="row">${langSwitch()}
+            <button type="button" class="btn ghost-light sm" data-act="open-auth" data-mode="login" data-key="menu-signin">${t('signIn')}</button>
+            <button type="button" class="btn apricot sm" data-act="open-auth" data-mode="register" data-key="menu-start">${t('start')}</button></div>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero" id="top">
+      <div class="wrap hero-inner">
+        <div>
+          <p class="eyebrow">${t('heroEyebrow')}</p>
+          <h1>${t('heroA')}<span>${t('heroB')}</span></h1>
+          <p class="hero-sub">${t('heroSub')}</p>
+          <div class="hero-ctas">
+            <button type="button" class="btn apricot lg" data-act="open-auth" data-mode="register" data-key="hero-start">${t('ctaStart')}</button>
+            <a class="btn ghost-light lg" href="#how">${t('ctaHow')}</a>
+          </div>
+          <p class="trust"><i></i>${t('trust')}</p>
+        </div>
+        <div class="stage">
+          <div class="toy">
+            <div class="ear l"></div><div class="ear r"></div>
+            <div class="toy-body"></div>
+            <div class="screen" id="hero-screen">${face('rest')}</div>
+            <button type="button" class="press" id="press" aria-label="${t('toyHint')}"></button>
+          </div>
+          <div class="bubble" id="bubble" aria-live="polite">${t('toyHint')}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="how">
+      <div class="wrap">
+        <div class="band-head"><p class="eyebrow">${t('howEyebrow')}</p><h2>${t('howTitle')}</h2><p>${t('howSub')}</p></div>
+        <div class="steps">
+          <article class="step"><div class="step-top"><span class="step-n">1</span><span class="chip-screen">${face('listen')}</span></div><h3>${t('s1t')}</h3><p>${t('s1b')}</p></article>
+          <article class="step"><div class="step-top"><span class="step-n">2</span><span class="chip-screen">${face('happy')}</span></div><h3>${t('s2t')}</h3><p>${t('s2b')}</p></article>
+          <article class="step"><div class="step-top"><span class="step-n">3</span><span class="mini-phone">${IC.phone}</span></div><h3>${t('s3t')}</h3><p>${t('s3b')}</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band alt" id="meet">
+      <div class="wrap">
+        <div class="band-head"><p class="eyebrow">${t('featEyebrow')}</p><h2>${t('featTitle')}</h2></div>
+        <div class="bento">
+          <article class="tile a"><h3>${t('f1t')}</h3><p>${t('f1b')}</p>
+            <div class="say-lines">
+              <span class="say child">${esc(t('f1c'))}</span><span class="say buddy">${esc(t('f1d'))}</span>
+              <span class="say child">${esc(t('f1e'))}</span><span class="say buddy">${esc(t('f1f'))}</span>
+            </div></article>
+          <article class="tile b"><h3>${t('f2t')}</h3><p>${t('f2b')}</p>
+            <div class="faces"><span class="chip-screen">${face('happy')}</span><span class="chip-screen">${face('curious')}</span><span class="chip-screen">${face('think')}</span><span class="chip-screen dim">${face('sleep')}</span></div></article>
+          <article class="tile c"><h3>${t('f3t')}</h3><p>${t('f3b')}</p><div class="scenes">${[0, 1, 2, 3].map(scene).join('')}</div></article>
+          <article class="tile d"><span class="soon">${t('soon')}</span><h3>${t('f4t')}</h3><p>${t('f4b')}</p>
+            <div class="personas"><span class="persona">${t('pFriend')}</span><span class="persona">${t('pTeacher')}</span><span class="persona">${t('pDad')}</span><span class="persona">${t('pMom')}</span></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band safety" id="safety">
+      <div class="wrap">
+        <div class="band-head"><p class="eyebrow">${t('safeEyebrow')}</p><h2>${t('safeTitle')}</h2><p>${t('safeSub')}</p></div>
+        <div class="promises">${promises}</div>
+      </div>
+    </section>
+
+    <section class="band" id="pricing">
+      <div class="wrap">
+        <div class="band-head"><p class="eyebrow">${t('priceEyebrow')}</p><h2>${t('priceTitle')}</h2><p>${t('priceSub')}</p></div>
+        <div class="free"><b>${t('freeA')}</b><span>${t('freeB')}</span></div>
+        <div class="price-grid">${packs}</div>
+        <div class="price-notes"><span>${IC.tick}${t('note1')}</span><span>${IC.tick}${t('note2')}</span><span>${IC.tick}${t('note3')}</span></div>
+      </div>
+    </section>
+
+    <section class="band alt" id="faq">
+      <div class="wrap">
+        <div class="band-head"><p class="eyebrow">${t('faqEyebrow')}</p><h2>${t('faqTitle')}</h2></div>
+        <div class="faq">${faqs}</div>
+      </div>
+    </section>
+
+    <section class="closing">
+      <div class="wrap">
+        <div class="closing-card"><h2>${t('closeTitle')}</h2>
+          <button type="button" class="btn dark lg" data-act="open-auth" data-mode="register" data-key="close-start">${t('closeCta')}</button></div>
+        <footer class="footer"><span>${t('footer')}</span><span>${t('footerProto')}</span></footer>
+      </div>
+    </section>`;
+  }
+
+  // ---------- Dashboard ----------
+
+  const SCREENS = ['overview', 'toys', 'credits', 'activity', 'family'];
+  const screenTitle = (s) => t(s === 'credits' ? 'creditsNav' : s);
+
+  function toyState(x) {
+    if (x.status === 'active') return { face: 'rest', dim: false, pill: `<span class="pill ok">${t('awake')}</span>` };
+    if (x.by === 'admin') return { face: 'sleep', dim: true, pill: `<span class="pill bad">${IC.alert}${t('support')}</span>` };
+    return { face: 'sleep', dim: true, pill: `<span class="pill rest">${t('resting')}</span>` };
+  }
+  const toyName = (x) => (child(x.child) ? t('forChild', { name: esc(child(x.child).name) }) : 'Buddy');
+
+  function balancePanel(cls = 'span-5') {
+    const b = balance();
+    const pill = b === 0 ? `<span class="pill bad">${IC.alert}${t('out')}</span>` : b <= 5 ? `<span class="pill warn">${IC.alert}${t('low')}</span>` : '';
+    return `<section class="panel balance ${cls}" aria-label="${t('balLabel')}">
+      <div class="bal-top"><span class="coin">${IC.credits.replace('<svg', '<svg width="22" height="22"')}</span><span class="feed-title">${t('balLabel')}</span>${pill}</div>
+      <div class="bal-num">${b}<small>${t('balUnit')}</small></div>
+      <p class="muted">${t('balHint')}</p>
+      ${b <= 5 ? `<div class="banner ${b === 0 ? 'bad' : 'warn'}">${IC.alert}<span>${t(b === 0 ? 'outLong' : 'lowLong')}</span></div>` : ''}
+      <button type="button" class="btn apricot" data-act="go" data-screen="credits">${t('buy')}</button>
+    </section>`;
+  }
+
+  function weekData() {
+    const out = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const start = startOfDay(Date.now() - i * DAY);
+      const n = D.ledger.filter((r) => r.kind === 'debit' && r.at >= start && r.at < start + DAY).reduce((s, r) => s + r.n, 0);
+      out.push({ start, n, today: i === 0 });
+    }
+    return out;
+  }
+
+  // Seven daily bars, one hue, baseline-anchored, today labelled directly;
+  // every bar also has a tooltip and the numbers are repeated in a table.
+  function chartPanel() {
+    const data = weekData();
+    const total = data.reduce((s, d) => s + d.n, 0);
+    const W = 560; const H = 214; const L = 30; const R = 8; const TOP = 26; const B = 30;
+    const pw = W - L - R; const ph = H - TOP - B;
+    const top = Math.max(4, Math.ceil(Math.max(...data.map((d) => d.n)) / 2) * 2);
+    const y = (v) => TOP + ph - (v / top) * ph;
+    const band = pw / 7;
+    const bw = Math.min(38, band * 0.54);
+    const short = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
+    const long = new Intl.DateTimeFormat(locale(), { weekday: 'long', day: 'numeric', month: 'numeric' });
+    const grid = [0, top / 2, top].map((v) => `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+    const bars = data.map((d, i) => {
+      const x = L + i * band + (band - bw) / 2;
+      const base = TOP + ph;
+      const yt = y(d.n);
+      const h = base - yt;
+      const r = Math.min(4, h);
+      const bar = h > 0 ? `<path class="bar" d="M${x} ${base} V${yt + r} Q${x} ${yt} ${x + r} ${yt} H${x + bw - r} Q${x + bw} ${yt} ${x + bw} ${yt + r} V${base} Z"/>` : '';
+      const label = d.today ? `<text class="val" x="${x + bw / 2}" y="${yt - 7}" text-anchor="middle">${d.n}</text>` : '';
+      const day = `<text class="axis ${d.today ? 'today' : ''}" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${esc(short.format(d.start))}</text>`;
+      const tip = t('tip', { d: long.format(d.start), n: d.n });
+      const hit = `<rect class="hit" x="${L + i * band}" y="${TOP}" width="${band}" height="${ph}" tabindex="0" role="img" aria-label="${esc(tip)}" data-tip="${esc(tip)}" data-y="${yt}" data-x="${x + bw / 2}"/>`;
+      return bar + label + day + hit;
+    }).join('');
+    const table = `<table class="sr-only"><caption>${t('chartTable')}</caption><tbody>${data.map((d) => `<tr><th>${esc(long.format(d.start))}</th><td>${d.n}</td></tr>`).join('')}</tbody></table>`;
+    return `<section class="panel span-7">
+      <div class="panel-head"><h2>${t('chartTitle')}</h2><span class="total">${t('chartTotal', { n: total })}</span></div>
+      <div class="chart-wrap" id="chart"><svg viewBox="0 0 ${W} ${H}" aria-hidden="false" role="group" aria-label="${t('chartTitle')}">${grid}${bars}</svg>${table}<div class="tip" id="tip" hidden></div></div>
+    </section>`;
+  }
+
+  function toyCard(x) {
+    const st = toyState(x);
+    const action = x.status === 'active'
+      ? `<button type="button" class="btn ghost sm" data-act="pause" data-id="${x.id}">${t('pause')}</button>`
+      : x.by === 'parent' ? `<button type="button" class="btn apricot sm" data-act="wake" data-id="${x.id}">${t('wake')}</button>` : '';
+    return `<article class="toy-card" data-act="open-toy" data-id="${x.id}" data-key="toy-${x.id}" role="button" tabindex="0" aria-label="${toyName(x)}">
+      <div class="tc-screen ${st.dim ? 'dim' : ''}">${face(st.face)}</div>
+      <div class="tc-body"><h3>${toyName(x)}</h3><div class="tc-meta">${st.pill}<span>${t('seen', { t: rel(x.seen) })}</span></div></div>
+      ${action ? `<div class="tc-actions">${action}</div>` : ''}
+    </article>`;
+  }
+
+  const addTile = () => `<button type="button" class="add-tile" data-act="start-add" data-key="add-tile"><span class="plus">${IC.plus}</span>${t('addToy')}</button>`;
+
+  function onboardCard() {
+    return `<section class="panel onboard span-12"><div class="chip-screen" style="width:120px;height:84px;border-radius:22px">${face('curious')}</div>
+      <div><h2>${t('onboardT')}</h2><p>${t('onboardB')}</p><button type="button" class="btn apricot" data-act="start-add" data-key="onboard-add">${t('addToy')}</button></div></section>`;
+  }
+
+  function turnItem(u) {
+    const c = child(u.child);
+    const name = c ? esc(c.name) : '';
+    if (u.status === 'completed') {
+      return `<div class="feed-item"><div class="dot ok">${IC.check}</div>
+        <div><div class="feed-title">${t('answered', { name })}</div><div class="feed-sub">${rel(u.at)}</div><p class="quote">“${esc(u.answer)}”</p></div>
+        <div class="delta">-1</div></div>`;
+    }
+    const reason = u.status === 'abandoned' ? t('r_abandoned') : t(`r_${u.reason}`);
+    const cls = u.reason === 'no_credits' ? 'warn' : 'rest';
+    return `<div class="feed-item"><div class="dot ${cls}">${u.status === 'abandoned' ? IC.dash : IC.moon}</div>
+      <div><div class="feed-title">${t('notAnswered', { name })}</div><div class="feed-sub">${reason} · ${rel(u.at)}</div></div>
+      <div class="delta zero">${t('free')}</div></div>`;
+  }
+
+  const sortedTurns = () => [...D.turns].sort((a, b) => b.at - a.at);
+
+  function screenOverview() {
+    const recent = sortedTurns().slice(0, 3);
+    const toys = D.toys.length
+      ? `<section class="span-12"><div class="section-title"><h2>${t('yourToys')}</h2><button type="button" class="link" data-act="go" data-screen="toys">${t('manage')}</button></div>
+          <div class="toy-grid">${D.toys.map(toyCard).join('')}${addTile()}</div></section>`
+      : onboardCard();
+    return `<div class="grid-12">
+      ${balancePanel()}${chartPanel()}
+      ${toys}
+      <section class="panel span-12"><div class="panel-head"><h2>${t('recent')}</h2>${recent.length ? `<button type="button" class="link" data-act="go" data-screen="activity">${t('seeAll')}</button>` : ''}</div>
+        <div class="feed">${recent.length ? recent.map(turnItem).join('') : `<div class="empty">${t('noTurns')}</div>`}</div></section>
+    </div>
+    <details class="tools"><summary>${t('tools')}</summary><div class="tools-body">
+      <button type="button" class="btn ghost sm" data-act="sim-ask">${t('simAsk')}</button>
+      <button type="button" class="btn ghost sm" data-act="sim-support">${t('simSupport')}</button>
+      <button type="button" class="btn ghost sm" data-act="reset">${t('reset')}</button></div></details>`;
+  }
+
+  function screenToys() {
+    if (!D.toys.length) return `<div class="grid-12">${onboardCard()}</div>`;
+    return `<div class="toy-grid">${D.toys.map(toyCard).join('')}${addTile()}</div>`;
+  }
+
+  function screenCredits() {
+    const packs = PACKS.map((p) => `<button type="button" class="pack ${p.id === 'big' ? 'best' : ''}" data-act="choose-pack" data-id="${p.id}" data-key="pack-${p.id}">
+        <span class="pack-name">${t(`pack_${p.id}`)}${p.id === 'big' ? `<span class="badge">${t('best')}</span>` : ''}</span>
+        <span class="pack-sub">${t('credits', { n: p.credits })} · ${t('perAnswer', { p: vnd(Math.round(p.price / p.credits)) })}</span>
+        <span class="pack-price">${vnd(p.price)}</span></button>`).join('');
+    const rows = D.ledger.map((r) => {
+      let label;
+      let delta;
+      if (r.kind === 'debit') { label = t('l_debit', { n: r.n }); delta = -r.n; }
+      else if (r.kind === 'purchase') { label = t('l_purchase', { pack: t(`pack_${r.pack}`) }); delta = r.delta; }
+      else { label = t('l_welcome'); delta = r.delta; }
+      return `<div class="feed-item"><div class="dot ${delta > 0 ? 'coin-dot' : 'rest'}">${delta > 0 ? IC.plus : IC.check}</div>
+        <div><div class="feed-title">${label}</div><div class="feed-sub">${rel(r.at)}</div></div>
+        <div class="delta ${delta > 0 ? 'pos' : ''}">${delta > 0 ? '+' : ''}${delta}</div></div>`;
+    }).join('');
+    return `<div class="grid-12">
+      ${balancePanel()}
+      <section class="panel span-7"><div class="panel-head"><h2>${t('packs')}</h2></div><div class="pack-list">${packs}</div></section>
+      <section class="panel span-12"><div class="panel-head"><h2>${t('history')}</h2></div><div class="feed">${rows}</div></section>
+    </div>`;
+  }
+
+  function screenActivity() {
+    const list = sortedTurns().filter((u) => (S.filter === 'all' ? true : S.filter === 'answered' ? u.status === 'completed' : u.status !== 'completed'));
+    const seg = [['all', 'fAll'], ['answered', 'fAnswered'], ['not', 'fNot']]
+      .map(([v, k]) => `<button type="button" data-act="filter" data-v="${v}" aria-pressed="${S.filter === v}">${t(k)}</button>`).join('');
+    return `<section class="panel">
+      <div class="panel-head"><div class="seg" role="group">${seg}</div></div>
+      <div class="feed">${list.length ? list.map(turnItem).join('') : `<div class="empty">${t('noTurns')}</div>`}</div>
+      <p class="muted" style="font-size:14px;margin-top:12px">${t('activityNote')}</p></section>`;
+  }
+
+  function childForm(id) {
+    const years = Array.from({ length: 11 }, (_, i) => YEAR - 1 - i).map((yv) => `<option value="${yv}" ${yv === 2020 ? 'selected' : ''}>${yv}</option>`).join('');
+    return `<form class="form" id="${id}" novalidate style="margin-top:14px">
+      <div class="field"><label for="${id}-name">${t('childName')}</label><input class="input" id="${id}-name" name="name" maxlength="40" autocomplete="off" data-autofocus></div>
+      <div class="field"><label for="${id}-year">${t('birthYear')}</label><select class="input" id="${id}-year" name="year">${years}</select></div>
+      <p class="msg bad" id="${id}-msg"></p>
+      <button type="submit" class="btn apricot">${t('save')}</button></form>`;
+  }
+
+  function screenFamily() {
+    const kids = D.children.map((c, i) => {
+      const n = D.toys.filter((x) => x.child === c.id).length;
+      return `<div class="row"><div class="kid"><span class="avatar ${i % 2 ? 'alt' : ''}">${esc(c.name.slice(0, 1))}</span>
+        <div><div class="feed-title">${esc(c.name)}</div><div class="feed-sub">${t('age', { n: YEAR - c.year })}</div></div></div>
+        <span class="feed-sub">${n ? t('buddies', { n }) : t('noBuddy')}</span></div>`;
+    }).join('');
+    return `<div class="grid-12">
+      <section class="panel span-7"><div class="panel-head"><h2>${t('children')}</h2>${S.familyForm ? '' : `<button type="button" class="link" data-act="family-form">+ ${t('addChild')}</button>`}</div>
+        ${D.children.length ? `<div class="rows">${kids}</div>` : `<p class="muted">${t('noKids')}</p>`}
+        ${S.familyForm ? childForm('family-child') : ''}</section>
+      <section class="panel span-5"><div class="panel-head"><h2>${t('account')}</h2></div>
+        <div class="rows">
+          <div class="row"><span class="k">${t('email')}</span><span class="v">${esc(D.parent.email)}</span></div>
+          <div class="row"><span class="k">${t('familyName')}</span><span class="v">${esc(D.familyName)}</span></div>
+          <div class="row"><span class="k">${t('language')}</span>${langSwitch()}</div>
+        </div>
+        <button type="button" class="btn ghost" data-act="sign-out" style="margin-top:14px">${IC.out}${t('signOut')}</button></section>
+    </div>`;
+  }
+
+  function app() {
+    const nav = SCREENS.map((s) => `<button type="button" class="nav-item" data-act="go" data-screen="${s}" ${S.screen === s ? 'aria-current="page"' : ''} aria-label="${screenTitle(s)}">${IC[s]}<span>${screenTitle(s)}</span></button>`).join('');
+    const body = { overview: screenOverview, toys: screenToys, credits: screenCredits, activity: screenActivity, family: screenFamily }[S.screen]();
+    const eyebrow = S.screen === 'overview' ? `${t('hi', { name: esc(D.parent.name) })} · ${esc(D.familyName)}` : esc(D.familyName);
+    return `<div class="app">
+      <aside class="side">
+        ${wordmark('#')}
+        ${nav}
+        <div class="side-foot"><div class="who"><b>${esc(D.familyName)}</b><span class="muted">${esc(D.parent.email)}</span></div>
+          <button type="button" class="nav-item" data-act="sign-out" aria-label="${t('signOut')}">${IC.out}<span>${t('signOut')}</span></button></div>
+      </aside>
+      <main class="main">
+        <div class="appbar">${wordmark('#')}${langSwitch()}</div>
+        <header class="page-head"><div><p class="eyebrow">${eyebrow}</p><h1>${screenTitle(S.screen)}</h1></div>
+          <div class="head-actions">${langSwitch()}<button type="button" class="btn apricot" data-act="start-add" data-key="head-add">${IC.plus}${t('addToy')}</button></div></header>
+        ${body}
+      </main>
+    </div>`;
+  }
+
+  // ---------- Layers ----------
+
+  const closeBtn = () => `<button type="button" class="x" data-act="close-layer" aria-label="${t('close')}">${IC.x}</button>`;
+
+  function layerAuth(L) {
+    const reg = L.mode === 'register';
+    return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <div class="layer-head"><h2 id="auth-title">${reg ? t('createTitle') : t('welcomeBack')}</h2>${closeBtn()}</div>
+      <div class="auth-tabs" role="group"><button type="button" data-act="auth-mode" data-v="login" aria-pressed="${!reg}">${t('signIn')}</button><button type="button" data-act="auth-mode" data-v="register" aria-pressed="${reg}">${t('register')}</button></div>
+      <form class="form" id="auth-form" novalidate>
+        ${reg ? `<div class="field"><label for="auth-family">${t('familyName')}</label><input class="input" id="auth-family" name="family" autocomplete="off" data-autofocus></div>` : ''}
+        <div class="field"><label for="auth-email">${t('email')}</label><input class="input" id="auth-email" name="email" type="email" autocomplete="email" value="${reg ? '' : 'lan.nguyen@example.com'}" ${reg ? '' : 'data-autofocus'}></div>
+        <div class="field"><label for="auth-password">${t('password')}</label><input class="input" id="auth-password" name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" value="${reg ? '' : 'bong-2020!'}"><span class="muted" style="font-size:13.5px">${t('pwHint')}</span></div>
+        <p class="msg bad">${L.error ? esc(L.error) : ''}</p>
+        <button type="submit" class="btn apricot lg block">${reg ? t('register') : t('signIn')}</button>
+        ${reg ? `<p class="muted" style="text-align:center;font-size:14px">${t('registerNote')}</p>` : ''}
+      </form></div>`;
+  }
+
+  const codeReady = (raw) => raw.length === 8 && [...raw].every((c) => ALPHABET.includes(c));
+
+  function layerAdd(L) {
+    const order = ['code', 'child', 'done'];
+    const stepper = `<div class="stepper" aria-hidden="true">${order.map((s, i) => `<span class="${order.indexOf(L.step) >= i ? 'on' : ''}"></span>`).join('')}</div>`;
+    const head = `<div class="layer-head"><h2 id="add-title">${t('addTitle')}</h2>${closeBtn()}</div>${stepper}`;
+    let body;
+    if (L.step === 'code') {
+      const formatted = L.code.length > 4 ? `${L.code.slice(0, 4)}-${L.code.slice(4)}` : L.code;
+      body = `<form class="form" id="code-form" novalidate>
+        <h3 style="font-size:19px">${t('codeTitle')}</h3>
+        <input class="input code-input" id="claim-code" value="${esc(formatted)}" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="code-msg" data-autofocus>
+        <p class="msg ${L.error ? 'bad' : 'muted'}" id="code-msg">${L.error ? esc(L.error) : t('codeHelp')}</p>
+        <button type="submit" class="btn apricot lg block" id="code-next" ${codeReady(L.code) && !L.checking ? '' : 'disabled'}>${L.checking ? t('checking') : t('next')}</button>
+        <p class="muted" style="font-size:13.5px">${t('codeDemo')}</p></form>`;
+    } else if (L.step === 'child') {
+      const choices = D.children.map((c, i) => `<button type="button" class="choice" data-act="pick-child" data-id="${c.id}" aria-pressed="${L.child === c.id}">
+          <span class="avatar ${i % 2 ? 'alt' : ''}">${esc(c.name.slice(0, 1))}</span><span><b>${esc(c.name)}</b><br><span class="feed-sub">${t('age', { n: YEAR - c.year })}</span></span></button>`).join('');
+      body = `<div class="form"><div class="hero-screen">${face('curious')}</div>
+        <div><h3 style="font-size:19px">${t('childTitle')}</h3><p class="muted" style="font-size:14.5px">${t('childHelp')}</p></div>
+        <div class="choices">${choices}</div>
+        ${L.childForm ? childForm('add-child') : `<button type="button" class="link" data-act="add-child-form" style="justify-self:start">+ ${t('addChildInline')}</button>`}
+        <button type="button" class="btn apricot lg block" data-act="finish-add" ${L.child ? '' : 'disabled'}>${t('next')}</button>
+        <button type="button" class="btn ghost block" data-act="finish-add" data-skip="1">${t('later')}</button></div>`;
+    } else {
+      const x = toy(L.toyId);
+      body = `<div class="center"><div class="hero-screen" style="width:100%">${face('happy')}</div><h2>${t('readyT')}</h2><p class="muted">${t('readyB')}</p><p class="mono muted">${esc(x.serial)}</p>
+        <button type="button" class="btn apricot lg block" data-act="add-done" data-autofocus>${t('goToys')}</button></div>`;
+    }
+    return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-title">${head}${body}</div>`;
+  }
+
+  function layerToy(L) {
+    const x = toy(L.id);
+    if (!x) return '';
+    const st = toyState(x);
+    const options = [`<option value="">${t('noChild')}</option>`, ...D.children.map((c) => `<option value="${c.id}" ${x.child === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)].join('');
+    let action;
+    if (x.status === 'active') action = `<button type="button" class="btn ghost block" data-act="pause" data-id="${x.id}">${t('pause')}</button><p class="muted" style="font-size:14px">${t('pauseExplain')}</p>`;
+    else if (x.by === 'parent') action = `<button type="button" class="btn apricot block" data-act="wake" data-id="${x.id}">${t('wake')}</button><p class="muted" style="font-size:14px">${t('pauseExplain')}</p>`;
+    else action = `<div class="banner bad">${IC.alert}<span>${t('supportExplain')}</span></div>`;
+    const remove = L.confirmRemove
+      ? `<div class="confirm"><p>${t('removeAsk')}</p><div class="actions"><button type="button" class="btn danger-solid" data-act="remove" data-id="${x.id}" data-autofocus>${t('removeYes')}</button><button type="button" class="btn ghost" data-act="cancel-remove">${t('cancel')}</button></div></div>`
+      : `<button type="button" class="btn danger" data-act="ask-remove" style="justify-self:start">${t('remove')}</button>`;
+    return `<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="toy-title">
+      <div class="layer-head"><h2 id="toy-title">${toyName(x)}</h2>${closeBtn()}</div>
+      <div class="hero-screen ${st.dim ? 'dim' : ''}">${face(st.face)}</div>
+      <div>${st.pill}</div>
+      <div class="form" style="gap:10px">${action}</div>
+      <div class="rows">
+        <div class="row"><label class="k" for="toy-child">${t('toyFor')}</label><select class="input" id="toy-child" data-id="${x.id}" style="width:auto">${options}</select></div>
+        <div class="row"><span class="k">${t('lastSeen')}</span><span class="v">${rel(x.seen)}</span></div>
+        <div class="row"><span class="k">${t('serial')}</span><span class="v mono">${esc(x.serial)}</span></div>
+        <div class="row"><span class="k">${t('firmware')}</span><span class="v mono">${esc(x.fw)}</span></div>
+      </div>
+      ${remove}
+    </aside>`;
+  }
+
+  function layerPay(L) {
+    const p = PACKS.find((x) => x.id === L.pack);
+    const head = `<div class="layer-head"><h2 id="pay-title">${t('payTitle')}</h2>${L.phase === 'processing' ? '' : closeBtn()}</div>`;
+    let body;
+    if (L.phase === 'processing') body = `<div class="center" style="padding-block:28px"><div class="spinner" role="progressbar" aria-label="${t('paying')}"></div><p>${t('paying')}</p></div>`;
+    else if (L.phase === 'paid') body = `<div class="center"><div class="hero-screen" style="width:100%">${face('happy')}</div><h2>${t('paidT', { n: p.credits })}</h2><p class="muted">${t('paidB', { b: balance() })}</p><button type="button" class="btn apricot lg block" data-act="close-layer" data-autofocus>${t('done')}</button></div>`;
+    else if (L.phase === 'declined') body = `<div class="form"><div class="banner bad">${IC.alert}<span><b>${t('declinedT')}</b><br>${t('declinedB')}</span></div><button type="button" class="btn apricot lg block" data-act="pay-retry" data-autofocus>${t('tryAgain')}</button><button type="button" class="btn ghost block" data-act="close-layer">${t('cancel')}</button></div>`;
+    else {
+      body = `<div class="form">
+        <div class="summary"><span class="muted">${t('pack')}</span><b>${t(`pack_${p.id}`)}</b><span class="muted">${t('add')}</span><b>+${t('credits', { n: p.credits })}</b><span class="muted">${t('total')}</span><span class="big">${vnd(p.price)}</span></div>
+        <div class="banner mint">${IC.alert}<span>${t('payNote')}</span></div>
+        <label class="check" for="decline"><input type="checkbox" id="decline" ${L.decline ? 'checked' : ''}> ${t('payDecline')}</label>
+        <button type="button" class="btn apricot lg block" data-act="pay" data-autofocus>${t('pay', { price: vnd(p.price) })}</button></div>`;
+    }
+    return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-title">${head}${body}</div>`;
+  }
+
+  function layer() {
+    const L = S.layer;
+    if (!L) return '';
+    const inner = { auth: layerAuth, add: layerAdd, toy: layerToy, pay: layerPay }[L.type](L);
+    return `<div class="scrim ${L.type === 'toy' ? 'drawer-mode' : ''}" data-act="scrim">${inner}</div>`;
+  }
+
+  // ---------- Render ----------
+
+  function renderPage() {
+    document.documentElement.lang = lang;
+    document.getElementById('page').innerHTML = S.view === 'marketing' ? marketing() : app();
+    if (S.view === 'marketing') setupToy();
+    else setupChart();
+  }
+
+  function renderLayer() {
+    const host = document.getElementById('layer');
+    host.innerHTML = layer();
+    document.body.style.overflow = S.layer ? 'hidden' : '';
+    if (S.layer && !host.contains(document.activeElement)) {
+      const target = host.querySelector('[data-autofocus]') || host.querySelector('button, input, select');
+      target?.focus();
+    }
+  }
+
+  function render() {
+    renderPage();
+    renderLayer();
+  }
+
+  function openLayer(L, opener) {
+    S.layer = L;
+    S.openerKey = opener?.dataset.key ?? null;
+    renderLayer();
+  }
+
+  function closeLayer() {
+    if (S.layer?.type === 'pay' && S.layer.phase === 'processing') return;
+    const key = S.openerKey;
+    S.layer = null;
+    S.openerKey = null;
+    render();
+    if (key) document.querySelector(`[data-key="${key}"]`)?.focus();
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+  }
+
+  function go(screen) {
+    S.screen = screen;
+    S.familyForm = false;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  // The hero toy: hold to talk, like the real one. A press that is too short
+  // is treated as an accident, exactly as the button on the toy.
+  let toyTimers = [];
+  function setupToy() {
+    const btn = document.getElementById('press');
+    const screen = document.getElementById('hero-screen');
+    const bubble = document.getElementById('bubble');
+    if (!btn) return;
+    let downAt = 0;
+    let active = false;
+    const setFace = (st) => { screen.innerHTML = face(st); };
+    const clear = () => { toyTimers.forEach(clearTimeout); toyTimers = []; };
+    clear();
+    const startHold = () => {
+      if (active) return;
+      active = true;
+      clear();
+      downAt = Date.now();
+      btn.classList.add('down');
+      setFace('listen');
+      bubble.innerHTML = `<span class="waves" aria-hidden="true"><i></i><i></i><i></i><i></i></span>${t('listening')}`;
+    };
+    const endHold = () => {
+      if (!active) return;
+      active = false;
+      btn.classList.remove('down');
+      if (Date.now() - downAt < 650) {
+        setFace('rest');
+        bubble.textContent = t('holdLonger');
+        return;
+      }
+      const list = QA[lang];
+      const qa = list[S.qi % list.length];
+      S.qi += 1;
+      setFace('think');
+      bubble.innerHTML = `<span class="ask">${t('asked')}: “${esc(qa.q)}”</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>`;
+      toyTimers.push(setTimeout(() => {
+        setFace('happy');
+        bubble.innerHTML = `<span class="ask">${t('asked')}: “${esc(qa.q)}”</span><span class="ans">${esc(qa.a)}</span>`;
+        toyTimers.push(setTimeout(() => setFace('rest'), 7000));
+      }, 1100));
+    };
+    btn.addEventListener('pointerdown', (e) => { e.preventDefault(); btn.setPointerCapture?.(e.pointerId); btn.focus({ preventScroll: true }); startHold(); });
+    btn.addEventListener('pointerup', endHold);
+    btn.addEventListener('pointercancel', endHold);
+    btn.addEventListener('lostpointercapture', endHold);
+    btn.addEventListener('keydown', (e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); startHold(); } });
+    btn.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endHold(); } });
+    btn.addEventListener('blur', endHold);
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  function setupChart() {
+    const wrap = document.getElementById('chart');
+    if (!wrap) return;
+    const tip = document.getElementById('tip');
+    const svg = wrap.querySelector('svg');
+    const show = (el) => {
+      const vb = svg.viewBox.baseVal;
+      const sr = svg.getBoundingClientRect();
+      const wr = wrap.getBoundingClientRect();
+      const k = sr.width / vb.width;
+      tip.textContent = el.dataset.tip;
+      tip.style.left = `${sr.left - wr.left + Number(el.dataset.x) * k}px`;
+      tip.style.top = `${sr.top - wr.top + Number(el.dataset.y) * k}px`;
+      tip.hidden = false;
+    };
+    const hide = () => { tip.hidden = true; };
+    wrap.querySelectorAll('.hit').forEach((el) => {
+      el.addEventListener('mouseenter', () => show(el));
+      el.addEventListener('focus', () => show(el));
+      el.addEventListener('mouseleave', hide);
+      el.addEventListener('blur', hide);
+    });
+  }
+
+  // ---------- Simulation (same rules as the backend's ask gate) ----------
+
+  function addDebit() {
+    const today = startOfDay(Date.now());
+    const row = D.ledger.find((r) => r.kind === 'debit' && r.at >= today);
+    if (row) { row.n += 1; row.at = Date.now(); }
+    else D.ledger.unshift({ id: uid('d'), kind: 'debit', n: 1, at: Date.now() });
+    D.ledger.sort((a, b) => b.at - a.at);
+  }
+
+  function simulateAsk() {
+    const x = D.toys.find((y) => y.status === 'active') ?? D.toys[0];
+    if (!x) { toast(t('noActive')); return; }
+    x.seen = Date.now();
+    let reason = null;
+    if (x.status !== 'active') reason = 'disabled';
+    else if (balance() < 1) reason = 'no_credits';
+    if (reason) {
+      D.turns.push({ id: uid('u'), toy: x.id, child: x.child, status: 'denied', reason, at: Date.now() });
+      toast(t('simDenied', { r: t(`r_${reason}`) }));
+    } else {
+      D.turns.push({ id: uid('u'), toy: x.id, child: x.child, status: 'completed', answer: ANSWERS[seq % ANSWERS.length], at: Date.now() });
+      addDebit();
+      toast(t('simAnswered'));
+    }
+    render();
+  }
+
+  // ---------- Events ----------
+
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act;
+    const id = el.dataset.id;
+    switch (act) {
+      case 'scrim': if (e.target === el) closeLayer(); break;
+      case 'close-layer': closeLayer(); break;
+      case 'lang':
+        lang = el.dataset.v;
+        try { localStorage.setItem('lb2-lang', lang); } catch { /* optional */ }
+        render();
+        break;
+      case 'menu': {
+        const nav = document.getElementById('nav');
+        const open = nav.classList.toggle('open');
+        el.setAttribute('aria-expanded', String(open));
+        break;
+      }
+      case 'menu-link': document.getElementById('nav')?.classList.remove('open'); break;
+      case 'open-auth': openLayer({ type: 'auth', mode: el.dataset.mode, error: null }, el); break;
+      case 'auth-mode': S.layer.mode = el.dataset.v; S.layer.error = null; renderLayer(); break;
+      case 'go': S.layer = null; go(el.dataset.screen); break;
+      case 'open-toy': openLayer({ type: 'toy', id, confirmRemove: false }, el); break;
+      case 'pause': {
+        const x = toy(id); x.status = 'disabled'; x.by = 'parent';
+        render(); toast(t('pausedToast')); break;
+      }
+      case 'wake': {
+        const x = toy(id); x.status = 'active'; x.by = null; x.seen = Date.now();
+        render(); toast(t('wokeToast')); break;
+      }
+      case 'ask-remove': S.layer.confirmRemove = true; renderLayer(); break;
+      case 'cancel-remove': S.layer.confirmRemove = false; renderLayer(); break;
+      case 'remove':
+        D.toys = D.toys.filter((x) => x.id !== id);
+        S.layer = null;
+        S.openerKey = null;
+        render();
+        toast(t('removed'));
+        break;
+      case 'start-add': openLayer({ type: 'add', step: 'code', code: '', error: null, checking: false, child: null, toyId: null, childForm: false }, el); break;
+      case 'pick-child': S.layer.child = id; renderLayer(); break;
+      case 'add-child-form': S.layer.childForm = true; renderLayer(); document.getElementById('add-child-name')?.focus(); break;
+      case 'finish-add':
+        toy(S.layer.toyId).child = el.dataset.skip ? null : S.layer.child;
+        S.layer.step = 'done';
+        S.layer.childForm = false;
+        render();
+        break;
+      case 'add-done': S.layer = null; S.openerKey = null; go('toys'); break;
+      case 'choose-pack':
+        if (S.view === 'marketing') openLayer({ type: 'auth', mode: 'register', error: null }, el);
+        else openLayer({ type: 'pay', pack: id, decline: false, phase: 'confirm' }, el);
+        break;
+      case 'pay': {
+        const L = S.layer;
+        L.decline = document.getElementById('decline').checked;
+        L.phase = 'processing';
+        renderLayer();
+        setTimeout(() => {
+          if (L.decline) L.phase = 'declined';
+          else {
+            const p = PACKS.find((x) => x.id === L.pack);
+            D.ledger.unshift({ id: uid('p'), kind: 'purchase', pack: p.id, delta: p.credits, at: Date.now() });
+            L.phase = 'paid';
+          }
+          render();
+        }, 1300);
+        break;
+      }
+      case 'pay-retry': S.layer.phase = 'confirm'; renderLayer(); break;
+      case 'filter': S.filter = el.dataset.v; render(); break;
+      case 'family-form': S.familyForm = true; render(); document.getElementById('family-child-name')?.focus(); break;
+      case 'sign-out': S.view = 'marketing'; S.layer = null; render(); window.scrollTo(0, 0); break;
+      case 'sim-ask': simulateAsk(); break;
+      case 'sim-support': {
+        const x = D.toys.find((y) => y.status === 'active');
+        if (x) { x.status = 'disabled'; x.by = 'admin'; render(); }
+        break;
+      }
+      case 'reset': D = example(); go('overview'); break;
+      default: break;
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && S.layer) { closeLayer(); return; }
+    const card = e.target.closest?.('.toy-card');
+    if (card && e.target === card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); card.click(); }
+  });
+
+  document.addEventListener('input', (e) => {
+    if (e.target.id !== 'claim-code') return;
+    const el = e.target;
+    const raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    el.value = raw.length > 4 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
+    S.layer.code = raw;
+    S.layer.error = null;
+    const bad = [...raw].find((c) => !ALPHABET.includes(c));
+    const msg = document.getElementById('code-msg');
+    msg.className = `msg ${bad ? 'bad' : 'muted'}`;
+    msg.textContent = bad ? t('codeBad', { c: bad }) : t('codeHelp');
+    document.getElementById('code-next').disabled = !codeReady(raw);
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.id !== 'toy-child') return;
+    toy(e.target.dataset.id).child = e.target.value || null;
+    render();
+    toast(t('saved'));
+  });
+
+  document.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (f.id === 'code-form') {
+      const L = S.layer;
+      if (!codeReady(L.code)) return;
+      L.checking = true;
+      renderLayer();
+      setTimeout(() => {
+        L.checking = false;
+        // ABCD-EFGH plays the part of a code that matches no toy.
+        if (L.code === 'ABCDEFGH') { L.error = t('codeInvalid'); renderLayer(); document.getElementById('claim-code')?.focus(); return; }
+        const x = { id: uid('t'), serial: `2026W38A-${String(40 + seq).padStart(4, '0')}`, status: 'active', by: null, child: null, seen: Date.now(), fw: '1.0.3' };
+        D.toys.push(x);
+        L.toyId = x.id;
+        L.step = 'child';
+        L.child = D.children[0]?.id ?? null;
+        render();
+      }, 700);
+      return;
+    }
+    if (f.id === 'add-child' || f.id === 'family-child') {
+      const name = f.elements.name.value.trim();
+      if (!name) { document.getElementById(`${f.id}-msg`).textContent = t('needName'); return; }
+      const c = { id: uid('c'), name, year: Number(f.elements.year.value) };
+      D.children.push(c);
+      if (f.id === 'add-child') { S.layer.child = c.id; S.layer.childForm = false; }
+      else S.familyForm = false;
+      render();
+      toast(t('saved'));
+      return;
+    }
+    if (f.id === 'auth-form') {
+      const L = S.layer;
+      const reg = L.mode === 'register';
+      const email = f.elements.email.value.trim();
+      const password = f.elements.password.value;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { L.error = t(reg ? 'badEmail' : 'badLogin'); renderLayer(); return; }
+      if (password.length < 8) { L.error = t(reg ? 'shortPw' : 'badLogin'); renderLayer(); return; }
+      if (reg) {
+        const familyName = f.elements.family.value.trim();
+        if (!familyName) { L.error = t('needFamily'); renderLayer(); return; }
+        // A brand new family: 10 welcome credits and nothing else yet.
+        D = { parent: { name: email.split('@')[0], email }, familyName, children: [], toys: [], ledger: [{ id: uid('w'), kind: 'welcome', delta: 10, at: Date.now() }], turns: [] };
+      } else if (!D.toys.length && D.parent.email !== email) {
+        D = example();
+      }
+      S.layer = null;
+      S.openerKey = null;
+      S.view = 'app';
+      S.screen = 'overview';
+      render();
+      window.scrollTo(0, 0);
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

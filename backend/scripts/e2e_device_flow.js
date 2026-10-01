@@ -2,13 +2,21 @@
 // provision, heartbeat while unclaimed, refused stream, claim from the
 // dashboard side, heartbeat, live stream, kill switch, unpair. Exits 0 when
 // every step matched, 1 on the first mismatch. Cleans up after itself.
+//
+// Always the mock pipeline, whatever .env says: this checks the backend's
+// own flow (gate, credits, protocol) and must not need the brain running or
+// spend vendor calls. It is set before config.js is first imported, hence
+// the dynamic imports.
 import http from 'node:http';
-import { createApp } from '../app.js';
-import { attachStream, CLOSE_BLOCKED } from '../ws/stream.js';
-import { pool } from '../store/db.js';
-import * as redisStore from '../store/redis.js';
-import * as registry from '../devices/registry.js';
-import { SimDevice } from '../devices/sim_client.js';
+
+process.env.PROVIDER_MODE = 'mock';
+
+const { createApp } = await import('../app.js');
+const { attachStream, CLOSE_BLOCKED } = await import('../ws/stream.js');
+const { pool } = await import('../store/db.js');
+const redisStore = await import('../store/redis.js');
+const registry = await import('../devices/registry.js');
+const { SimDevice } = await import('../devices/sim_client.js');
 
 const RUN = Date.now().toString(36).toUpperCase();
 let failed = false;
@@ -111,16 +119,21 @@ try {
     expect(pong.type === 'pong', `got ${pong.type}`);
   });
 
-  await step('button press: accepted, frames, answer, done, one credit spent', async () => {
+  await step('button press: accepted, typed turn, answer with heard, done, one credit spent', async () => {
     const before = (await api(baseUrl, 'GET', '/api/wallet', { token })).body.balance;
     const accepted = await sim.turnStart(ws);
     expect(accepted.type === 'turn_accepted', `got ${JSON.stringify(accepted)}`);
-    sim.sendFrames(ws, 25);
-    const { answer, done } = await sim.turnEnd(ws);
-    expect(answer?.emotion === 'happy' && done?.status === 'completed', `got ${JSON.stringify({ answer, done })}`);
+    const text = 'Xin chào Buddy';
+    const { answer, done } = await sim.turnEnd(ws, { text });
+    expect(answer?.emotion === 'happy' && answer?.heard === text && done?.status === 'completed', `got ${JSON.stringify({ answer, done })}`);
     const after = (await api(baseUrl, 'GET', '/api/wallet', { token })).body.balance;
     expect(after === before - 1, `balance ${before} -> ${after}`);
     return `"${answer.say}" balance ${before} -> ${after}`;
+  });
+
+  await step('a new conversation is started on request', async () => {
+    const reply = await sim.conversationNew(ws);
+    expect(reply.type === 'conversation_started', `got ${JSON.stringify(reply)}`);
   });
 
   await step('a second press mid-turn is refused, cancel charges nothing', async () => {

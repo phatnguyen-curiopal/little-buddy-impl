@@ -66,7 +66,7 @@ export function BalanceCard({ balance, className = '' }) {
       <div className="bal-num" aria-live="polite">{shown}<small>{t('balUnit')}</small></div>
       <p className="muted">{t('balHint')}</p>
       {(out || low) && <div className={`banner ${out ? 'bad' : 'warn'}`}>{Icon.alert}<span>{t(out ? 'outLong' : 'lowLong')}</span></div>}
-      <button type="button" className="btn apricot sheen" onClick={() => openPay(null)}>{t('buy')}</button>
+      <button type="button" className="btn pop sheen" onClick={() => openPay(null)}>{t('buy')}</button>
     </section>
   );
 }
@@ -107,7 +107,7 @@ export function Onboard() {
       <div>
         <h2>{t('onboardT')}</h2>
         <p>{t('onboardB')}</p>
-        <button type="button" className="btn apricot sheen" onClick={(e) => openAdd(e.currentTarget)}>{Icon.plus}{t('addToy')}</button>
+        <button type="button" className="btn pop sheen" onClick={(e) => openAdd(e.currentTarget)}>{Icon.plus}{t('addToy')}</button>
       </div>
     </section>
   );

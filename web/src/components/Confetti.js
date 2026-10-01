@@ -2,7 +2,7 @@ import { reducedMotion } from '../lib/motion.js';
 
 // A short celebratory burst for a finished purchase or a newly added toy.
 // Hand-rolled on a throwaway canvas: a library for this would outweigh it.
-const COLORS = ['#FF9F4A', '#4FBF9F', '#79B4EE', '#FFD1A6', '#7CF0CD'];
+const COLORS = ['#F97316', '#2F6BFF', '#8FB2FF', '#FDBA74', '#9DBBFF'];
 
 export function burst({ x = window.innerWidth / 2, y = window.innerHeight / 3, count = 110 } = {}) {
   if (reducedMotion()) return;

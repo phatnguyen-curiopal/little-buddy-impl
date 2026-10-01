@@ -135,7 +135,7 @@ export function ChildForm({ onDone, autoFocus = true }) {
       <div className="field"><label htmlFor="child-year">{t('birthYear')}</label>
         <select id="child-year" className="input" value={year} onChange={(e) => setYear(e.target.value)}>{years.map((y) => <option key={y} value={y}>{y}</option>)}</select></div>
       {error && <p className="msg bad">{error}</p>}
-      <button type="submit" className="btn apricot" disabled={busy}>{busy ? t('saving') : t('save')}</button>
+      <button type="submit" className="btn pop" disabled={busy}>{busy ? t('saving') : t('save')}</button>
     </form>
   );
 }

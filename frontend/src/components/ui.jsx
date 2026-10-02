@@ -1,70 +1,108 @@
-import { useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useI18n } from '../lib/i18n.jsx';
 
-export function StatusPill({ status }) {
-  return <span className={`pill pill-${status || 'none'}`}>{status || 'none'}</span>;
+export const Icon = {
+  x: <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>,
+  plus: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>,
+  check: <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>,
+  alert: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4l9 16H3z" /><path d="M12 10v4M12 17.2v.1" /></svg>,
+  coin: <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v9M9.5 10h4a1.8 1.8 0 010 3.6h-3" /></svg>,
+  out: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 12H4M8 8l-4 4 4 4M13 4h5a2 2 0 012 2v12a2 2 0 01-2 2h-5" /></svg>,
+  arrow: <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>,
+};
+
+export function Pill({ tone = 'rest', icon, children }) {
+  return <span className={`pill ${tone}`}>{icon}{children}</span>;
 }
 
-export function JsonView({ value }) {
-  if (value === undefined) return <span className="muted">none</span>;
-  return <pre className="json">{JSON.stringify(value, null, 2)}</pre>;
+export function Skeleton({ h = 20, w = '100%', r = 12 }) {
+  return <span className="skel" style={{ height: h, width: w, borderRadius: r }} aria-hidden="true" />;
 }
 
-export function Field({ label, children }) {
+export function LangSwitch({ dark = false }) {
+  const { lang, setLang } = useI18n();
   return (
-    <label className="field">
-      <span className="field-label">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-export function Button({ children, kind = 'default', busy = false, ...rest }) {
-  return (
-    <button type="button" className={`btn btn-${kind}`} disabled={busy || rest.disabled} {...rest}>
-      {busy ? '...' : children}
-    </button>
-  );
-}
-
-// Two clicks within three seconds; used for unpair and revoke, the two
-// actions a tester would regret doing by accident.
-export function ConfirmButton({ children, onConfirm, kind = 'danger', ...rest }) {
-  const [armed, setArmed] = useState(false);
-  const click = () => {
-    if (!armed) {
-      setArmed(true);
-      setTimeout(() => setArmed(false), 3000);
-      return;
-    }
-    setArmed(false);
-    onConfirm();
-  };
-  return (
-    <Button kind={armed ? 'danger-armed' : kind} onClick={click} {...rest}>
-      {armed ? 'click again to confirm' : children}
-    </Button>
-  );
-}
-
-export function ErrorLine({ error }) {
-  if (!error) return null;
-  return (
-    <div className="error-line">
-      <b>{error.status ? `${error.status} ${error.code}` : error.code}</b> {error.message}
-      {error.retryAfter ? ` (retry after ${error.retryAfter} s)` : ''}
-      {error.body?.error?.details ? ` ${error.body.error.details.map((d) => `${d.field}: ${d.message}`).join('; ')}` : ''}
+    <div className={`lang ${dark ? 'on-dark' : ''}`} role="group" aria-label="Language">
+      <button type="button" aria-pressed={lang === 'vi'} onClick={() => setLang('vi')}>VI</button>
+      <button type="button" aria-pressed={lang === 'en'} onClick={() => setLang('en')}>EN</button>
     </div>
   );
 }
 
-export function short(id) {
-  return id ? `${id.slice(0, 8)}…` : '';
+// Modal dialog or side drawer. Focus moves in on open and back to the
+// opener on close; Escape and a click on the backdrop close it.
+export function Layer({ kind = 'modal', onClose, labelledBy, children, locked = false }) {
+  const panel = useRef(null);
+  const opener = useRef(typeof document !== 'undefined' ? document.activeElement : null);
+
+  useEffect(() => {
+    const target = panel.current?.querySelector('[data-autofocus]') ?? panel.current?.querySelector('button, input, select, a[href]');
+    target?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const back = opener.current;
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      if (back && document.contains(back)) back.focus?.();
+    };
+    // Focus handling runs once per open layer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !locked) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [locked, onClose]);
+
+  return createPortal(
+    <div className={`scrim ${kind === 'drawer' ? 'scrim--drawer' : ''}`} onMouseDown={(e) => { if (e.target === e.currentTarget && !locked) onClose(); }}>
+      <div ref={panel} className={kind} role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
 }
 
-export function ago(iso) {
-  if (!iso) return 'never';
-  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
-  if (s < 60) return `${s} s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  return `${Math.floor(s / 3600)} h ago`;
+export function CloseButton({ onClick }) {
+  const { t } = useI18n();
+  return <button type="button" className="x" onClick={onClick} aria-label={t('close')}>{Icon.x}</button>;
+}
+
+const ToastContext = createContext(() => {});
+
+export function ToastProvider({ children }) {
+  const [toast, setToast] = useState(null);
+  const timer = useRef(null);
+  const show = useCallback((text, tone = 'ink') => {
+    clearTimeout(timer.current);
+    setToast({ text, tone, id: Date.now() });
+    timer.current = setTimeout(() => setToast(null), 2800);
+  }, []);
+  return (
+    <ToastContext.Provider value={show}>
+      {children}
+      <div className="toast-host" role="status" aria-live="polite">
+        {toast && <div key={toast.id} className={`toast toast--${toast.tone}`}>{toast.text}</div>}
+      </div>
+    </ToastContext.Provider>
+  );
+}
+
+export const useToast = () => useContext(ToastContext);
+
+// API error to a sentence a parent can act on.
+export function useErrorText() {
+  const { t } = useI18n();
+  return useCallback((err) => {
+    if (!err) return '';
+    if (err.code === 'rate_limited') return t('err_rate_limited', { s: err.retryAfter ?? 60 });
+    const key = `err_${err.code}`;
+    const text = t(key);
+    return text === key ? t('err_generic') : text;
+  }, [t]);
 }

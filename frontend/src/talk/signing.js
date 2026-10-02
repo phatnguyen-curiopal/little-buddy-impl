@@ -1,7 +1,6 @@
-// The LB1 device signer, in WebCrypto. A byte-for-byte copy of
-// frontend/src/signing.js (itself a mirror of backend/devices/signing.js):
+// The LB1 device signer, in WebCrypto. A mirror of backend/devices/signing.js:
 // the web toy signs /v1 exactly as firmware does, and tests/signing.test.js
-// pins it to the backend's reference vectors so the copies cannot drift.
+// pins it to the backend's reference vectors so the two cannot drift.
 // No window or DOM access: it runs unchanged under node --test.
 //
 //   canonical = "LB1\n" METHOD "\n" PATH "\n" device_id "\n" ts "\n" nonce "\n" sha256hex(body)

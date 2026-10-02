@@ -867,7 +867,7 @@ npm run seed                  # demo family, one claimed toy, one unclaimed toy
 npm run e2e                   # a simulated toy through its whole life
 npm run dev                   # http://localhost:3000/healthz</code></pre>
         <p>The seed prints a parent login (<code>demo@littlebuddy.local</code> / <code>demo-password</code>), a claimed toy's id and secret (also written to <code>backend/.env.device</code>), and the claim code of a second, unclaimed toy, so the whole flow can be driven by hand with <code>SimDevice</code> and <code>curl</code>.</p>
-        <p>What comes next: the streaming pipeline behind <code>/v1/stream</code> (speech-to-text, the model, text-to-speech, the per-turn ask gate that debits a credit), then the React dashboard in <code>frontend/</code>. Both build on the pieces described here without changing them.</p>
+        <p>What comes next: the streaming pipeline behind <code>/v1/stream</code> (speech-to-text, the model, text-to-speech, the per-turn ask gate that debits a credit), then the parent website in <code>frontend/</code>. Both build on the pieces described here without changing them.</p>
       </section>
 
       <footer>Little Buddy backend, implementation phase, September 2026. Source of the product invariants: the team's onboarding spec in the sibling <code>LittleBuddy</code> repository.</footer>

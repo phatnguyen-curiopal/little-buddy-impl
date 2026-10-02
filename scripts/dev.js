@@ -1,4 +1,4 @@
-// Starts the three dev servers the web demo needs (brain, backend, web) in
+// Starts the three dev servers the web demo needs (brain, backend, frontend) in
 // one terminal, each line prefixed with its service. No dependency on
 // purpose: this is a dev convenience, not part of any service.
 //
@@ -21,7 +21,7 @@ const isWindows = process.platform === 'win32';
 const SERVICES = [
   { name: 'brain', dir: 'brain', color: 35, needsEnv: true, port: 8080, host: '127.0.0.1' },
   { name: 'backend', dir: 'backend', color: 36, needsEnv: true, port: 3000 },
-  { name: 'web', dir: 'web', color: 33, needsEnv: false, port: 5174 },
+  { name: 'frontend', dir: 'frontend', color: 33, needsEnv: false, port: 5174 },
 ];
 
 const width = Math.max(...SERVICES.map((s) => s.name.length));
@@ -105,7 +105,7 @@ for (const s of SERVICES) {
   });
 }
 
-console.log('dev: brain http://127.0.0.1:8080  backend http://localhost:3000  web http://localhost:5174/app/talk (Ctrl+C stops all)');
+console.log('dev: brain http://127.0.0.1:8080  backend http://localhost:3000  frontend http://localhost:5174/app/talk (Ctrl+C stops all)');
 
 process.on('SIGINT', () => stopAll(0));
 process.on('SIGTERM', () => stopAll(0));

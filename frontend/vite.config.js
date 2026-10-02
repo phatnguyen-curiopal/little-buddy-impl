@@ -1,22 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// The backend has no CORS middleware on purpose (nothing browser-facing
-// exists in production yet), so the dev server serves the console and
-// proxies every backend prefix same-origin. ws: true forwards the HTTP
-// Upgrade for /v1/stream with its query string (which carries the
-// signature) untouched.
+// The backend has no CORS on purpose; in development the site talks to it
+// same-origin through this proxy. In production a reverse proxy does the
+// same job, so the app never needs to know the API's host. /v1 carries the
+// web toy: /v1/time over HTTP and the signed /v1/stream WebSocket upgrade.
 const target = process.env.BACKEND_URL || 'http://localhost:3000';
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    port: 5174,
     strictPort: true,
     proxy: {
       '/api': { target },
-      '/admin': { target },
-      '/healthz': { target },
       '/v1': { target, ws: true },
     },
   },

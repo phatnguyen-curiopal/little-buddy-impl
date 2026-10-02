@@ -1,7 +1,7 @@
 // The one place the site talks to the backend. The access token lives in
 // memory only; the refresh token is kept in localStorage so a parent stays
 // signed in across reloads. (Production should move it to an httpOnly
-// cookie; see web/README.md.)
+// cookie; see frontend/README.md.)
 const RT_KEY = 'lb-web-refresh';
 
 export class ApiError extends Error {

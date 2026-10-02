@@ -2,7 +2,7 @@
   "name": "littlebuddy",
   "private": true,
   "type": "module",
-  "description": "Runs the brain, backend and web dev servers together",
+  "description": "Runs the brain, backend and frontend dev servers together",
   "engines": {
     "node": ">=22.0.0"
   },

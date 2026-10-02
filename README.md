@@ -14,7 +14,7 @@ ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
                                              ▲
                                              │ REST /api (JWT)
                                     ┌──────────────────┐
-                                    │ Website phụ huynh  │  (web/)
+                                    │ Website phụ huynh  │  (frontend/)
                                     └──────────────────┘
 ```
 
@@ -23,8 +23,8 @@ ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
 | Thư mục | Nội dung |
 |---|---|
 | `backend/` | API Node.js: quản lý thiết bị, xác thực thiết bị (HMAC), tài khoản phụ huynh (JWT), endpoint quản trị. Xem `backend/README.md`. |
-| `frontend/` | Console kiểm thử dev (Vite + React): làn phụ huynh, thiết bị mô phỏng chạy trong trình duyệt, làn vận hành. Không phải dashboard sản phẩm. Xem `frontend/README.md`. |
-| `web/` | Website cho phụ huynh (Vite + React): trang giới thiệu sản phẩm và bảng điều khiển sau khi đăng nhập, song ngữ. Chạy ở http://localhost:5174. Xem `web/README.md`. |
+| `brain/` | Dịch vụ hội thoại của Buddy: nhận dạng giọng nói, bộ nhớ, prompt, mô hình ngôn ngữ, tổng hợp giọng. Xem `brain/README.md`. |
+| `frontend/` | Website cho phụ huynh (Vite + React): trang giới thiệu sản phẩm và bảng điều khiển sau khi đăng nhập, nơi trình duyệt cũng đóng vai đồ chơi để trò chuyện với Buddy. Song ngữ. Chạy ở http://localhost:5174. Xem `frontend/README.md`. |
 | `docker/` | Script khởi tạo Postgres (tạo thêm database test). |
 | `docker-compose.yml` | Postgres (pgvector) và Redis cho dev và test. |
 
@@ -45,12 +45,12 @@ npm run seed          # tạo gia đình demo, 1 thiết bị đã ghép, 1 thi�
 npm run dev           # http://localhost:3000/healthz
 ```
 
-Chạy cả bản demo (brain, backend và web) trong một cửa sổ, từ thư mục gốc (mỗi
+Chạy cả bản demo (brain, backend và frontend) trong một cửa sổ, từ thư mục gốc (mỗi
 thư mục đã `npm install` và có `.env`; `BRAIN_TOKEN` của `backend/.env` và
 `brain/.env` phải trùng nhau):
 
 ```powershell
-npm run dev           # brain :8080, backend :3000, web http://localhost:5174/app/talk
+npm run dev           # brain :8080, backend :3000, frontend http://localhost:5174/app/talk
 ```
 
 Mỗi dòng log có tên dịch vụ ở đầu. Ctrl+C dừng cả ba; một dịch vụ chết thì hai
@@ -72,13 +72,9 @@ stream, tắt, gỡ ghép):
 npm run e2e
 ```
 
-Bấm thử mọi thứ từ trình duyệt (backend phải đang chạy):
-
-```powershell
-cd frontend
-npm install
-npm run dev           # http://localhost:5173
-```
+Các endpoint vận hành `/admin` (tắt, thu hồi thiết bị, cấp credit, cấp lại mã
+ghép) không có giao diện: gọi bằng curl với `Authorization: Bearer <ADMIN_TOKEN>`,
+danh sách ở `backend/README.md`.
 
 ## Lưu ý
 

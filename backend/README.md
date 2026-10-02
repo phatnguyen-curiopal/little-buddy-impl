@@ -153,7 +153,7 @@ bí mật xóa dấu) và sự kiện `secret_revealed`; vận hành thấy dấ
 tra chữ ký. Trình duyệt sau
 đó ký `/v1` như firmware (không gửi heartbeat), nên mỗi lượt vẫn qua ask gate
 và trừ credit như đồ chơi thật. `WEB_TOY=off` tắt tính năng
-(`403 web_toy_disabled`); `GET /api/me` trả `web_toy` để web ẩn nút Trò chuyện.
+(`403 web_toy_disabled`); `GET /api/me` trả `web_toy` để frontend ẩn nút Trò chuyện.
 
 Chi tiết giao thức chữ ký cho firmware: `docs/device_auth.md`.
 
@@ -161,7 +161,8 @@ Chi tiết giao thức chữ ký cho firmware: `docs/device_auth.md`.
 
 Mọi phản hồi là JSON, khóa `snake_case`, lỗi có dạng
 `{ "error": { "code", "message", ... } }` kèm header `x-request-id`.
-Cách nhanh nhất để bấm thử bằng tay là console ở `frontend/` (`npm run dev`).
+Cách nhanh nhất để bấm thử bằng tay là website ở `frontend/` (`npm run dev` ở thư
+mục gốc chạy cả brain, backend và frontend); `/admin` gọi bằng curl.
 
 ### `/api` (dashboard, `Authorization: Bearer <access_token>`)
 

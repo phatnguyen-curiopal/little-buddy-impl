@@ -171,7 +171,7 @@ Vietnamese.
 `laughing`, `love`, `curious`, `surprised`, `wink`, `shy`, `confused`,
 `sad`, `sleepy`. The firmware should draw each one and fall back to
 `neutral` for anything it does not know. The model picks the answer's
-emotion from the whole set. The parent website (`web/`) draws the same set.
+emotion from the whole set. The parent website (`frontend/`) draws the same set.
 
 A turn that is not ended within 120 seconds, a cancelled turn, a socket
 that drops mid-turn, and a kill switch (close code 4003) all end as

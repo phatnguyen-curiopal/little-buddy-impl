@@ -17,6 +17,7 @@ prompt; hợp đồng nằm ở `brain/docs/contract.md`.
 |---|---|---|
 | `NODE_ENV` | `development` | `development` / `test` / `production` |
 | `PORT` | `3000` | Cổng HTTP |
+| `HOST` | (trống: mọi interface) | Đặt `127.0.0.1` khi chạy sau reverse proxy để API không lộ ra ngoài proxy |
 | `LOG_LEVEL` | `info` (test: `silent`) | `debug` / `info` / `warn` / `error` / `silent` |
 | `DATABASE_URL` | compose local | Bắt buộc ở production |
 | `REDIS_URL` | compose local | Bắt buộc ở production |
@@ -32,7 +33,7 @@ prompt; hợp đồng nằm ở `brain/docs/contract.md`.
 | `DEVICE_HEARTBEAT_SEC` | `60` | Chu kỳ heartbeat khi đã ghép |
 | `DEVICE_HEARTBEAT_UNCLAIMED_SEC` | `5` | Chu kỳ heartbeat khi chưa ghép |
 | `DEVICE_AUTH_FAIL_LIMIT` | `30` | Số lần xác thực hỏng mỗi phút trước khi khóa tạm |
-| `TRUST_PROXY` | `0` | Đặt `1` khi chạy sau nginx/pm2 |
+| `TRUST_PROXY` | `0` | Số proxy đứng trước: `1` sau nginx, `2` sau Cloudflare + nginx |
 | `WELCOME_CREDITS` | `10` | Credit tặng cho gia đình mới |
 | `TURN_MAX_SEC` | `120` | Một lượt nói dài tối đa bao nhiêu giây; audio quá mức này bị bỏ. Với `PROVIDER_MODE=brain` tối đa 196 (brain nhận thân tối đa 6 MB) |
 | `CONVERSATION_IDLE_SEC` | `300` | Các lượt cách nhau ít hơn chừng này thuộc cùng một cuộc trò chuyện |

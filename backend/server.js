@@ -20,8 +20,8 @@ await db.ping();
 await sweepStale();
 setInterval(() => sweepStale().catch((err) => log.warn('turns_sweep_failed', { err_message: err.message })), 60_000).unref();
 
-server.listen(config.port, () => {
-  log.info('server_listening', { port: config.port, node_env: config.nodeEnv, device_auth: config.deviceAuth, provider_mode: config.providerMode, web_toy: config.webToy });
+server.listen(config.port, config.host, () => {
+  log.info('server_listening', { host: config.host ?? 'all', port: config.port, node_env: config.nodeEnv, device_auth: config.deviceAuth, provider_mode: config.providerMode, web_toy: config.webToy });
   if (config.deviceAuth === 'off') {
     // Loud on purpose: a server running like this accepts any device id.
     log.warn('device_auth_off', { note: 'signature checks are disabled; never run like this outside local dev' });

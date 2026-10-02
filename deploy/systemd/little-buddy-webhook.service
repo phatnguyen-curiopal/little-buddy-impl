@@ -1,0 +1,22 @@
+# GitHub push webhook (deploy/webhook.mjs). Unprivileged: it can only
+# rewrite its trigger file, which little-buddy-deploy.path watches.
+[Unit]
+Description=Little Buddy GitHub webhook (a push to main starts a deploy)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /opt/little-buddy/bin/webhook.mjs
+EnvironmentFile=/opt/little-buddy/env/webhook.env
+DynamicUser=yes
+StateDirectory=little-buddy-webhook
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+MemoryMax=128M
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

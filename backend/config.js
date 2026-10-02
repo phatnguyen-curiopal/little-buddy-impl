@@ -113,6 +113,10 @@ export function loadConfig(env = process.env) {
     nodeEnv,
     isProd,
     port: readInt(env, 'PORT', 3000, 1, 65535),
+    // Unset listens on every interface (dev, where Vite proxies from
+    // localhost). Behind nginx on a host with no firewall it must be
+    // 127.0.0.1, or the API is reachable around the proxy and its TLS.
+    host: env.HOST || undefined,
     logLevel,
     databaseUrl,
     redisUrl,

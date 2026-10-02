@@ -1,0 +1,9 @@
+# Secrets and factory manifests must never be baked into an image.
+.env
+.env.*
+!.env.example
+manifests
+node_modules
+tests
+coverage
+*.log

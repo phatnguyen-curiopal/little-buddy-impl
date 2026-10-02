@@ -1,0 +1,11 @@
+# Starts a deploy whenever the webhook rewrites its trigger file. The real
+# path is under private/ because the webhook runs with DynamicUser.
+[Unit]
+Description=Start a Little Buddy deploy when the GitHub webhook fires
+
+[Path]
+PathModified=/var/lib/private/little-buddy-webhook/trigger
+Unit=little-buddy-deploy.service
+
+[Install]
+WantedBy=multi-user.target

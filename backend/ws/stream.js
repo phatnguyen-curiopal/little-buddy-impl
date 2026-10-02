@@ -16,6 +16,12 @@ export const CLOSE_BLOCKED = 4003;
 // most 2000 characters, so 64 KB is generous; anything bigger is closed by
 // ws with 1009 before it is ever buffered.
 export const MAX_PAYLOAD = 64 * 1024;
+// Cloudflare drops a WebSocket that carries nothing for 100 s and nginx's
+// default read timeout is 60 s, while a toy can sit idle far longer between
+// presses (the web toy sends no heartbeat at all). A protocol ping is
+// answered by the client's WebSocket stack, so it keeps the path open
+// without any firmware or browser code.
+export const KEEPALIVE_MS = 30_000;
 
 const STATUS_TEXT = { 401: 'Unauthorized', 403: 'Forbidden', 429: 'Too Many Requests', 503: 'Service Unavailable' };
 
@@ -113,7 +119,13 @@ export function attachStream(server) {
       if (msg?.type === 'ping') return safeSend(ws, { type: 'pong', server_time: nowSec() });
       return handleText(ws, msg).catch((err) => log.error('turn_handler_failed', { device_id: ws.device.id, err_message: err.message }));
     });
-    ws.on('close', () => abandonSocket(ws, 'socket_closed'));
+    const keepalive = setInterval(() => {
+      if (ws.readyState === ws.OPEN) ws.ping();
+    }, KEEPALIVE_MS);
+    ws.on('close', () => {
+      clearInterval(keepalive);
+      abandonSocket(ws, 'socket_closed');
+    });
     safeSend(ws, { type: 'ready', device_id: ws.device.id, server_time: nowSec() });
     log.info('stream_open', { device_id: ws.device.id });
   });

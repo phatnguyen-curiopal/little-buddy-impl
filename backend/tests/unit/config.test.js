@@ -124,3 +124,9 @@ test('the web toy is on outside production and off in production unless set', ()
   assert.equal(loadConfig({ ...validProd, WEB_TOY: 'on' }).webToy, true);
   assert.throws(() => loadConfig({ WEB_TOY: 'maybe' }), /WEB_TOY/);
 });
+
+test('HOST binds one interface; unset or empty listens on all', () => {
+  assert.equal(loadConfig({}).host, undefined);
+  assert.equal(loadConfig({ HOST: '' }).host, undefined);
+  assert.equal(loadConfig({ HOST: '127.0.0.1' }).host, '127.0.0.1');
+});

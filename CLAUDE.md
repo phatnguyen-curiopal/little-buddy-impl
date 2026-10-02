@@ -98,6 +98,14 @@ From `frontend/`: `npm install`, `npm run dev` (http://localhost:5174, needs the
 - `src/talk/signing.js` must stay byte-compatible with `backend/devices/signing.js`; `tests/signing.test.js` pins it to `backend/tests/fixtures/hmac_vectors.json`. The signer takes `bodyText` (a string) and the same string is what fetch sends, so the hashed bytes are the sent bytes.
 - The backend has no CORS middleware; `vite.config.js` proxies `/api` and `/v1` same-origin. Never add CORS to the backend for the site.
 
+## Deploy
+
+`deploy/` ships the demo to https://little-buddy.curiopal.com on a shared production host that serves other sites: only ever add things there, never edit or restart what other sites use (`deploy/README.md`, in Vietnamese, has the layout and operations). A push to `main` deploys by itself: GitHub calls `/hooks/deploy`, `deploy/webhook.mjs` (unprivileged, `node --test deploy/webhook.test.mjs`) verifies the signature and only rewrites a trigger file, and a systemd path unit runs `deploy/auto_deploy.sh` as root (fetch `origin/main`, build the frontend in a Node 22 container, then `deploy/remote_deploy.sh`). `bash deploy/deploy.sh` from the repo root (Git Bash) is the manual path for an uncommitted tree; it ships the working tree minus gitignored files and pipes the same `remote_deploy.sh`, which builds the images (`backend/Dockerfile`, `brain/Dockerfile`), migrates both services, swaps the static site, reverts its own nginx file if `nginx -t` fails, and installs the webhook's files and units. The two paths share a lock. So whatever lands on `main` goes live: never push something that would not boot.
+
+- The containers use host networking to reach the host's native Postgres 16 on 127.0.0.1 without touching its `listen_addresses` or `pg_hba`, and bind 127.0.0.1 themselves (the backend through `HOST`) because the host has no firewall. Its pgvector is 0.6: no `halfvec` or other later features in migrations.
+- Production runs with `WEB_TOY=on`, `PAYMENT_PROVIDER=disabled` and `TRUST_PROXY=2` (Cloudflare, then nginx). nginx does not proxy `/admin`; it is called on the host.
+- The backend pings every stream socket every 30 s (`KEEPALIVE_MS` in `ws/stream.js`): Cloudflare drops a WebSocket idle for 100 s, and the web toy sends no heartbeat.
+
 ## Tooling notes
 
 - Bash heredocs for multi-file JS writes failed to parse once in this environment; the Write tool is reliable for source files.

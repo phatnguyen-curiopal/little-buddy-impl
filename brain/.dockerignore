@@ -1,0 +1,10 @@
+# API keys and debug dumps of children's words must never be baked into an
+# image.
+.env
+.env.*
+!.env.example
+*.log
+*.wav
+node_modules
+tests
+coverage

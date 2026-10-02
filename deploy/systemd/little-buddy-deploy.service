@@ -1,0 +1,11 @@
+# Deploys origin/main (deploy/auto_deploy.sh). Started by
+# little-buddy-deploy.path; never enabled on its own.
+[Unit]
+Description=Deploy Little Buddy from origin/main
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/little-buddy/bin/auto_deploy.sh
+TimeoutStartSec=30min

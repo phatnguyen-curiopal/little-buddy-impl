@@ -1,0 +1,42 @@
+# Little Buddy on the shared curiopal host (see deploy/README.md).
+#
+# Every service uses the host network so the brain and backend reach the
+# host's native Postgres on 127.0.0.1 without any change to its
+# listen_addresses or pg_hba, which other sites depend on. The host has no
+# firewall, so each service binds 127.0.0.1 itself: Redis by flag, the brain
+# always, the backend through HOST in backend.env.
+name: little-buddy
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  redis:
+    image: redis:7-alpine
+    network_mode: host
+    # Nonces and rate limits only, all TTL'd, so nothing is ever saved.
+    command: ['redis-server', '--bind', '127.0.0.1', '--port', '6390', '--save', '', '--appendonly', 'no', '--maxmemory', '256mb', '--maxmemory-policy', 'noeviction']
+    restart: unless-stopped
+    logging: *logging
+
+  brain:
+    build: ../brain
+    network_mode: host
+    env_file: /opt/little-buddy/env/brain.env
+    restart: unless-stopped
+    logging: *logging
+
+  backend:
+    build: ../backend
+    network_mode: host
+    env_file: /opt/little-buddy/env/backend.env
+    volumes:
+      # Factory manifests hold device secrets and claim codes: on the host
+      # only, never in the image.
+      - /opt/little-buddy/manifests:/app/manifests
+    depends_on: [redis, brain]
+    restart: unless-stopped
+    logging: *logging

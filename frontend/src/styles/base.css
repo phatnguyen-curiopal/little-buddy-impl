@@ -86,19 +86,17 @@ img, svg { max-width: 100%; }
 .wordmark { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.02em; text-decoration: none; }
 .wordmark--ink { color: var(--ink); }
 .dotface { width: 36px; height: 27px; border-radius: 9px; background: var(--screen); color: var(--glow); display: grid; place-items: center; flex: none; }
-.dotface svg { width: 28px; }
+.dotface .bd-screen { width: 30px; }
 
 /* The LCD chip used wherever a small Buddy face appears */
 .chip-screen { width: 84px; height: 58px; border-radius: 16px; background: var(--screen); color: var(--glow); display: grid; place-items: center; flex: none; }
-.chip-screen svg { width: 66px; filter: drop-shadow(0 0 5px rgba(157, 187, 255, 0.45)); }
-.chip-screen.dim { color: var(--glow-dim); }
-.chip-screen.dim svg { filter: none; }
+.chip-screen .bd-screen { width: 68px; }
 .chip-screen--sm { width: 52px; height: 38px; border-radius: 11px; }
-.chip-screen--sm svg { width: 42px; }
+.chip-screen--sm .bd-screen { width: 44px; }
 .chip-screen--xl { width: 150px; height: 104px; border-radius: 28px; }
-.chip-screen--xl svg { width: 118px; }
+.chip-screen--xl .bd-screen { width: 124px; }
 .chip-screen--hero { width: min(300px, 70vw); height: min(208px, 48vw); border-radius: 44px; box-shadow: 0 0 60px rgba(157, 187, 255, 0.18); }
-.chip-screen--hero svg { width: 76%; }
+.chip-screen--hero .bd-screen { width: 82%; }
 
 .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .pill svg { width: 14px; height: 14px; }
@@ -160,9 +158,7 @@ img, svg { max-width: 100%; }
 .step-title { font-size: 19px; }
 .hero-screen { height: 150px; border-radius: 24px; background: var(--screen); color: var(--glow); display: grid; place-items: center; }
 .hero-screen.full { width: 100%; }
-.hero-screen svg { width: 140px; filter: drop-shadow(0 0 8px rgba(157, 187, 255, 0.5)); }
-.hero-screen.dim { color: var(--glow-dim); }
-.hero-screen.dim svg { filter: none; }
+.hero-screen .bd-screen { width: 190px; }
 .choices { display: grid; gap: 10px; }
 .choices--row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .choice { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); width: 100%; text-align: left; transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s var(--ease-out); }

@@ -89,9 +89,11 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
    khi mất phản hồi) thì nhận lại đúng đồ chơi đó, 200, không ghi gì thêm.
    Cùng transaction đó ghi **hồ sơ Buddy** (`buddy_profiles`): tên (1 đến 24
    ký tự), vai (`friend` mặc định, `daddy`, `mommy`, `teacher`), một trong 16
-   tính cách (`ENFP` mặc định) và nguồn (`quiz`, `picked`, `default`). Không
+   tính cách (`ENFP` mặc định), nguồn (`quiz`, `picked`, `default`) và ngoại
+   hình trên web (`design`: `orbit` mặc định, `volt`, `glim`; brain không dùng). Không
    gửi `profile` thì dùng mặc định Buddy / bạn thân / ENFP. Mỗi lần ghép đều
-   ghi đè hồ sơ, nên đồ chơi đổi chủ không mang theo tên và tính cách cũ.
+   ghi đè hồ sơ, nên đồ chơi đổi chủ không mang theo tên, tính cách và ngoại
+   hình cũ.
    Hồ sơ còn có **cài đặt trò chuyện**: ngôn ngữ (`vi` mặc định hoặc `en`,
    độc lập với ngôn ngữ giao diện web), giọng (`voice_id`, `null` là giọng
    mặc định trong bảng `voices`), học từ các cuộc trò chuyện (`learn`, mặc

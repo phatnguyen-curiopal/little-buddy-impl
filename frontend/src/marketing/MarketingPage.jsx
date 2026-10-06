@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import Face from '../components/Face.jsx';
+import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
 import Toy from '../components/Toy.jsx';
 import { Icon, LangSwitch } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
@@ -37,7 +37,7 @@ function Nav() {
   return (
     <header className={`nav ${scrolled ? 'nav--solid' : ''} ${open ? 'nav--open' : ''}`}>
       <div className="wrap nav-inner">
-        <a className="wordmark" href="#top"><span className="dotface"><Face emotion="neutral" /></span><span>Little Buddy</span></a>
+        <a className="wordmark" href="#top"><span className="dotface"><BuddyScreen emotion="neutral" /></span><span>Little Buddy</span></a>
         <nav className="nav-links" aria-label={t('navSections')}>
           {links.map(([href, key]) => <a key={href} href={href}>{t(key)}</a>)}
         </nav>
@@ -108,7 +108,7 @@ function HowItWorks() {
             <article key={s.n} className="step lift">
               <div className="step-top">
                 <span className="step-n">{s.n}</span>
-                {s.face ? <span className="chip-screen"><Face emotion={s.face} /></span> : <span className="mini-phone"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="6.5" y="3" width="11" height="18" rx="3" /><path d="M10.5 17.5h3" /></svg></span>}
+                {s.face ? <span className="chip-screen"><BuddyScreen emotion={s.face} /></span> : <span className="mini-phone"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="6.5" y="3" width="11" height="18" rx="3" /><path d="M10.5 17.5h3" /></svg></span>}
               </div>
               <h3>{t(`s${s.n}t`)}</h3>
               <p>{t(`s${s.n}b`)}</p>
@@ -141,7 +141,7 @@ function Emotions() {
         <div className="band-head"><p className="eyebrow">{t('emoEyebrow')}</p><h2>{t('emoTitle')}</h2><p>{t('emoSub')}</p></div>
         <div className="emo-layout">
           <div className="emo-stage">
-            <div className="emo-screen" key={picked}><Face emotion={picked} label={t(`emo_${picked}`)} /></div>
+            <div className="emo-screen" key={picked}><BuddyScreen emotion={picked} label={t(`emo_${picked}`)} /></div>
             <div className="emo-caption" aria-live="polite">
               <b>{t(`emo_${picked}`)}</b>
               <span>{t(`emoWhen_${picked}`)}</span>
@@ -158,7 +158,7 @@ function Emotions() {
                 onPointerEnter={() => choose(e)}
                 onFocus={() => choose(e)}
               >
-                <span className="chip-screen"><Face emotion={e} /></span>
+                <span className="chip-screen"><BuddyScreen emotion={e} /></span>
                 <span>{t(`emo_${e}`)}</span>
               </button>
             ))}
@@ -301,7 +301,7 @@ function Closing() {
       <div className="wrap">
         <div className="closing-card">
           <div className="closing-faces" aria-hidden="true">
-            {['happy', 'love', 'excited', 'wink'].map((e, i) => <span key={e} className="chip-screen float" style={{ '--i': i }}><Face emotion={e} /></span>)}
+            {['happy', 'love', 'excited', 'wink'].map((e, i) => <span key={e} className="chip-screen float" style={{ '--i': i }}><BuddyScreen emotion={e} /></span>)}
           </div>
           <div>
             <h2>{t('closeTitle')}</h2>

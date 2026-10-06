@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateProfile, DEFAULT_PROFILE, DEFAULT_SETTINGS, ROLES } from '../../personalization/roles.js';
+import { validateProfile, DEFAULT_PROFILE, DEFAULT_SETTINGS, DESIGNS, ROLES } from '../../personalization/roles.js';
 
 const fields = (fn) => {
   try {
@@ -14,7 +14,7 @@ const fields = (fn) => {
 
 test('a full profile is cleaned: name trimmed and collapsed, code uppercased', () => {
   const out = validateProfile({ name: '  Bin   Bin ', role: 'teacher', personality: 'intj', personality_source: 'quiz' });
-  assert.deepEqual(out, { name: 'Bin Bin', role: 'teacher', personality: 'INTJ', personality_source: 'quiz', ...DEFAULT_SETTINGS });
+  assert.deepEqual(out, { name: 'Bin Bin', role: 'teacher', personality: 'INTJ', personality_source: 'quiz', design: 'orbit', ...DEFAULT_SETTINGS });
 });
 
 test('a full profile without a source counts as picked', () => {
@@ -37,6 +37,7 @@ test('partial updates accept any subset but not nothing', () => {
 test('defaults and roles match the prototype friend persona and the four spec roles', () => {
   assert.deepEqual({ ...DEFAULT_PROFILE }, {
     name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default',
+    design: 'orbit',
     language: 'vi', voice_id: null, learn: false, mood_pin: null,
   });
   assert.deepEqual(Object.keys(ROLES), ['friend', 'daddy', 'mommy', 'teacher']);
@@ -57,6 +58,16 @@ test('settings: a full profile can carry them, and bad ones are listed with the 
   assert.deepEqual(fields(() => validateProfile({ mood_pin: -1 }, { partial: true })), ['mood_pin']);
   assert.deepEqual(fields(() => validateProfile({ mood_pin: 12.5 }, { partial: true })), ['mood_pin']);
   assert.deepEqual(fields(() => validateProfile({ voice_id: 42 }, { partial: true })), ['voice_id']);
+});
+
+test('design: one of the three, never null; a full profile defaults to orbit', () => {
+  assert.deepEqual(DESIGNS, ['orbit', 'volt', 'glim']);
+  assert.equal(validateProfile({ name: 'Kem', role: 'friend', personality: 'ENFP' }).design, 'orbit');
+  assert.equal(validateProfile({ name: 'Kem', role: 'friend', personality: 'ENFP', design: 'glim' }).design, 'glim');
+  assert.deepEqual(validateProfile({ design: 'volt' }, { partial: true }), { design: 'volt' });
+  assert.deepEqual(fields(() => validateProfile({ design: null }, { partial: true })), ['design']);
+  assert.deepEqual(fields(() => validateProfile({ design: 'classic' }, { partial: true })), ['design']);
+  assert.deepEqual(fields(() => validateProfile({ name: '', role: 'friend', personality: 'ENFP', design: 'ORBIT' })), ['design', 'name']);
 });
 
 test('partial: null is a value for voice_id and mood_pin, 0 is a real pin, absent is untouched', () => {

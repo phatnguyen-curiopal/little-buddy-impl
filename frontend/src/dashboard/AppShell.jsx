@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import Face from '../components/Face.jsx';
+import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
 import { Icon, LangSwitch, Skeleton } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { useAuth } from '../lib/auth.jsx';
@@ -38,7 +38,7 @@ function Screen({ name }) {
   if (d.error && !d.me) {
     return (
       <div className="panel center pad">
-        <span className="chip-screen chip-screen--xl"><Face emotion="confused" /></span>
+        <span className="chip-screen chip-screen--xl"><BuddyScreen emotion="confused" /></span>
         <h2>{t('loadFailed')}</h2>
         <button type="button" className="btn pop" onClick={d.reload}>{t('tryAgain')}</button>
       </div>
@@ -74,7 +74,7 @@ function Shell({ screen }) {
     <LayerContext.Provider value={layers}>
       <div className="app">
         <aside className="side">
-          <Link className="wordmark wordmark--ink" to="/app"><span className="dotface"><Face emotion="neutral" /></span><span>Little Buddy</span></Link>
+          <Link className="wordmark wordmark--ink" to="/app"><span className="dotface"><BuddyScreen emotion="neutral" /></span><span>Little Buddy</span></Link>
           <nav className="side-nav" aria-label={t('appNav')}>
             {screens.map((r) => (
               <Link key={r.name} to={r.path} className="nav-item" aria-current={screen === r.name ? 'page' : undefined} aria-label={t(`nav_${r.name}`)}>
@@ -88,7 +88,7 @@ function Shell({ screen }) {
           </div>
         </aside>
         <main className="main">
-          <div className="appbar"><Link className="wordmark wordmark--ink" to="/app"><span className="dotface"><Face emotion="neutral" /></span><span>Little Buddy</span></Link><LangSwitch /></div>
+          <div className="appbar"><Link className="wordmark wordmark--ink" to="/app"><span className="dotface"><BuddyScreen emotion="neutral" /></span><span>Little Buddy</span></Link><LangSwitch /></div>
           <header className="page-head">
             <div><p className="eyebrow">{eyebrow}</p><h1>{t(`nav_${screen}`)}</h1></div>
             <div className="head-actions"><LangSwitch /><button type="button" className="btn pop sheen" onClick={() => layers.openAdd()}>{Icon.plus}<span>{t('addToy')}</span></button></div>

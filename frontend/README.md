@@ -46,8 +46,18 @@ mô phỏng đúng hành vi này.
 
 ## Cảm xúc của Buddy
 
-14 cảm xúc, mỗi cảm xúc có chuyển động riêng (`src/components/Face.jsx`,
-`src/styles/motion.css`): `neutral`, `listening`, `thinking`, `happy`,
+Buddy có ba ngoại hình (`src/lib/designs.js`): **Orbit** (nhà thám hiểm không
+gian, mặc định), **Volt** (chú mèo robot) và **Glim** (đốm sáng trong lọ thủy
+tinh). Mỗi đồ chơi chọn ngoại hình riêng trong hồ sơ (bước "Ngoại hình" của
+luồng thêm đồ chơi, hoặc trong drawer); chỗ nào vẽ Buddy mà không gắn với đồ
+chơi cụ thể (logo, trang giới thiệu, đăng nhập) thì dùng Orbit. Thân đồ chơi
+ở `src/components/ToyShell.jsx`, mặt đứng riêng (thẻ, chip) ở
+`src/components/buddy/BuddyScreen.jsx`.
+
+14 cảm xúc, mỗi cảm xúc có chuyển động riêng, toàn bộ bằng CSS trong
+`src/styles/buddy.css`. Mắt và miệng là đa giác `clip-path` cùng số điểm
+(`src/styles/buddy-shapes.css`, sinh bởi `node scripts/buddy_shapes.js`) nên
+mặt chuyển mượt từ cảm xúc này sang cảm xúc khác: `neutral`, `listening`, `thinking`, `happy`,
 `excited`, `laughing`, `love`, `curious`, `surprised`, `wink`, `shy`,
 `confused`, `sad`, `sleepy`. Giá trị lạ hiển thị `neutral`. Khi dùng brain, mô
 hình tự gắn cảm xúc cho mỗi câu trả lời; chế độ mock chỉ gửi `listening`,
@@ -170,14 +180,15 @@ giao diện ở `src/dashboard/Talk.jsx`; thân đồ chơi dùng chung với he
 ## Cấu trúc
 
 ```
-src/lib/        routes (thuần), router, api (token + refresh), auth, i18n, translate, format, stats, emotions, motion, personality, toySettings
+src/lib/        routes (thuần), router, api (token + refresh), auth, i18n, translate, format, stats, emotions, designs, motion, personality, toySettings
 src/i18n/       vi.js, en.js (mọi câu chữ)
-src/components/ Face, Toy (hero), ToyShell (thân đồ chơi dùng chung), Confetti, ui (Layer, Toast, Pill, LangSwitch...)
+src/components/ Toy (hero), ToyShell (thân đồ chơi, ba ngoại hình), buddy/ (BuddyFace, BuddyScreen), Confetti, ui (Layer, Toast, Pill, LangSwitch...)
 src/talk/       đồ chơi trên web: signing, dsp, vad, machine (thuần), useWebToy, mic, player
 src/marketing/  MarketingPage
 src/auth/       AuthPage
 src/dashboard/  AppShell, screens, Talk, layers (drawer, thêm đồ chơi, mua lượt), profile (hồ sơ, trắc nghiệm, cài đặt trò chuyện), WeekChart, parts, data
-src/styles/     tokens, base, motion, marketing, app
+src/styles/     tokens, base, motion, buddy-shapes, buddy, marketing, app
+scripts/        buddy_shapes.js (sinh buddy-shapes.css)
 tests/          node --test cho các module thuần
 ```
 

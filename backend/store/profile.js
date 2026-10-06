@@ -1,4 +1,4 @@
-const COLUMNS = `device_id, name, role, personality, personality_source, language, voice_id, learn, mood_pin,
+const COLUMNS = `device_id, name, role, personality, personality_source, design, language, voice_id, learn, mood_pin,
   created_at, updated_at`;
 
 // A claim always writes the whole row, settings included, so a new owner
@@ -6,14 +6,14 @@ const COLUMNS = `device_id, name, role, personality, personality_source, languag
 // previous family's.
 export async function upsert(tx, deviceId, p) {
   const r = await tx.query(
-    `INSERT INTO buddy_profiles (device_id, name, role, personality, personality_source, language, voice_id, learn, mood_pin)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO buddy_profiles (device_id, name, role, personality, personality_source, design, language, voice_id, learn, mood_pin)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (device_id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role,
-       personality = EXCLUDED.personality, personality_source = EXCLUDED.personality_source,
+       personality = EXCLUDED.personality, personality_source = EXCLUDED.personality_source, design = EXCLUDED.design,
        language = EXCLUDED.language, voice_id = EXCLUDED.voice_id, learn = EXCLUDED.learn,
        mood_pin = EXCLUDED.mood_pin, updated_at = now()
      RETURNING ${COLUMNS}`,
-    [deviceId, p.name, p.role, p.personality, p.personality_source, p.language, p.voice_id, p.learn, p.mood_pin],
+    [deviceId, p.name, p.role, p.personality, p.personality_source, p.design, p.language, p.voice_id, p.learn, p.mood_pin],
   );
   return r.rows[0];
 }
@@ -23,6 +23,7 @@ const FIELDS = [
   ['role', 'text'],
   ['personality', 'text'],
   ['personality_source', 'text'],
+  ['design', 'text'],
   ['language', 'text'],
   ['voice_id', 'text'],
   ['learn', 'boolean'],

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import Face from '../components/Face.jsx';
+import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
 import ToyShell from '../components/ToyShell.jsx';
 import { Icon, Pill, useErrorText, useToast } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
@@ -7,6 +7,7 @@ import { api } from '../lib/api.js';
 import { Link, navigate, useLocation } from '../lib/router.js';
 import { usePointerLook } from '../lib/motion.js';
 import { normalizeEmotion } from '../lib/emotions.js';
+import { designOf } from '../lib/designs.js';
 import { useWebToy, webToySupported } from '../talk/useWebToy.js';
 import { canSend, tapAction } from '../talk/machine.js';
 import { micSupported } from '../talk/mic.js';
@@ -120,6 +121,7 @@ function TalkRoom({ device, toys }) {
   const d = useFamilyData();
   const nameOf = useToyName();
   const buddyName = device.profile?.name || 'Buddy';
+  const design = designOf(device);
   const stageRef = useRef(null);
   const ringRef = useRef(null);
   const logRef = useRef(null);
@@ -174,6 +176,7 @@ function TalkRoom({ device, toys }) {
     <div className="talk-layout">
       <section className="talk-stage" ref={stageRef} aria-label={t('talkTo', { name: buddyName })}>
         <ToyShell
+          design={design}
           phase={phase}
           emotion={face}
           look={phase === 'idle' ? look : null}
@@ -181,7 +184,8 @@ function TalkRoom({ device, toys }) {
           pressed={state.status === 'listening'}
           label={state.status === 'listening' ? t('toyTapStop') : t('talkTapStart', { name: buddyName })}
           busy={!action}
-          className={`toy--live ${state.status === 'asleep' || state.status === 'offline' ? 'toy--dim' : ''}`}
+          live
+          dim={state.status === 'asleep' || state.status === 'offline'}
           ringRef={ringRef}
         />
         <div className="talk-status" aria-live="polite">
@@ -200,7 +204,7 @@ function TalkRoom({ device, toys }) {
       <section className="panel chat" aria-label={t('nav_talk')}>
         <div className="chat-head">
           <div className="chat-who">
-            <span className={`chip-screen chip-screen--sm ${state.status === 'asleep' ? 'dim' : ''}`}><Face emotion={face} /></span>
+            <span className={`chip-screen chip-screen--sm ${state.status === 'asleep' ? 'dim' : ''}`}><BuddyScreen design={design} emotion={face} dim={state.status === 'asleep'} /></span>
             <div className="chat-name">
               {toys.length > 1 ? (
                 <select className="input input--auto chat-pick" aria-label={t('talkPick')} value={device.id}
@@ -265,7 +269,7 @@ export default function Talk() {
   if (d.me && d.me.web_toy === false) {
     return (
       <section className="panel center pad">
-        <span className="chip-screen chip-screen--xl dim"><Face emotion="sleepy" /></span>
+        <span className="chip-screen chip-screen--xl dim"><BuddyScreen emotion="sleepy" dim /></span>
         <h2>{t('talkOffT')}</h2>
         <p className="muted">{t('talkOffB')}</p>
       </section>
@@ -275,7 +279,7 @@ export default function Talk() {
   if (!selected) {
     return (
       <section className="panel center pad">
-        <span className="chip-screen chip-screen--xl dim"><Face emotion="sleepy" /></span>
+        <span className="chip-screen chip-screen--xl dim"><BuddyScreen emotion="sleepy" dim /></span>
         <h2>{t('talkNoToyT')}</h2>
         <p className="muted">{t('talkNoToyB')}</p>
         <Link className="btn pop" to="/app/toys">{t('talkGoToys')}</Link>

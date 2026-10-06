@@ -17,7 +17,7 @@ export default {
   trust: 'Tặng 10 câu trả lời khi tạo tài khoản · Không thu phí hằng tháng',
 
   // hero toy
-  toyIdle: 'Chạm nút xanh để hỏi thử Buddy', toyListening: 'Buddy đang nghe…', toySilence: 'Bé đã ngừng nói, Buddy đang chờ thêm một chút…',
+  toyIdle: 'Chạm nút sáng để hỏi thử Buddy', toyListening: 'Buddy đang nghe…', toySilence: 'Bé đã ngừng nói, Buddy đang chờ thêm một chút…',
   toyHeard: 'Buddy nhận ra bé đã nói xong', toyStopped: 'Bé chạm nút lần nữa nên Buddy thôi nghe', toyThinking: 'Buddy đang nghĩ…',
   toyAnswer: 'Chạm lần nữa để hỏi câu khác', toyTap: 'Chạm để bắt đầu nói với Buddy', toyTapStop: 'Chạm để nói xong', asked: 'Bé hỏi',
   demo1q: 'Vì sao bầu trời lại có màu xanh?', demo1a: 'Vì ánh sáng Mặt Trời gặp không khí thì phần màu xanh bị tán ra khắp nơi, nên nhìn đâu mình cũng thấy xanh đó!',
@@ -128,6 +128,8 @@ export default {
   // Buddy profile
   profileTitle: 'Hồ sơ của Buddy',
   nameLabel: 'Tên của Buddy', nameHelp: 'Bé sẽ gọi Buddy bằng tên này.', suggestName: 'Gợi ý tên khác', needBuddyName: 'Đặt tên cho Buddy nhé (tối đa 24 ký tự).',
+  designLabel: 'Ngoại hình', design_orbit: 'Orbit', design_volt: 'Volt', design_glim: 'Glim',
+  designTag_orbit: 'Nhà thám hiểm không gian', designTag_volt: 'Chú mèo robot', designTag_glim: 'Đốm sáng trong lọ thủy tinh',
   roleLabel: 'Buddy xưng hô với bé như', role_friend: 'Bạn thân', role_daddy: 'Bố', role_mommy: 'Mẹ', role_teacher: 'Cô giáo',
   roleSays_friend: 'Xưng “tớ”, gọi bé là “cậu”', roleSays_daddy: 'Xưng “bố”, gọi bé là “con”', roleSays_mommy: 'Xưng “mẹ”, gọi bé là “con”', roleSays_teacher: 'Xưng “cô”, gọi bé là “con”',
   personalityLabel: 'Tính cách', tabQuiz: 'Làm trắc nghiệm', tabPick: 'Tự chọn',
@@ -136,6 +138,7 @@ export default {
   saveProfile: 'Lưu hồ sơ', editProfile: 'Sửa hồ sơ', profileSaved: 'Đã lưu hồ sơ của Buddy',
   source_quiz: 'theo bài trắc nghiệm', source_picked: 'bạn tự chọn', source_default: 'mặc định',
   addedB: 'Buddy đã về nhà bạn! Giờ mình làm quen với Buddy nhé.', nameStepT: 'Buddy tên là gì?',
+  lookStepT: '{name} trông như thế nào?', lookStepB: 'Chọn cách Buddy hiện trên web. Đổi lại lúc nào cũng được.',
   roleStepT: 'Buddy nói chuyện với bé như ai?', roleStepB: 'Cách Buddy xưng hô với bé. Đổi lại lúc nào cũng được.', roleShort: 'Vai',
   personalityStepT: '{name} có tính cách thế nào?', personalityStepB: 'Làm bài trắc nghiệm ngắn hoặc tự chọn một tính cách.', pickIntro: 'Xem cả 16 tính cách, chia thành 4 nhóm.',
   reviewStepT: 'Xem lại hồ sơ', reviewStepB: 'Chạm “Sửa” để đổi lại bất kỳ mục nào.', edit: 'Sửa', readyNamed: '{name} đã sẵn sàng!',
@@ -174,7 +177,7 @@ export default {
 
   // talk (the web toy)
   talkTo: 'Trò chuyện với {name}', talkPick: 'Chọn Buddy', talkLog: 'Cuộc trò chuyện',
-  talkConnecting: 'Đang kết nối với {name}…', talkIdle: 'Chạm nút xanh để nói với {name}, hoặc nhắn tin bên cạnh',
+  talkConnecting: 'Đang kết nối với {name}…', talkIdle: 'Chạm nút sáng để nói với {name}, hoặc nhắn tin bên cạnh',
   talkStarting: '{name} chuẩn bị nghe…', talkSpeakNow: 'Nói đi, {name} đang nghe', talkListening: '{name} đang nghe… Chạm lần nữa khi nói xong',
   talkThinking: '{name} đang nghĩ…', talkAnswered: '{name} đã trả lời', talkSpeaking: '{name} đang nói…',
   talkDenied: '{name} chưa trả lời được lúc này. Lý do có trong trang Hoạt động.',

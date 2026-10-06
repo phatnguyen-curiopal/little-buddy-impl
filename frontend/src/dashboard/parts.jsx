@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import Face from '../components/Face.jsx';
+import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
 import { Icon, Pill } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { relativeTime } from '../lib/format.js';
 import { normalizeEmotion } from '../lib/emotions.js';
 import { reducedMotion, useCountUp } from '../lib/motion.js';
-import { useLayers } from './data.jsx';
+import { designOf } from '../lib/designs.js';
+import { useFamilyData, useLayers } from './data.jsx';
 
 export function childOf(children, id) {
   return children.find((c) => c.id === id) ?? null;
@@ -79,7 +80,7 @@ export function ToyCard({ device, kids }) {
   const { openToy } = useLayers();
   return (
     <button type="button" className="toy-card lift" onClick={(e) => openToy(device.id, e.currentTarget)}>
-      <span className={`tc-screen ${look.dim ? 'dim' : ''}`}><Face emotion={face} /></span>
+      <span className={`tc-screen ${look.dim ? 'dim' : ''}`}><BuddyScreen design={designOf(device)} emotion={face} dim={look.dim} /></span>
       <span className="tc-body">
         <span className="tc-name">{name}</span>
         <span className="tc-meta"><Pill tone={look.tone}>{t(look.key)}</Pill><span>{t('seen', { t: relativeTime(device.last_seen_at, t) })}</span></span>
@@ -103,7 +104,7 @@ export function Onboard() {
   const { openAdd } = useLayers();
   return (
     <section className="panel onboard">
-      <span className="chip-screen chip-screen--xl float"><Face emotion="excited" /></span>
+      <span className="chip-screen chip-screen--xl float"><BuddyScreen emotion="excited" /></span>
       <div>
         <h2>{t('onboardT')}</h2>
         <p>{t('onboardB')}</p>
@@ -115,12 +116,14 @@ export function Onboard() {
 
 export function TurnRow({ turn }) {
   const { t } = useI18n();
+  // Drawn as the toy that answered; a toy since removed falls back to the default.
+  const design = designOf(useFamilyData().devices.find((x) => x.id === turn.device_id));
   const who = turn.child_name ?? turn.device_serial ?? 'Buddy';
   const when = relativeTime(turn.started_at, t);
   if (turn.status === 'completed') {
     return (
       <div className="feed-item">
-        <span className="chip-screen chip-screen--sm"><Face emotion={normalizeEmotion(turn.emotion)} /></span>
+        <span className="chip-screen chip-screen--sm"><BuddyScreen design={design} emotion={normalizeEmotion(turn.emotion)} /></span>
         <div>
           <div className="feed-title">{t('answered', { name: who })}</div>
           <div className="feed-sub">{when} · {t(`emo_${normalizeEmotion(turn.emotion)}`)}</div>
@@ -133,7 +136,7 @@ export function TurnRow({ turn }) {
   const reason = turn.status === 'denied' ? t(`r_${turn.denied_reason}`) : t(`r_${turn.status}`);
   return (
     <div className="feed-item">
-      <span className="chip-screen chip-screen--sm dim"><Face emotion={turn.status === 'denied' ? 'sleepy' : 'confused'} /></span>
+      <span className="chip-screen chip-screen--sm dim"><BuddyScreen design={design} emotion={turn.status === 'denied' ? 'sleepy' : 'confused'} dim /></span>
       <div>
         <div className="feed-title">{turn.status === 'accepted' ? t('answering', { name: who }) : t('notAnswered', { name: who })}</div>
         <div className="feed-sub">{reason} · {when}</div>

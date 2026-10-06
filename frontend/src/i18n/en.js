@@ -17,7 +17,7 @@ export default {
   trust: '10 free answers when you sign up · No monthly fee',
 
   // hero toy
-  toyIdle: 'Tap the blue button to try Buddy', toyListening: 'Buddy is listening…', toySilence: 'Your child stopped talking, Buddy waits a moment…',
+  toyIdle: 'Tap the glowing button to try Buddy', toyListening: 'Buddy is listening…', toySilence: 'Your child stopped talking, Buddy waits a moment…',
   toyHeard: 'Buddy noticed they finished talking', toyStopped: 'A second tap told Buddy they were done', toyThinking: 'Buddy is thinking…',
   toyAnswer: 'Tap again to ask something else', toyTap: 'Tap to start talking to Buddy', toyTapStop: 'Tap when you are done talking', asked: 'Your child asked',
   demo1q: 'Why is the sky blue?', demo1a: 'Sunlight bumps into the air and the blue part scatters everywhere, so blue is what we see all around!',
@@ -128,6 +128,8 @@ export default {
   // Buddy profile
   profileTitle: "Buddy's profile",
   nameLabel: "Buddy's name", nameHelp: 'Your child will call Buddy by this name.', suggestName: 'Suggest another name', needBuddyName: 'Please give Buddy a name (up to 24 characters).',
+  designLabel: 'Look', design_orbit: 'Orbit', design_volt: 'Volt', design_glim: 'Glim',
+  designTag_orbit: 'Space explorer', designTag_volt: 'Mecha cub', designTag_glim: 'Light in a glass jar',
   roleLabel: 'Buddy talks to your child like', role_friend: 'Best friend', role_daddy: 'Dad', role_mommy: 'Mom', role_teacher: 'Teacher',
   roleSays_friend: 'Says “tớ” and “cậu”, friend to friend', roleSays_daddy: 'Says “bố” and “con”, like a dad', roleSays_mommy: 'Says “mẹ” and “con”, like a mom', roleSays_teacher: 'Says “cô” and “con”, like a teacher',
   personalityLabel: 'Personality', tabQuiz: 'Take the quiz', tabPick: 'Choose myself',
@@ -136,6 +138,7 @@ export default {
   saveProfile: 'Save profile', editProfile: 'Edit profile', profileSaved: "Buddy's profile saved",
   source_quiz: 'from the quiz', source_picked: 'chosen by you', source_default: 'default',
   addedB: "Buddy is home! Now let's get to know each other.", nameStepT: "What's Buddy's name?",
+  lookStepT: 'What does {name} look like?', lookStepB: 'Pick how Buddy appears on the website. You can change it any time.',
   roleStepT: 'How should Buddy talk to your child?', roleStepB: 'This sets how Buddy addresses your child. You can change it any time.', roleShort: 'Role',
   personalityStepT: 'What is {name} like?', personalityStepB: 'Take a short quiz or choose a personality yourself.', pickIntro: 'See all 16 personalities in 4 groups.',
   reviewStepT: 'Check the profile', reviewStepB: 'Tap “Edit” to change anything.', edit: 'Edit', readyNamed: '{name} is ready!',
@@ -174,7 +177,7 @@ export default {
 
   // talk (the web toy)
   talkTo: 'Talk to {name}', talkPick: 'Choose a Buddy', talkLog: 'Conversation',
-  talkConnecting: 'Connecting to {name}…', talkIdle: 'Tap the blue button to talk to {name}, or type a message',
+  talkConnecting: 'Connecting to {name}…', talkIdle: 'Tap the glowing button to talk to {name}, or type a message',
   talkStarting: '{name} is getting ready to listen…', talkSpeakNow: 'Go ahead, {name} is listening', talkListening: "{name} is listening… Tap again when you're done",
   talkThinking: '{name} is thinking…', talkAnswered: '{name} answered', talkSpeaking: '{name} is talking…',
   talkDenied: "{name} can't answer right now. The reason is on the Activity page.",

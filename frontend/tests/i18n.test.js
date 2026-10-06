@@ -8,6 +8,7 @@ import en from '../src/i18n/en.js';
 import { EMOTIONS } from '../src/lib/emotions.js';
 import { APP_SCREENS } from '../src/lib/routes.js';
 import { TYPES, GROUPS, QUESTIONS, ROLES } from '../src/lib/personality.js';
+import { DESIGNS } from '../src/lib/designs.js';
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const placeholders = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -67,6 +68,7 @@ test('keys built at runtime exist', () => {
     ...GROUPS.map((g) => `group_${g}`),
     ...QUESTIONS.flatMap((q) => [`pq${q.n}`, `pq${q.n}a`, `pq${q.n}b`]),
     ...ROLES.flatMap((r) => [`role_${r}`, `roleSays_${r}`]),
+    ...DESIGNS.flatMap((d) => [`design_${d}`, `designTag_${d}`]),
     ...['quiz', 'picked', 'default'].map((s) => `source_${s}`),
     ...['rate_limited', 'network_error', 'invalid_credentials', 'email_taken', 'claim_code_invalid', 'purchase_not_pending', 'disabled_by_operator'].map((c) => `err_${c}`),
   ];

@@ -1,5 +1,6 @@
 // Buddy's personality: one of the 16 four-letter types (same codes as the
 // backend's personalities table). Pure, so node --test covers the scoring.
+import { DEFAULT_DESIGN } from './designs.js';
 
 // Four families of types, used to group the picker. Each type also has the
 // face that best shows its temperament in the preview.
@@ -63,5 +64,5 @@ export function suggestName(current, random = Math.random) {
 }
 
 export const ROLES = ['friend', 'daddy', 'mommy', 'teacher'];
-export const DEFAULT_PROFILE = Object.freeze({ name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default' });
+export const DEFAULT_PROFILE = Object.freeze({ name: 'Buddy', design: DEFAULT_DESIGN, role: 'friend', personality: 'ENFP', personality_source: 'default' });
 export const NAME_MAX = 24;

@@ -1,27 +1,32 @@
 import { useEffect, useState } from 'react';
-import Face from '../components/Face.jsx';
+import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
+import ToyShell from '../components/ToyShell.jsx';
+import { DESIGNS, normalizeDesign } from '../lib/designs.js';
 import { useI18n } from '../lib/i18n.jsx';
 import { api } from '../lib/api.js';
 import { MOOD_START, clampMood, defaultVoice, settingsOf } from '../lib/toySettings.js';
 import { GROUPS, NAME_MAX, NAME_SUGGESTIONS, QUESTIONS, ROLES, TYPES, scoreQuiz, suggestName, typeOf } from '../lib/personality.js';
 
-// Buddy's profile: a name, how it talks to the child (role) and one of 16
-// personalities, found with a short quiz or picked directly. The pieces are
+// Buddy's profile: a name, how the website draws it (design), how it talks
+// to the child (role) and one of 16 personalities, found with a short quiz
+// or picked directly. The pieces are
 // screen-sized so the add-toy wizard can show one per step while the drawer
 // puts them on one page for quick edits.
 
 export function ProfileSummary({ profile, onEdit }) {
   const { t } = useI18n();
   const type = typeOf(profile.personality);
+  const design = normalizeDesign(profile.design);
   if (onEdit) {
     const rows = [
       ['name', t('nameLabel'), profile.name],
+      ['look', t('designLabel'), `${t(`design_${design}`)} · ${t(`designTag_${design}`)}`],
       ['role', t('roleShort'), `${t(`role_${profile.role}`)} · ${t(`roleSays_${profile.role}`)}`],
       ['personality', t('personalityLabel'), `${t(`ptype_${type.code}`)} (${type.code}) · ${t(`source_${profile.personality_source}`)}`],
     ];
     return (
       <div className="review">
-        <div className="hero-screen"><Face emotion={type.emotion} /></div>
+        <div className="hero-screen"><BuddyScreen design={design} emotion={type.emotion} /></div>
         {rows.map(([step, label, value]) => (
           <div key={step} className="review-row">
             <span className="k">{label}</span>
@@ -34,9 +39,10 @@ export function ProfileSummary({ profile, onEdit }) {
   }
   return (
     <div className="p-summary">
-      <span className="chip-screen"><Face emotion={type.emotion} /></span>
+      <span className="chip-screen"><BuddyScreen design={design} emotion={type.emotion} /></span>
       <div>
         <div className="p-name">{profile.name}</div>
+        <div className="feed-sub">{t('designLabel')}: {t(`design_${design}`)}</div>
         <div className="feed-sub">{t(`role_${profile.role}`)} · {t(`ptype_${type.code}`)} <span className="mono">{type.code}</span> · {t(`source_${profile.personality_source}`)}</div>
         <div className="feed-sub">{t(`ptypeDesc_${type.code}`)}</div>
         <SettingsLine profile={profile} />
@@ -76,6 +82,25 @@ export function NameField({ value, onChange, error = '', autoFocus = false }) {
   );
 }
 
+// The three designs side by side, each a small live toy. The previews are
+// drawn without their own button, since each card already is one.
+export function DesignPicker({ value, onChange, autoFocus = false }) {
+  const { t } = useI18n();
+  const current = normalizeDesign(value);
+  return (
+    <div className="design-grid" role="group" aria-label={t('designLabel')}>
+      {DESIGNS.map((d) => (
+        <button key={d} type="button" className="choice design-card" aria-pressed={current === d} onClick={() => onChange(d)}
+          data-autofocus={(autoFocus && current === d) || undefined}>
+          <span className="design-stage"><ToyShell design={d} phase="idle" emotion={current === d ? 'happy' : 'neutral'} /></span>
+          <b>{t(`design_${d}`)}</b>
+          <span className="feed-sub">{t(`designTag_${d}`)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function RolePicker({ value, onChange, autoFocus = false }) {
   const { t } = useI18n();
   return (
@@ -93,7 +118,7 @@ export function RolePicker({ value, onChange, autoFocus = false }) {
 
 // One question per screen. onExit (back from the first question) and onPick
 // (switch to the grid from the result) are optional: the drawer has tabs.
-export function PersonalityQuiz({ onResult, onExit, onPick }) {
+export function PersonalityQuiz({ onResult, onExit, onPick, design }) {
   const { t } = useI18n();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -105,7 +130,7 @@ export function PersonalityQuiz({ onResult, onExit, onPick }) {
     return (
       <div className="quiz quiz-result">
         <p className="eyebrow">{t('quizResult')}</p>
-        <div className="hero-screen"><Face emotion={type.emotion} /></div>
+        <div className="hero-screen"><BuddyScreen design={design} emotion={type.emotion} /></div>
         <div><b className="p-name">{t(`ptype_${code}`)}</b> <span className="mono muted">{code}</span></div>
         <p className="muted">{t(`ptypeDesc_${code}`)}</p>
         <div className="row-actions">
@@ -143,7 +168,7 @@ export function PersonalityQuiz({ onResult, onExit, onPick }) {
   );
 }
 
-export function PersonalityPicker({ value, onPick }) {
+export function PersonalityPicker({ value, onPick, design }) {
   const { t } = useI18n();
   return (
     <div className="picker">
@@ -155,7 +180,7 @@ export function PersonalityPicker({ value, onPick }) {
             {TYPES.filter((ty) => ty.group === g).map((ty) => (
               <button key={ty.code} type="button" className="ptype-card" aria-pressed={value === ty.code} onClick={() => onPick(ty.code)}
                 data-autofocus={value === ty.code || undefined}>
-                <span className="chip-screen chip-screen--sm"><Face emotion={ty.emotion} /></span>
+                <span className="chip-screen chip-screen--sm"><BuddyScreen design={design} emotion={ty.emotion} /></span>
                 <span>
                   <b>{t(`ptype_${ty.code}`)}</b> <span className="mono muted">{ty.code}</span>
                   <span className="feed-sub">{t(`ptypeDesc_${ty.code}`)}</span>
@@ -170,7 +195,7 @@ export function PersonalityPicker({ value, onPick }) {
 }
 
 // The drawer's one-page editor, for changing one thing on an existing Buddy.
-// Controlled: value is { name, role, personality, personality_source } plus
+// Controlled: value is { name, design, role, personality, personality_source } plus
 // the conversation settings (language, voice_id, learn, mood_pin).
 export function ProfileEditor({ value, onChange, nameError = '' }) {
   const { t } = useI18n();
@@ -183,13 +208,17 @@ export function ProfileEditor({ value, onChange, nameError = '' }) {
     <div className="profile-editor">
       <NameField value={value.name} onChange={(name) => set({ name })} error={nameError} autoFocus />
       <section className="pe-section">
+        <p className="pe-label">{t('designLabel')}</p>
+        <DesignPicker value={value.design} onChange={(design) => set({ design })} />
+      </section>
+      <section className="pe-section">
         <p className="pe-label">{t('roleLabel')}</p>
         <RolePicker value={value.role} onChange={(role) => set({ role })} />
       </section>
       <section className="pe-section">
         <p className="pe-label">{t('personalityLabel')}</p>
         <div className="p-current">
-          <span className="chip-screen chip-screen--sm"><Face emotion={type.emotion} /></span>
+          <span className="chip-screen chip-screen--sm"><BuddyScreen design={value.design} emotion={type.emotion} /></span>
           <span><b>{t(`ptype_${type.code}`)}</b> <span className="mono muted">{type.code}</span> <span className="feed-sub">· {t(`source_${value.personality_source}`)}</span></span>
         </div>
         <div className="seg" role="group" aria-label={t('personalityLabel')}>
@@ -197,8 +226,8 @@ export function ProfileEditor({ value, onChange, nameError = '' }) {
           <button type="button" aria-pressed={tab === 'pick'} onClick={() => setTab('pick')}>{t('tabPick')}</button>
         </div>
         {tab === 'quiz'
-          ? <PersonalityQuiz key={quizKey} onResult={(code) => { set({ personality: code, personality_source: 'quiz' }); setTab('pick'); }} />
-          : <PersonalityPicker value={value.personality} onPick={(code) => set({ personality: code, personality_source: 'picked' })} />}
+          ? <PersonalityQuiz key={quizKey} design={value.design} onResult={(code) => { set({ personality: code, personality_source: 'quiz' }); setTab('pick'); }} />
+          : <PersonalityPicker design={value.design} value={value.personality} onPick={(code) => set({ personality: code, personality_source: 'picked' })} />}
       </section>
       <ToySettings value={value} onChange={set} />
     </div>

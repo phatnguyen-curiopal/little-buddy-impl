@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import Face from '../components/Face.jsx';
+import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
 import { LangSwitch, useErrorText } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { useAuth } from '../lib/auth.jsx';
@@ -55,8 +55,8 @@ export default function AuthPage({ mode }) {
   return (
     <div className="auth">
       <div className="auth-side">
-        <Link className="wordmark" to="/"><span className="dotface"><Face emotion="neutral" /></span><span>Little Buddy</span></Link>
-        <div className="auth-face" ref={faceRef}><span className="chip-screen chip-screen--hero float"><Face emotion={emotion} look={look} /></span></div>
+        <Link className="wordmark" to="/"><span className="dotface"><BuddyScreen emotion="neutral" /></span><span>Little Buddy</span></Link>
+        <div className="auth-face" ref={faceRef}><span className="chip-screen chip-screen--hero float"><BuddyScreen emotion={emotion} look={look} /></span></div>
         <p className="auth-quote">{reg ? t('authQuoteReg') : t('authQuoteLogin')}</p>
       </div>
       <div className="auth-main">

@@ -18,6 +18,11 @@ export const NAME_MAX = 24;
 export const MOOD_MIN = 0;
 export const MOOD_MAX = 100;
 
+// How the website draws this toy. The physical toy and the brain never see
+// it; the codes match frontend/src/lib/designs.js.
+export const DESIGNS = Object.freeze(['orbit', 'volt', 'glim']);
+export const DEFAULT_DESIGN = 'orbit';
+
 // Conversation settings every claim starts from, so a new owner never
 // inherits the previous family's. learn is off until a parent opts in.
 export const DEFAULT_SETTINGS = Object.freeze({ language: 'vi', voice_id: null, learn: false, mood_pin: null });
@@ -28,12 +33,14 @@ export const DEFAULT_PROFILE = Object.freeze({
   role: 'friend',
   personality: 'ENFP',
   personality_source: 'default',
+  design: DEFAULT_DESIGN,
   ...DEFAULT_SETTINGS,
 });
 
 // Returns a clean profile (or, with partial, only the fields given) or
 // throws one 400 listing every bad field, so a form can mark them all.
-// A full profile fills missing settings with the defaults. In a partial one
+// A full profile fills a missing design and settings with the defaults, so
+// every claim starts from them. In a partial one
 // a field that is present counts even when null: voice_id null means "back
 // to the default voice" and mood_pin null means "unpin".
 export function validateProfile(input, { partial = false } = {}) {
@@ -64,6 +71,11 @@ export function validateProfile(input, { partial = false } = {}) {
   } else if (!partial) {
     out.personality_source = 'picked';
   }
+  // Not nullable: every toy is drawn somehow, so there is nothing to clear.
+  if (has('design')) {
+    if (!DESIGNS.includes(src.design)) errors.push({ field: 'design', message: `must be one of ${DESIGNS.join(', ')}` });
+    else out.design = src.design;
+  }
 
   if (has('language')) {
     if (!LANGUAGES.includes(src.language)) errors.push({ field: 'language', message: `must be one of ${LANGUAGES.join(', ')}` });
@@ -91,7 +103,7 @@ export function validateProfile(input, { partial = false } = {}) {
 
   if (errors.length) throw badRequest('validation_error', 'invalid profile', { details: errors });
   if (partial && Object.keys(out).length === 0) throw badRequest('validation_error', 'nothing to update', { details: [{ field: 'profile', message: 'give at least one field' }] });
-  return partial ? out : { ...DEFAULT_SETTINGS, ...out };
+  return partial ? out : { design: DEFAULT_DESIGN, ...DEFAULT_SETTINGS, ...out };
 }
 
 // A voice_id that passed the shape check but names no row fails the

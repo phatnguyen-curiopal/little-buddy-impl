@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import Face from './components/Face.jsx';
+import BuddyScreen from './components/buddy/BuddyScreen.jsx';
 import { ToastProvider } from './components/ui.jsx';
 import { LangProvider, useI18n } from './lib/i18n.jsx';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
@@ -10,14 +10,14 @@ import AuthPage from './auth/AuthPage.jsx';
 import AppShell from './dashboard/AppShell.jsx';
 
 function Splash() {
-  return <div className="splash"><span className="chip-screen chip-screen--xl"><Face emotion="thinking" /></span></div>;
+  return <div className="splash"><span className="chip-screen chip-screen--xl"><BuddyScreen emotion="thinking" /></span></div>;
 }
 
 function NotFound() {
   const { t } = useI18n();
   return (
     <div className="splash">
-      <span className="chip-screen chip-screen--xl"><Face emotion="confused" /></span>
+      <span className="chip-screen chip-screen--xl"><BuddyScreen emotion="confused" /></span>
       <h1>{t('notFoundT')}</h1>
       <Link className="btn pop" to="/">{t('backHome')}</Link>
     </div>

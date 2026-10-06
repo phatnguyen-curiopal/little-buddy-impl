@@ -10,7 +10,7 @@ const PUBLIC = `id, serial, batch_id, hardware_rev, status, status_reason, disab
 // because devices and buddy_profiles share created_at and updated_at.
 const WITH_PROFILE = `${PUBLIC.split(",").map((c) => `d.${c.trim()}`).join(", ")},
   p.name AS profile_name, p.role AS profile_role, p.personality AS profile_personality, p.personality_source AS profile_source,
-  p.language AS profile_language, p.voice_id AS profile_voice_id, p.learn AS profile_learn, p.mood_pin AS profile_mood_pin`;
+  p.design AS profile_design, p.language AS profile_language, p.voice_id AS profile_voice_id, p.learn AS profile_learn, p.mood_pin AS profile_mood_pin`;
 const FROM_WITH_PROFILE = "devices d LEFT JOIN buddy_profiles p ON p.device_id = d.id";
 
 const INSERT_CHUNK = 500;
@@ -212,6 +212,7 @@ export function toDto(row) {
       role: row.profile_role,
       personality: row.profile_personality,
       personality_source: row.profile_source,
+      design: row.profile_design,
       language: row.profile_language,
       voice_id: row.profile_voice_id,
       learn: row.profile_learn,

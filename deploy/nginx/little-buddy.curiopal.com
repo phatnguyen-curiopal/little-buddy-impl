@@ -80,6 +80,14 @@ server {
         add_header Cache-Control "no-cache";
     }
 
+    # The voice picker's samples. The host's mime.types has no wav, and
+    # Safari will not play audio sent as application/octet-stream under the
+    # host's nosniff header. A missing sample is a 404, not the app shell.
+    location /voice-samples/ {
+        types { audio/wav wav; }
+        try_files $uri =404;
+    }
+
     # Client-side routes (/app/...) all load the same shell.
     location / {
         try_files $uri $uri/ /index.html;

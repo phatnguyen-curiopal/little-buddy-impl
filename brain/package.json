@@ -15,7 +15,8 @@
     "test": "node --test --test-concurrency=1 --import ./tests/helpers/env.js \"tests/**/*.test.js\"",
     "test:unit": "node --test --import ./tests/helpers/env.js \"tests/unit/**/*.test.js\"",
     "import:poc": "node --env-file=.env scripts/import_poc.js",
-    "seed:botlife": "node --env-file=.env scripts/seed_botlife.js"
+    "seed:botlife": "node --env-file=.env scripts/seed_botlife.js",
+    "voice-samples": "node --env-file=.env scripts/voice_samples.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

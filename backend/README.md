@@ -96,12 +96,22 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
    hình cũ.
    Hồ sơ còn có **cài đặt trò chuyện**: ngôn ngữ (`vi` mặc định hoặc `en`,
    độc lập với ngôn ngữ giao diện web), giọng (`voice_id`, `null` là giọng
-   mặc định trong bảng `voices`), học từ các cuộc trò chuyện (`learn`, mặc
+   mặc định của ngôn ngữ đó trong bảng `voices`), học từ các cuộc trò chuyện (`learn`, mặc
    định tắt) và tâm trạng ghim (`mood_pin` 0 đến 100, `null` là tự động; 0 là
    một giá trị ghim thật). Mỗi lần ghép cũng đặt lại các cài đặt này về mặc
    định. Bảng `personalities` chỉ còn là dữ liệu tham khảo: mọi chữ của prompt
    (cách xưng hô của từng vai, tính cách, tâm trạng) thuộc về `brain/`;
    `personalization/roles.js` chỉ giữ mã vai và nhãn.
+   Mỗi giọng chỉ nói một ngôn ngữ (`voices.language`), mỗi ngôn ngữ có đúng
+   một giọng mặc định. Migration 008 nạp sẵn: tiếng Việt Phan Anh (mặc định),
+   Cam Hong; tiếng Anh Little Dude II (mặc định), Ziggy, The Elf. Chọn giọng
+   khác ngôn ngữ của đồ chơi là 400 (`voice does not speak this language`);
+   đổi ngôn ngữ mà không gửi giọng thì giọng cũ khác ngôn ngữ bị xoá về
+   `null`. Lúc gửi lượt sang brain, `voices.resolve` không bao giờ chọn giọng
+   của ngôn ngữ kia: nó lùi về giọng mặc định của ngôn ngữ đó.
+   Thêm một giọng: `POST /admin/voices` (kèm `language`), rồi ghi giọng mẫu
+   bằng `npm run voice-samples -- <id>:<vi|en>` trong `brain/` để trang web
+   có bản nghe thử.
 3. **Heartbeat** (`POST /v1/heartbeat`, có chữ ký): thiết bị biết trạng thái
    của mình và chu kỳ heartbeat tiếp theo.
 4. **Stream** (`GET /v1/stream` WebSocket, chữ ký trong query string): mọi
@@ -182,7 +192,7 @@ mục gốc chạy cả brain, backend và frontend); `/admin` gọi bằng curl
 | PATCH | `/api/devices/:id` | `{child_id}` (uuid hoặc null) |
 | PATCH | `/api/devices/:id/profile` | Bất kỳ tập con nào của `{name, role, personality, personality_source, language, voice_id, learn, mood_pin}` → `{device}`. `mood_pin: null` bỏ ghim, `voice_id: null` về giọng mặc định; giọng không tồn tại là 400. Ghi sự kiện `profile_updated`; 409 `device_revoked` |
 | POST | `/api/devices/:id/secret` | `{device_id, secret_hex}` cho đồ chơi trên web (xem mục trên) |
-| GET | `/api/voices` | `{voices: [{id, label, is_default}]}` |
+| GET | `/api/voices` | `{voices: [{id, label, language, is_default}]}`, xếp theo ngôn ngữ rồi thứ tự hiển thị |
 | POST | `/api/devices/:id/disable` | `{reason?}`. 409 `device_not_active` |
 | POST | `/api/devices/:id/enable` | 403 `disabled_by_operator` nếu vận hành đã tắt |
 | DELETE | `/api/devices/:id` | Gỡ ghép → 204 |
@@ -225,7 +235,7 @@ Mã lỗi thiết bị: `auth_missing`, `auth_ts_skew`, `auth_unknown_device`,
 | POST | `/admin/devices/:id/reissue-claim-code` | Chỉ với thiết bị `provisioned`; trả mã mới một lần |
 | POST | `/admin/families/:id/credits` | `{amount, kind? grant|refund, reason}` → `{balance}` |
 | GET | `/admin/families/:id/wallet` | Số dư và sổ credit của một gia đình |
-| POST | `/admin/voices` | `{id, label, sort?, is_default?}` thêm (201) hoặc sửa (200) một giọng; `is_default: true` chuyển giọng mặc định sang giọng này |
+| POST | `/admin/voices` | `{id, label, language?, sort?, is_default?}` thêm (201) hoặc sửa (200) một giọng; giọng mới không ghi `language` là `vi`; `is_default: true` chuyển giọng mặc định của ngôn ngữ đó sang giọng này; chuyển một giọng mặc định sang ngôn ngữ đã có mặc định là 409 `default_exists` |
 
 Không có endpoint provision qua HTTP: bí mật thiết bị chỉ đi từ CLI ra manifest.
 

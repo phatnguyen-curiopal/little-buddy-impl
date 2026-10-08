@@ -30,8 +30,27 @@ export function clampMood(value) {
   return Math.max(0, Math.min(100, n));
 }
 
-// The option the voice picker shows for "no choice": the default voice's
-// label when the backend marks one.
-export function defaultVoice(voices) {
-  return (voices ?? []).find((v) => v.is_default) ?? null;
+// Each voice speaks one conversation language, and a toy is only offered the
+// voices of its own (the backend already sends them in display order).
+export function voicesFor(voices, language) {
+  return (voices ?? []).filter((v) => v.language === language);
+}
+
+// The voice a toy without a choice speaks with: its language's default, or
+// that language's first voice if none is marked, as the backend resolves it.
+export function defaultVoice(voices, language) {
+  const own = voicesFor(voices, language);
+  return own.find((v) => v.is_default) ?? own[0] ?? null;
+}
+
+// The voice the picker shows as selected: the toy's own choice while it
+// speaks this language, otherwise the default it really speaks with.
+export function chosenVoice(voices, language, voiceId) {
+  return voicesFor(voices, language).find((v) => v.id === voiceId) ?? defaultVoice(voices, language);
+}
+
+// Buddy's greeting in each voice, recorded by brain/scripts/voice_samples.js.
+// A voice added without running it has no file; the picker says so.
+export function sampleUrl(id) {
+  return `/voice-samples/${encodeURIComponent(id)}.wav`;
 }

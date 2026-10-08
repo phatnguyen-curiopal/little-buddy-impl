@@ -1,6 +1,6 @@
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { setupDb, teardownDb, resetDb, resetRedis } from '../helpers/db.js';
+import { setupDb, teardownDb, resetDb, resetRedis, DEFAULT_VOICES } from '../helpers/db.js';
 import { startTestServer } from '../helpers/app.js';
 import { registerParent, provisionDevice, adminHeaders } from '../helpers/fixtures.js';
 import { pool } from '../../store/db.js';
@@ -94,42 +94,57 @@ test('a toy that changes family starts from a fresh profile', async () => {
 });
 
 const patch = (p, id, body) => api('PATCH', `/api/devices/${id}/profile`, { token: p.token, body });
-const DEFAULT_VOICE = '1rqNHUqUbBGpY3OyzPMI';
+// Seeded by migration 008: one non-default voice in each language.
+const ZIGGY = '87n4zM8Wuy87vFILuKvE';
+const CAM_HONG = 'x4KAhuXs2G8TfK9Zr7Q4';
 
-test('voices: the prototype voice is seeded as the default and listed for parents', async () => {
+test('voices: the chosen voices are seeded with one default per language and listed for parents', async () => {
   const p = await registerParent(api);
   const res = await api('GET', '/api/voices', { token: p.token });
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body.voices, [{ id: DEFAULT_VOICE, label: 'Giọng mặc định', is_default: true }]);
+  assert.deepEqual(res.body.voices, [
+    { id: DEFAULT_VOICES.en, label: 'Little Dude II', language: 'en', is_default: true },
+    { id: ZIGGY, label: 'Ziggy', language: 'en', is_default: false },
+    { id: 'e79twtVS2278lVZZQiAD', label: 'The Elf', language: 'en', is_default: false },
+    { id: DEFAULT_VOICES.vi, label: 'Phan Anh', language: 'vi', is_default: true },
+    { id: CAM_HONG, label: 'Cam Hong', language: 'vi', is_default: false },
+  ]);
   assert.equal((await api('GET', '/api/voices')).status, 401);
 });
 
-test('admin adds and edits voices; making one the default moves the flag', async () => {
+test('admin adds and edits voices; making one the default moves the flag within its language only', async () => {
   const unauth = await api('POST', '/admin/voices', { body: { id: 'Abc', label: 'x' } });
   assert.equal(unauth.status, 401);
-  const bad = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'has space', label: '' } });
+  const bad = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'has space', label: '', language: 'fr' } });
   assert.equal(bad.status, 400);
-  assert.deepEqual(bad.body.error.details.map((d) => d.field).sort(), ['id', 'label']);
+  assert.deepEqual(bad.body.error.details.map((d) => d.field).sort(), ['id', 'label', 'language']);
   const badFlag = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'Abc', label: 'A', is_default: 'yes' } });
   assert.equal(badFlag.status, 400);
 
   const created = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'NewVoice01', label: 'Giọng bé', sort: 5 } });
   assert.equal(created.status, 201);
-  assert.deepEqual(created.body.voice, { id: 'NewVoice01', label: 'Giọng bé', is_default: false, sort: 5 });
+  assert.deepEqual(created.body.voice, { id: 'NewVoice01', label: 'Giọng bé', language: 'vi', is_default: false, sort: 5 });
 
   const promoted = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'NewVoice01', label: 'Giọng bé mới', sort: 5, is_default: true } });
   assert.equal(promoted.status, 200);
   assert.equal(promoted.body.voice.is_default, true);
   const p = await registerParent(api);
-  const list = await api('GET', '/api/voices', { token: p.token });
-  assert.deepEqual(list.body.voices.map((v) => [v.id, v.is_default]), [[DEFAULT_VOICE, false], ['NewVoice01', true]]);
+  const defaults = async () => (await api('GET', '/api/voices', { token: p.token })).body.voices.filter((v) => v.is_default).map((v) => [v.language, v.id]);
+  assert.deepEqual(await defaults(), [['en', DEFAULT_VOICES.en], ['vi', 'NewVoice01']]);
 
-  // Relabelling the default without is_default or sort keeps both.
+  // Relabelling the default without is_default, sort or language keeps all three.
   const relabelled = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'NewVoice01', label: 'Giọng bé 2' } });
   assert.equal(relabelled.status, 200);
-  assert.deepEqual(relabelled.body.voice, { id: 'NewVoice01', label: 'Giọng bé 2', is_default: true, sort: 5 });
-  const listed = await api('GET', '/api/voices', { token: p.token });
-  assert.deepEqual(listed.body.voices.map((v) => [v.id, v.is_default]), [[DEFAULT_VOICE, false], ['NewVoice01', true]]);
+  assert.deepEqual(relabelled.body.voice, { id: 'NewVoice01', label: 'Giọng bé 2', language: 'vi', is_default: true, sort: 5 });
+  assert.deepEqual(await defaults(), [['en', DEFAULT_VOICES.en], ['vi', 'NewVoice01']]);
+
+  // A default moved into a language that has one already must say so.
+  const clash = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'NewVoice01', label: 'Giọng bé 2', language: 'en' } });
+  assert.equal(clash.status, 409);
+  assert.equal(clash.body.error.code, 'default_exists');
+  const moved = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'NewVoice01', label: 'Giọng bé 2', language: 'en', is_default: true } });
+  assert.equal(moved.status, 200);
+  assert.deepEqual(await defaults(), [['en', 'NewVoice01']]);
 });
 
 test('settings: set, clear the mood pin with null, keep 0 as a real pin, and leave absent fields alone', async () => {
@@ -137,9 +152,9 @@ test('settings: set, clear the mood pin with null, keep 0 as a real pin, and lea
   const d = await provisionDevice();
   await claim(p, d.claimCode);
 
-  let res = await patch(p, d.id, { language: 'en', learn: true, mood_pin: 0, voice_id: DEFAULT_VOICE });
+  let res = await patch(p, d.id, { language: 'en', learn: true, mood_pin: 0, voice_id: ZIGGY });
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body.device.profile, { name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default', design: 'orbit', language: 'en', voice_id: DEFAULT_VOICE, learn: true, mood_pin: 0 });
+  assert.deepEqual(res.body.device.profile, { name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default', design: 'orbit', language: 'en', voice_id: ZIGGY, learn: true, mood_pin: 0 });
 
   res = await patch(p, d.id, { name: 'Kem' });
   assert.equal(res.body.device.profile.mood_pin, 0, 'an absent field is untouched');
@@ -172,6 +187,45 @@ test('bad settings are a 400 naming each field; an unknown voice is a 400 too, n
   assert.equal((await claim(p, d2.claimCode)).status, 200, 'the failed claim consumed nothing');
 });
 
+test("a voice must speak the toy's language; switching language alone drops a voice of the other one", async () => {
+  const p = await registerParent(api);
+  const d = await provisionDevice();
+  await claim(p, d.claimCode);
+  const wrong = [{ field: 'voice_id', message: 'voice does not speak this language' }];
+
+  let res = await patch(p, d.id, { voice_id: ZIGGY });
+  assert.equal(res.status, 400, 'an English voice on a Vietnamese toy');
+  assert.deepEqual(res.body.error.details, wrong);
+  res = await patch(p, d.id, { language: 'en', voice_id: ZIGGY });
+  assert.equal(res.status, 200, 'language and voice switched together');
+  assert.equal(res.body.device.profile.voice_id, ZIGGY);
+  res = await patch(p, d.id, { language: 'en', voice_id: CAM_HONG });
+  assert.equal(res.status, 400);
+
+  res = await patch(p, d.id, { language: 'vi' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.device.profile.language, 'vi');
+  assert.equal(res.body.device.profile.voice_id, null, 'Ziggy goes; the toy speaks the Vietnamese default');
+  const event = await pool.query(
+    "SELECT detail FROM device_events WHERE device_id = $1 AND event = 'profile_updated' ORDER BY id DESC LIMIT 1",
+    [d.id],
+  );
+  assert.deepEqual(event.rows[0].detail.fields.sort(), ['language', 'voice_id']);
+
+  res = await patch(p, d.id, { voice_id: CAM_HONG });
+  assert.equal(res.status, 200);
+  res = await patch(p, d.id, { language: 'vi' });
+  assert.equal(res.body.device.profile.voice_id, CAM_HONG, 'the same language keeps the choice');
+
+  const d2 = await provisionDevice();
+  const badClaim = await claim(p, d2.claimCode, { name: 'Bin', role: 'friend', personality: 'ENFP', voice_id: ZIGGY });
+  assert.equal(badClaim.status, 400);
+  assert.deepEqual(badClaim.body.error.details, wrong);
+  const okClaim = await claim(p, d2.claimCode, { name: 'Bin', role: 'friend', personality: 'ENFP', language: 'en', voice_id: ZIGGY });
+  assert.equal(okClaim.status, 200);
+  assert.equal(okClaim.body.device.profile.voice_id, ZIGGY);
+});
+
 test('design: chosen at claim, changed alone by a patch, and reset for the next owner', async () => {
   const p1 = await registerParent(api);
   const p2 = await registerParent(api);
@@ -200,7 +254,7 @@ test('a claim resets every setting, so the next owner never inherits them', asyn
   const p2 = await registerParent(api);
   const d = await provisionDevice();
   await claim(p1, d.claimCode);
-  await patch(p1, d.id, { language: 'en', learn: true, mood_pin: 5, voice_id: DEFAULT_VOICE });
+  await patch(p1, d.id, { language: 'en', learn: true, mood_pin: 5, voice_id: ZIGGY });
   assert.equal((await api('DELETE', `/api/devices/${d.id}`, { token: p1.token })).status, 204);
   const res = await claim(p2, d.claimCode);
   assert.deepEqual(res.body.device.profile, { name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default', ...SETTINGS });

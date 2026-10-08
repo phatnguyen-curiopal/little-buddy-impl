@@ -110,9 +110,14 @@ Bảng chi tiết của đồ chơi sửa hồ sơ trên một trang. Logic thu�
 Phần "Khi trò chuyện" dưới hồ sơ, lưu cùng lệnh `PATCH /api/devices/:id/profile`:
 
 - **Ngôn ngữ trò chuyện** (Tiếng Việt / English): ngôn ngữ Buddy nói và nghe,
-  không phụ thuộc ngôn ngữ giao diện của trang web.
-- **Giọng nói**: danh sách từ `GET /api/voices`. "Mặc định" gửi `voice_id: null`,
-  nên khi đổi giọng mặc định ở máy chủ, mọi Buddy chưa chọn giọng đều theo.
+  không phụ thuộc ngôn ngữ giao diện của trang web. Đổi ngôn ngữ thì giọng
+  về mặc định của ngôn ngữ mới (gửi kèm `voice_id: null`).
+- **Giọng nói**: chỉ các giọng của ngôn ngữ đang chọn (`GET /api/voices` có
+  `language`), mỗi giọng một nút phát để nghe Buddy chào bằng giọng đó. Bản
+  nghe thử là file tĩnh `public/voice-samples/<id>.wav`, ghi bằng
+  `npm run voice-samples` trong `brain/`; giọng chưa có file thì hiện "chưa có
+  bản nghe thử". Chọn giọng mặc định gửi `voice_id: null`, nên khi đổi giọng
+  mặc định ở máy chủ, mọi Buddy chưa chọn giọng đều theo.
 - **Học từ các cuộc trò chuyện**: mặc định tắt. Tắt thì Buddy không lưu gì
   bé nói.
 - **Tâm trạng của Buddy**: "Tự động" (mỗi ngày Buddy tự có tâm trạng) hoặc

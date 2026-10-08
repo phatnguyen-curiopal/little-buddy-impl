@@ -11,7 +11,7 @@ process.env.BRAIN_URL = stub.url;
 process.env.BRAIN_TOKEN = 'test-brain-token';
 process.env.BRAIN_TIMEOUT_MS = '1500';
 
-const { setupDb, teardownDb, resetDb, resetRedis } = await import('../helpers/db.js');
+const { setupDb, teardownDb, resetDb, resetRedis, DEFAULT_VOICES } = await import('../helpers/db.js');
 const { startTestServer } = await import('../helpers/app.js');
 const { registerParent, provisionDevice, claimDevice, createChild, simFor, adminHeaders } = await import('../helpers/fixtures.js');
 const { attachStream, CLOSE_BLOCKED } = await import('../../ws/stream.js');
@@ -19,7 +19,7 @@ const ledgerStore = await import('../../store/ledger.js');
 const { pool } = await import('../../store/db.js');
 const { FAILED_ANSWERS } = await import('../../gate/ask_gate.js');
 
-const DEFAULT_VOICE = '1rqNHUqUbBGpY3OyzPMI';
+const DEFAULT_VOICE = DEFAULT_VOICES.vi;
 
 let srv;
 let api;
@@ -110,7 +110,7 @@ test('a voice turn: PCM body and meta header in, answer then audio then debit ou
 
 test('a typed turn sends JSON with the settings the parent chose; no audio means no audio messages', async () => {
   const { p, d, sim } = await activeToy();
-  const added = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'VoiceTwo_2', label: 'Giọng hai' } });
+  const added = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'VoiceTwo_2', label: 'Voice two', language: 'en' } });
   assert.equal(added.status, 201);
   const patched = await api('PATCH', `/api/devices/${d.id}/profile`, {
     token: p.token,
@@ -137,6 +137,34 @@ test('a typed turn sends JSON with the settings the parent chose; no audio means
   assert.deepEqual(call.meta.buddy, { name: 'Mít', role: 'teacher', personality: 'INFJ' });
   assert.deepEqual(call.meta.settings, { language: 'en', voice_id: 'VoiceTwo_2', learn: true, mood_pin: 0 });
   await closeWs(ws);
+});
+
+test('the voice follows the language: its default when none is picked, and never a voice of the other language', async () => {
+  const { p, d, sim } = await activeToy();
+  const patchProfile = (body) => api('PATCH', `/api/devices/${d.id}/profile`, { token: p.token, body });
+  stub.setHandler((call, res) => json(res, 200, reply({ heard: call.text })));
+  const voiceOfNextTurn = async () => {
+    const { ws } = await sim.openStream();
+    await sim.turnStart(ws);
+    await sim.endAndCollect(ws, { text: 'Hello' });
+    await closeWs(ws);
+    return stub.calls.at(-1).meta.settings.voice_id;
+  };
+
+  assert.equal(await voiceOfNextTurn(), DEFAULT_VOICES.vi);
+  assert.equal((await patchProfile({ language: 'en' })).status, 200);
+  assert.equal(await voiceOfNextTurn(), DEFAULT_VOICES.en);
+
+  const added = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'VoiceEn_3', label: 'Voice three', language: 'en' } });
+  assert.equal(added.status, 201);
+  assert.equal((await patchProfile({ voice_id: 'VoiceEn_3' })).status, 200);
+  assert.equal(await voiceOfNextTurn(), 'VoiceEn_3');
+
+  // An operator moves that voice to Vietnamese; the English toy that picked
+  // it falls back to the English default instead.
+  const moved = await api('POST', '/admin/voices', { headers: adminHeaders, body: { id: 'VoiceEn_3', label: 'Voice three', language: 'vi' } });
+  assert.equal(moved.status, 200);
+  assert.equal(await voiceOfNextTurn(), DEFAULT_VOICES.en);
 });
 
 test('no_speech: the line and its audio are sent, then the turn is abandoned and not charged', async () => {

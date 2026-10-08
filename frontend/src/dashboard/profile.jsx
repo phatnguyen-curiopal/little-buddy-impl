@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
 import ToyShell from '../components/ToyShell.jsx';
 import { DESIGNS, normalizeDesign } from '../lib/designs.js';
 import { useI18n } from '../lib/i18n.jsx';
 import { api } from '../lib/api.js';
-import { MOOD_START, clampMood, defaultVoice, settingsOf } from '../lib/toySettings.js';
+import { MOOD_START, chosenVoice, clampMood, sampleUrl, settingsOf, voicesFor } from '../lib/toySettings.js';
 import { GROUPS, NAME_MAX, NAME_SUGGESTIONS, QUESTIONS, ROLES, TYPES, scoreQuiz, suggestName, typeOf } from '../lib/personality.js';
 
 // Buddy's profile: a name, how the website draws it (design), how it talks
@@ -237,14 +237,14 @@ export function ProfileEditor({ value, onChange, nameError = '' }) {
 // Voices change rarely; one request per page is enough.
 let voicesOnce = null;
 function useVoices() {
-  const [state, setState] = useState({ voices: [], failed: false });
+  const [state, setState] = useState({ voices: [], failed: false, loaded: false });
   useEffect(() => {
     let live = true;
     voicesOnce ??= api.voices().then((out) => out.voices ?? []).catch((err) => {
       voicesOnce = null;
       throw err;
     });
-    voicesOnce.then((voices) => live && setState({ voices, failed: false }), () => live && setState({ voices: [], failed: true }));
+    voicesOnce.then((voices) => live && setState({ voices, failed: false, loaded: true }), () => live && setState({ voices: [], failed: true, loaded: true }));
     return () => {
       live = false;
     };
@@ -256,31 +256,28 @@ function useVoices() {
 // mood. Only the drawer shows these; the add-toy wizard keeps the defaults.
 export function ToySettings({ value, onChange }) {
   const { t } = useI18n();
-  const { voices, failed } = useVoices();
+  const { voices, failed, loaded } = useVoices();
   const s = settingsOf(value);
-  const fallback = defaultVoice(voices);
   const pinned = s.mood_pin !== null;
+  // Voices belong to one language, so a new language starts from its default
+  // voice (the backend would drop the old one too).
+  const setLanguage = (language) => language !== s.language && onChange({ language, voice_id: null });
   return (
     <div className="profile-editor settings">
       <p className="eyebrow">{t('settingsTitle')}</p>
       <section className="pe-section">
         <p className="pe-label" id="conv-lang">{t('convLang')}</p>
         <div className="seg" role="group" aria-labelledby="conv-lang">
-          <button type="button" aria-pressed={s.language === 'vi'} onClick={() => onChange({ language: 'vi' })}>{t('langVi')}</button>
-          <button type="button" aria-pressed={s.language === 'en'} onClick={() => onChange({ language: 'en' })}>{t('langEn')}</button>
+          <button type="button" aria-pressed={s.language === 'vi'} onClick={() => setLanguage('vi')}>{t('langVi')}</button>
+          <button type="button" aria-pressed={s.language === 'en'} onClick={() => setLanguage('en')}>{t('langEn')}</button>
         </div>
         <p className="feed-sub">{t('convLangHelp')}</p>
       </section>
       <section className="pe-section">
-        <label className="pe-label" htmlFor="buddy-voice">{t('voiceLabel')}</label>
-        <select id="buddy-voice" className="input" value={s.voice_id ?? ''} onChange={(e) => onChange({ voice_id: e.target.value || null })}>
-          <option value="">{fallback ? t('voiceDefault', { name: fallback.label }) : t('voiceDefaultPlain')}</option>
-          {/* The default voice is already the first option (null, which follows a
-              later change of default); listing it again would look identical
-              but pin it. It stays only when this toy has pinned it already. */}
-          {voices.filter((v) => !v.is_default || v.id === s.voice_id).map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
-          {s.voice_id && !voices.some((v) => v.id === s.voice_id) && <option value={s.voice_id}>{s.voice_id}</option>}
-        </select>
+        <p className="pe-label" id="buddy-voice">{t('voiceLabel')}</p>
+        {loaded && !failed && (
+          <VoicePicker voices={voices} language={s.language} value={s.voice_id} onChange={(voice_id) => onChange({ voice_id })} />
+        )}
         {failed && <p className="msg bad">{t('voicesFailed')}</p>}
       </section>
       <section className="pe-section">
@@ -304,6 +301,72 @@ export function ToySettings({ value, onChange }) {
         )}
         <p className="feed-sub">{pinned ? t('moodPinnedHelp') : t('moodAutoHelp')}</p>
       </section>
+    </div>
+  );
+}
+
+const PLAY_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>;
+const STOP_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg>;
+
+// The voices of the toy's language, each with Buddy's greeting to listen to
+// before choosing. Picking the default stores null, so the toy keeps
+// following a later change of default; any other voice is stored by id. One
+// audio element for the whole list, so two samples never talk over each other.
+function VoicePicker({ voices, language, value, onChange }) {
+  const { t } = useI18n();
+  const audio = useRef(null);
+  const [playing, setPlaying] = useState(null);
+  const [missing, setMissing] = useState(() => new Set());
+  const own = voicesFor(voices, language);
+  const chosen = chosenVoice(voices, language, value);
+
+  useEffect(() => () => audio.current?.pause(), []);
+  // A language switch replaces every card, so a sample from the old list stops.
+  useEffect(() => {
+    audio.current?.pause();
+    setPlaying(null);
+  }, [language]);
+
+  const toggle = (id) => {
+    const el = (audio.current ??= new Audio());
+    if (playing === id) {
+      el.pause();
+      setPlaying(null);
+      return;
+    }
+    el.onended = () => setPlaying(null);
+    el.onerror = () => {
+      setPlaying(null);
+      setMissing((m) => new Set(m).add(id));
+    };
+    el.src = sampleUrl(id);
+    setPlaying(id);
+    el.play().catch((err) => {
+      // A pause before playback starts aborts harmlessly; anything else (a
+      // blocked autoplay, a failed load) leaves nothing playing.
+      if (err?.name !== 'AbortError') setPlaying((cur) => (cur === id ? null : cur));
+    });
+  };
+
+  if (!own.length) return <p className="feed-sub">{t('voiceNoneForLang')}</p>;
+  return (
+    <div className="voice-list" role="group" aria-labelledby="buddy-voice">
+      {own.map((v) => {
+        const on = playing === v.id;
+        return (
+          <div key={v.id} className="voice-row">
+            <button type="button" className="choice voice-pick" aria-pressed={chosen?.id === v.id} onClick={() => onChange(v.is_default ? null : v.id)}>
+              <span className="voice-name">{v.label}</span>
+              {v.is_default && <span className="voice-tag">{t('voiceDefaultTag')}</span>}
+            </button>
+            <button type="button" className="voice-play" aria-pressed={on} aria-label={on ? t('voiceStop', { name: v.label }) : t('voicePlay', { name: v.label })} onClick={() => toggle(v.id)}>
+              {on ? STOP_ICON : PLAY_ICON}
+            </button>
+            {missing.has(v.id) && <p className="voice-missing feed-sub">{t('voiceSampleMissing')}</p>}
+          </div>
+        );
+      })}
+      <p className="feed-sub">{t('voiceHelp')}</p>
     </div>
   );
 }

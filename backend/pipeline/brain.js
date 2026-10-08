@@ -54,7 +54,7 @@ async function buildMeta(turn) {
   ]);
   // Toys claimed before profiles existed have no row; they are Buddy.
   const p = profile ?? DEFAULT_PROFILE;
-  const voiceId = await voices.resolve(pool, p.voice_id);
+  const voiceId = await voices.resolve(pool, p.voice_id, p.language);
   if (!voiceId) throw new BrainError('no_voice');
   return {
     turn_id: turn.id,

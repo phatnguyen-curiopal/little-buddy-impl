@@ -63,12 +63,28 @@ export async function resetDb() {
   await resetVoices();
 }
 
-// Voices are kept like other reference data, but tests add some through
-// /admin; back to exactly what migration 006 seeded.
-export const SEEDED_VOICE = '1rqNHUqUbBGpY3OyzPMI';
+// Voices are kept like other reference data, but tests add and edit some
+// through /admin; back to exactly what migration 008 seeded.
+export const SEEDED_VOICES = Object.freeze([
+  { id: 'mgBpvrNosWzExdPuRbXP', label: 'Phan Anh', language: 'vi', sort: 0, is_default: true },
+  { id: 'x4KAhuXs2G8TfK9Zr7Q4', label: 'Cam Hong', language: 'vi', sort: 1, is_default: false },
+  { id: 'fBD19tfE58bkETeiwUoC', label: 'Little Dude II', language: 'en', sort: 0, is_default: true },
+  { id: '87n4zM8Wuy87vFILuKvE', label: 'Ziggy', language: 'en', sort: 1, is_default: false },
+  { id: 'e79twtVS2278lVZZQiAD', label: 'The Elf', language: 'en', sort: 2, is_default: false },
+]);
+export const DEFAULT_VOICES = Object.freeze({ vi: 'mgBpvrNosWzExdPuRbXP', en: 'fBD19tfE58bkETeiwUoC' });
 async function resetVoices() {
-  await pool.query('DELETE FROM voices WHERE id <> $1', [SEEDED_VOICE]);
-  await pool.query(`UPDATE voices SET label = 'Giọng mặc định', sort = 0, is_default = true WHERE id = $1`, [SEEDED_VOICE]);
+  await pool.query('DELETE FROM voices WHERE NOT (id = ANY($1))', [SEEDED_VOICES.map((v) => v.id)]);
+  // Every default is cleared first, so restoring them never trips the
+  // one-default-per-language index halfway through.
+  await pool.query('UPDATE voices SET is_default = false');
+  for (const v of SEEDED_VOICES) {
+    await pool.query(
+      `INSERT INTO voices (id, label, language, sort, is_default) VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id) DO UPDATE SET label = EXCLUDED.label, language = EXCLUDED.language, sort = EXCLUDED.sort, is_default = EXCLUDED.is_default`,
+      [v.id, v.label, v.language, v.sort, v.is_default],
+    );
+  }
 }
 
 export async function resetRedis() {

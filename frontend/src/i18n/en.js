@@ -200,7 +200,10 @@ export default {
   // conversation settings (drawer)
   settingsTitle: 'When talking', convLang: 'Conversation language', convLangHelp: "The language Buddy speaks and listens in, separate from this website's language.",
   langVi: 'Tiếng Việt', langEn: 'English',
-  voiceLabel: 'Voice', voiceDefault: 'Default ({name})', voiceDefaultPlain: 'Default voice', voicesFailed: "Couldn't load the voices.",
+  voiceLabel: 'Voice', voicesFailed: "Couldn't load the voices.",
+  voiceDefaultTag: 'Default', voicePlay: 'Play {name}', voiceStop: 'Stop {name}',
+  voiceHelp: 'Tap play to hear Buddy say hello in each voice.', voiceSampleMissing: 'No sample for this voice yet.',
+  voiceNoneForLang: 'No voices for this language yet; Buddy uses the default voice.',
   learnLabel: 'Learn from conversations',
   learnHelp: 'When on, Buddy remembers names, likes and stories your child shares, so later talks feel more natural. When off, Buddy keeps nothing.',
   moodLabel: "Buddy's mood", moodAuto: 'Automatic', moodPinned: 'Pinned',

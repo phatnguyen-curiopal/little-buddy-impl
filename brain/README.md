@@ -18,6 +18,7 @@ npm install
 copy .env.example .env        # PowerShell; bash thì dùng cp, rồi điền key
 npm run migrate               # tự tạo database littlebuddy_brain và extension vector nếu thiếu
 npm run seed:botlife          # tiểu sử và nhật ký của Buddy (vi + en), ngày tính theo hôm nay
+npm run voice-samples -- <id>:<vi|en> ...   # giọng mẫu cho trang web, ghi vào frontend/public/voice-samples/
 npm run dev                   # http://127.0.0.1:8080/healthz
 npm test                      # toàn bộ test (cần Docker)
 npm run test:unit             # chỉ unit test, không cần Docker
@@ -108,6 +109,7 @@ File `.env.example` chia 8 nhóm. Các giá trị trong `.env` chép từ `app-b
 - `STT_NO_VERBATIM=1`: bỏ từ đệm và nói lắp. Lưu ý đã đo: "Không, không, không" bị gộp còn một "Không", mất sự nhấn mạnh.
 - `STT_LOGGING=1`: `0` là zero-retention, đúng ra nên dùng cho sản phẩm trẻ em nhưng tài khoản hiện tại bị 403 và hỏng cả request. Đây là query param, đặt nhầm vào form thì API im lặng bỏ qua.
 - `TTS_OUTPUT_FORMAT` phải là `pcm_*`: đồ chơi phát PCM16 thô. Giọng đọc (`voice_id`) nằm trong DB của backend, gửi sang theo từng lượt.
+- `scripts/voice_samples.js` ghi cho mỗi giọng một câu chào của Buddy bằng đúng lệnh `createTts` của một lượt (cùng model, định dạng và `language_code`), bọc PCM thành WAV tại `frontend/public/voice-samples/<id>.wav` để phụ huynh nghe thử trong trang web. Mỗi lần chạy tốn khoảng 60 ký tự ElevenLabs cho một giọng; giọng mới thêm vào backend cần chạy lại cho giọng đó.
 
 **5. Memory.**
 - `MEMORY_RETRIEVAL`: `both | summary | verbatim`. `summary` rẻ hơn (919 so với 2363 ký tự mỗi lượt) nhưng đo trên thế giới seed thì tìm sai hơn: vector của một bản tóm tắt là trung bình của nhiều điểm khác chủ đề nên khớp yếu với mọi thứ. Giá trị hiện tại chép từ nguyên mẫu.

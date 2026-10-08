@@ -3,11 +3,11 @@ import * as registry from '../devices/registry.js';
 import * as deviceStore from '../store/device.js';
 import { requireAdmin } from '../middleware/require_admin.js';
 import { validateBody, isUuid } from '../lib/validate.js';
-import { badRequest, notFound } from '../lib/http_error.js';
+import { badRequest, conflict, notFound } from '../lib/http_error.js';
 import * as billing from '../billing/ledger.js';
 import * as voices from '../store/voice.js';
 import { withTransaction } from '../store/db.js';
-import { VOICE_ID_RE } from '../personalization/roles.js';
+import { LANGUAGES, VOICE_ID_RE } from '../personalization/roles.js';
 
 // Internal operator endpoints, mounted at /admin. Provisioning is not here
 // on purpose: device secrets never cross HTTP, they go from the CLI to the
@@ -86,17 +86,29 @@ adminRouter.post('/devices/:id/reissue-claim-code', async (req, res) => {
   res.json({ claim_code: claimCode });
 });
 
-// Adds a voice, or edits one (same id). is_default moves the default here;
-// profiles that never picked a voice follow it.
+// Adds a voice, or edits one (same id). language is the conversation
+// language it is offered for (vi on a new voice when omitted). is_default
+// moves that language's default here; profiles in that language that never
+// picked a voice follow it.
 adminRouter.post('/voices', async (req, res) => {
   const body = validateBody(req.body, {
     id: { type: 'string', required: true, min: 1, max: 64, pattern: VOICE_ID_RE },
     label: { type: 'string', required: true, min: 1, max: 60 },
+    language: { type: 'enum', values: LANGUAGES },
     sort: { type: 'int', min: -1000, max: 1000 },
   });
   // Omitted means "leave as is" on an edit (and false on a new voice).
   const isDefault = req.body?.is_default ?? null;
   if (isDefault !== null && typeof isDefault !== 'boolean') throw badRequest('validation_error', 'invalid request body', { details: [{ field: 'is_default', message: 'must be true or false' }] });
-  const row = await withTransaction((tx) => voices.upsert(tx, { id: body.id, label: body.label, sort: body.sort ?? null, isDefault }));
+  let row;
+  try {
+    row = await withTransaction((tx) => voices.upsert(tx, { id: body.id, label: body.label, language: body.language ?? null, sort: body.sort ?? null, isDefault }));
+  } catch (err) {
+    // Moving a default voice to a language that has one already.
+    if (err.code === '23505' && /voices_one_default/.test(err.constraint ?? '')) {
+      throw conflict('default_exists', 'that language already has a default voice; pass is_default: true to move it');
+    }
+    throw err;
+  }
   res.status(row.created ? 201 : 200).json({ voice: { ...voices.toDto(row), sort: row.sort } });
 });

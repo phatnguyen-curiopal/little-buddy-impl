@@ -112,6 +112,12 @@ export function unknownVoice() {
   return badRequest('validation_error', 'invalid profile', { details: [{ field: 'voice_id', message: 'unknown voice' }] });
 }
 
+// A voice speaks one conversation language; pairing it with the other would
+// have Buddy answer in a voice the parent never heard in that language.
+export function voiceWrongLanguage() {
+  return badRequest('validation_error', 'invalid profile', { details: [{ field: 'voice_id', message: 'voice does not speak this language' }] });
+}
+
 export function isVoiceFkError(err) {
   return err?.code === '23503' && /voice/.test(err.constraint ?? '');
 }

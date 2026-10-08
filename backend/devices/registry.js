@@ -3,7 +3,8 @@ import { pool, withTransaction } from '../store/db.js';
 import * as devices from '../store/device.js';
 import * as childrenStore from '../store/child.js';
 import * as profiles from '../store/profile.js';
-import { DEFAULT_PROFILE, validateProfile, isVoiceFkError, unknownVoice } from '../personalization/roles.js';
+import * as voicesStore from '../store/voice.js';
+import { DEFAULT_PROFILE, validateProfile, isVoiceFkError, unknownVoice, voiceWrongLanguage } from '../personalization/roles.js';
 import { pipeline } from '../pipeline/index.js';
 import log from '../lib/log.js';
 import { newDeviceSecret, wrapSecret, unwrapSecret, claimCodeHash, webToySecret } from './secret_box.js';
@@ -130,6 +131,14 @@ async function mapVoiceError(promise) {
   }
 }
 
+// A chosen voice must speak the profile's language. An unknown id is left
+// to the foreign key (mapVoiceError), so the two 400s stay distinct.
+async function checkVoiceLanguage(tx, voiceId, language) {
+  if (!voiceId) return;
+  const voice = await voicesStore.findById(tx, voiceId);
+  if (voice && voice.language !== language) throw voiceWrongLanguage();
+}
+
 // The profile (name, role, personality and conversation settings) is
 // written in the same transaction, so a claimed toy always has one; omitted
 // fields mean the defaults.
@@ -155,6 +164,7 @@ export async function claimByCode({ familyId, claimCode, childId = null, profile
       const child = await childrenStore.findInFamily(tx, childId, familyId);
       if (!child) throw notFound('child_not_found', 'child not found');
     }
+    await checkVoiceLanguage(tx, chosen.voice_id, chosen.language);
     assertTransition(row.status, STATUS.ACTIVE);
     await devices.claim(tx, row.id, { familyId, childId });
     await profiles.upsert(tx, row.id, chosen);
@@ -175,9 +185,21 @@ export async function updateProfile({ deviceId, familyId, patch, actorId = null 
   return mapVoiceError(withTransaction(async (tx) => {
     const row = await lockDevice(tx, deviceId, familyId);
     if (row.status === STATUS.REVOKED) throw conflict('device_revoked', 'device is revoked');
+    // The device row lock above also serializes this read-then-write.
+    const stored = await profiles.findByDevice(tx, row.id);
+    const language = clean.language ?? stored?.language ?? DEFAULT_PROFILE.language;
+    const write = { ...clean };
+    if (Object.hasOwn(clean, 'voice_id')) {
+      await checkVoiceLanguage(tx, clean.voice_id, language);
+    } else if (clean.language && stored?.voice_id) {
+      // A language switch on its own drops a voice of the other language, so
+      // the toy speaks the new language's default, not a mismatched voice.
+      const voice = await voicesStore.findById(tx, stored.voice_id);
+      if (voice && voice.language !== language) write.voice_id = null;
+    }
     // Toys claimed before profiles existed have no row yet.
-    const updated = await profiles.update(tx, row.id, clean) ?? await profiles.upsert(tx, row.id, { ...DEFAULT_PROFILE, ...clean });
-    await devices.insertEvent(tx, { deviceId: row.id, event: 'profile_updated', actorKind: 'parent', actorId, detail: { fields: Object.keys(clean) } });
+    const updated = await profiles.update(tx, row.id, write) ?? await profiles.upsert(tx, row.id, { ...DEFAULT_PROFILE, ...write });
+    await devices.insertEvent(tx, { deviceId: row.id, event: 'profile_updated', actorKind: 'parent', actorId, detail: { fields: Object.keys(write) } });
     return updated && devices.findInFamily(tx, row.id, familyId);
   }));
 }

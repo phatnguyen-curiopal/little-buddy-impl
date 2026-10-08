@@ -200,7 +200,10 @@ export default {
   // conversation settings (drawer)
   settingsTitle: 'Khi trò chuyện', convLang: 'Ngôn ngữ trò chuyện', convLangHelp: 'Ngôn ngữ Buddy nói và nghe, không phụ thuộc ngôn ngữ của trang web.',
   langVi: 'Tiếng Việt', langEn: 'English',
-  voiceLabel: 'Giọng nói', voiceDefault: 'Mặc định ({name})', voiceDefaultPlain: 'Giọng mặc định', voicesFailed: 'Chưa tải được danh sách giọng nói.',
+  voiceLabel: 'Giọng nói', voicesFailed: 'Chưa tải được danh sách giọng nói.',
+  voiceDefaultTag: 'Mặc định', voicePlay: 'Nghe thử giọng {name}', voiceStop: 'Dừng giọng {name}',
+  voiceHelp: 'Bấm nút phát để nghe Buddy chào bằng từng giọng.', voiceSampleMissing: 'Giọng này chưa có bản nghe thử.',
+  voiceNoneForLang: 'Chưa có giọng nào cho ngôn ngữ này, Buddy sẽ dùng giọng mặc định.',
   learnLabel: 'Học từ các cuộc trò chuyện',
   learnHelp: 'Khi bật, Buddy nhớ tên, sở thích và chuyện bé kể để lần sau trò chuyện tự nhiên hơn. Khi tắt, Buddy không lưu lại gì.',
   moodLabel: 'Tâm trạng của Buddy', moodAuto: 'Tự động', moodPinned: 'Ghim',

@@ -1,10 +1,10 @@
 import express from 'express';
 
 import { turnsRouter } from './http/turns.js';
-import { createDebugFile } from './lib/debug_file.js';
 import { createLog, errorFields } from './lib/log.js';
 import { createHelper, createOpenAiClient } from './llm/helper.js';
 import { createLlm } from './llm/index.js';
+import { createLlmLog } from './llm/log_tap.js';
 import { createEmbedder } from './memory/embed.js';
 import { createHistory } from './memory/history.js';
 import { createLearner } from './memory/learn.js';
@@ -18,18 +18,18 @@ const HEALTH_TIMEOUT_MS = 2000;
 export function createDeps(config, { pool, log = createLog({ level: config.logLevel }) }) {
   const openai = createOpenAiClient(config);
   const embed = createEmbedder(openai);
-  const helper = createHelper(openai);
+  const llmLog = createLlmLog(config.debug.llmLogFile);
+  const helper = createHelper(openai, { llmLog });
   const deps = {
     config,
     pool,
     log,
-    llm: createLlm(config, { warn: (message) => log.warn('config_warning', { message }) }),
+    llm: createLlm(config, { warn: (message) => log.warn('config_warning', { message }), llmLog }),
     stt: createStt(config),
     tts: createTts(config),
     embed,
     helper,
     history: createHistory({ maxTurns: config.llm.historyMaxTurns }),
-    debugFile: createDebugFile(config.debug.llmLogFile),
   };
   deps.learner = createLearner(deps);
   return deps;

@@ -132,6 +132,7 @@ export async function extractExchange(helper, { model, lang, userText, assistant
     model,
     system,
     user: t.exchange(userText, assistantText) + (withSummary ? t.summarySheet(sheet) : ''),
+    purpose: withSummary ? 'memory_names_summary' : 'memory_names',
   });
   return {
     names: config.memory.names ? parseNames(parsed, userText) : { names: [], dropped: 0 },
@@ -144,7 +145,7 @@ export async function extractProfile(helper, { model, lang, userText, assistantT
   const sheet = currentRows.length
     ? currentRows.map((row) => t.profileRow(row.id, toWord('factCategory', lang, row.category), row.fact, row.count)).join('\n')
     : t.emptyProfile;
-  const parsed = await helper.json({ model, system: t.profile, user: t.profileUser(sheet, userText, assistantText) });
+  const parsed = await helper.json({ model, system: t.profile, user: t.profileUser(sheet, userText, assistantText), purpose: 'memory_profile' });
   return parseProfileOps(parsed, currentRows);
 }
 
@@ -176,7 +177,7 @@ export async function fixNames(helper, { model, lang, text, known, serviceTier, 
   if (known.some((n) => mentions(text, n))) return { text, fixed: [] };
   const t = textFor(lang).extract;
   try {
-    const parsed = await helper.json({ model, system: t.fix, user: t.fixUser(known, text), serviceTier, signal });
+    const parsed = await helper.json({ model, system: t.fix, user: t.fixUser(known, text), serviceTier, signal, purpose: 'name_fix' });
     return parseFix(parsed, text, known);
   } catch {
     return { text, fixed: [] };

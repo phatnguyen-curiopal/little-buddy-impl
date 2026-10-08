@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import express from 'express';
 
 import { errorFields } from '../lib/log.js';
+import { withLlmContext } from '../llm/log_tap.js';
 import { TurnAbort } from '../llm/result.js';
 import { runTurn } from '../turn/run_turn.js';
 import { SUBJECT_RE, decodeMetaHeader, validateMeta } from './validate.js';
@@ -71,19 +72,24 @@ export function turnsRouter(deps) {
         if (!res.writableFinished) controller.abort(new TurnAbort('closed'));
       });
 
+      // Tags every model call of this turn in LLM_LOG_FILE, the learning
+      // that commit() queues after the answer included.
+      const tag = { turn_id: meta.turn_id, subject: meta.subject };
       try {
-        const { response, commit } = await runTurn(deps, {
-          meta,
-          audio,
-          text: meta.text ?? null,
-          signal: controller.signal,
-        });
+        const { response, commit } = await withLlmContext(tag, () =>
+          runTurn(deps, {
+            meta,
+            audio,
+            text: meta.text ?? null,
+            signal: controller.signal,
+          }),
+        );
         if (controller.signal.aborted && controller.signal.reason?.kind === 'closed') {
           log.info('turn_aborted', { turn_id: meta.turn_id, subject: meta.subject });
           return;
         }
         res.json(response);
-        commit();
+        withLlmContext(tag, commit);
         log.info('turn_done', {
           turn_id: meta.turn_id,
           subject: meta.subject,

@@ -81,7 +81,7 @@ From `brain/`: `npm install`, `npm run migrate` (creates `littlebuddy_brain` and
 - Every child-data table is keyed by `subject` (`child:<uuid>`, or `device:<device>:<family>` for a toy with no child); there are no process-global caches of child data. Short-term history is in RAM only (30 min TTL). Learning runs only with `learn` on, serialized per subject.
 - Prompt text lives in `persona/text/{vi,en}.js` (vi verbatim from the prototype, em dashes removed). The reply must start with an emotion tag, which is parsed and stripped; the tag rule is appended even under an `LLM_SYSTEM_PROMPT` override, and a missing tag is logged. Vietnamese enum words from the extractors map to English codes in `memory/enums.js`.
 - The mood day key is Asia/Ho_Chi_Minh. A pinned mood writes nothing; moods persist even with learning off (they are Buddy's, not the child's).
-- `LLM_LOG_FILE` and `STT_DUMP_WAV` hold a child's words and are refused in production.
+- `LLM_LOG_FILE` and `STT_DUMP_WAV` hold a child's words and are refused in production. `LLM_LOG_FILE` is written by `llm/log_tap.js` from inside both doors to a model (`createLlm#generate` for the reply, `helper.json` for the memory extractors and the name fix, each call labelled with a `purpose`), so every prompt and answer, errors and refusals included, is logged without the caller doing anything; `http/turns.js` tags the turn (`withLlmContext`, AsyncLocalStorage) around `runTurn` and `commit`, so the learning queued after the answer carries the turn id too.
 
 ## Frontend (parent website)
 

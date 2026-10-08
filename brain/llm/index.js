@@ -9,7 +9,7 @@ import { LlmError } from './result.js';
 
 export const providers = { openai, anthropic, qwen };
 
-export function createLlm(config, { warn = () => {} } = {}) {
+export function createLlm(config, { warn = () => {}, llmLog = null } = {}) {
   if (!config.llm.enabled) {
     return {
       name: config.llm.provider,
@@ -27,7 +27,27 @@ export function createLlm(config, { warn = () => {} } = {}) {
     describe: provider.describe,
     buildRequest: provider.buildRequest,
     async generate(args) {
-      const result = await provider.generate(args);
+      const started = Date.now();
+      const asked = { purpose: 'reply', system: args.system, messages: args.messages };
+      let result;
+      try {
+        result = await provider.generate(args);
+      } catch (err) {
+        llmLog?.record({ ...asked, provider: provider.name, model: provider.model, ms: Date.now() - started, error: err });
+        throw err;
+      }
+      // Logged before the checks below, so a refusal or an empty reply is
+      // on record with the prompt that caused it.
+      llmLog?.record({
+        ...asked,
+        provider: result.provider,
+        model: result.model,
+        ms: Date.now() - started,
+        finish: result.finish,
+        usage: result.usage,
+        flagged: Boolean(result.moderation?.flagged),
+        answer: result.text,
+      });
       if (result.finish === 'refusal') throw new LlmError('refusal', 'model declined the request');
       if (!result.text.trim()) throw new LlmError('empty', 'empty reply');
       return result;

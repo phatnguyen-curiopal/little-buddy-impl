@@ -23,7 +23,7 @@ function pick(lines, rand = Math.random) {
 }
 
 export async function runTurn(deps, { meta, audio = null, text = null, signal }) {
-  const { config, pool, llm, stt, tts, history, learner, log, debugFile } = deps;
+  const { config, pool, llm, stt, tts, history, learner, log } = deps;
   const started = Date.now();
   const timings = { stt: 0, memory: 0, llm: 0, tts: 0, total: 0 };
   const { subject, conversation_id: conversationId, settings, buddy, child } = meta;
@@ -177,15 +177,6 @@ export async function runTurn(deps, { meta, audio = null, text = null, signal })
   // The raw words go to the model: history must be what was actually said,
   // and the corrector's conclusion rides in the name-fix block instead.
   const messages = [...past, { role: 'user', content: heard }];
-  debugFile?.write(
-    [
-      `turn ${meta.turn_id} -> request to llm`,
-      '--- system ---',
-      system,
-      `--- messages (${messages.length}) ---`,
-      ...messages.map((msg) => `[${msg.role}] ${msg.content}`),
-    ].join('\n'),
-  );
 
   // --- Reply -----------------------------------------------------------------
   const llmStarted = Date.now();
@@ -200,7 +191,6 @@ export async function runTurn(deps, { meta, audio = null, text = null, signal })
   // A prompt regression that stops the tags would otherwise look like a run
   // of calm faces; this makes it countable in the logs.
   if (!tagged) log.warn('emotion_tag_missing', { turn_id: meta.turn_id });
-  debugFile?.write(`turn ${meta.turn_id} <- reply: ${JSON.stringify(result.text)}\n${'='.repeat(72)}`);
   if (result.moderation?.flagged) {
     log.warn('moderation_flagged', { turn_id: meta.turn_id, categories: result.moderation.top });
   }

@@ -46,7 +46,7 @@ Nếu backend đóng kết nối giữa chừng, brain huỷ mọi lời gọi r
 server.js, app.js, config.js      config.js là nơi DUY NHẤT đọc process.env
 http/turns.js, http/validate.js   route, bearer, kiểm tra metadata
 turn/run_turn.js                  điều phối một lượt, không chứa quyết định nghiệp vụ
-turn/emotion.js                   thẻ [happy] đầu câu -> 1 trong 14 cảm xúc, bỏ mọi thẻ khác trước TTS
+turn/emotion.js                   thẻ [happy] đầu câu -> 1 trong 14 cảm xúc; thẻ giọng nói trong VOICE_TAGS giữ lại cho TTS (khi model diễn được), mọi thẻ khác bỏ
 llm/index.js, llm/result.js       registry chiến lược + LlmResult/LlmError
 llm/providers/openai|anthropic|qwen.js
 llm/helper.js                     lời gọi JSON của OpenAI cho extractor (luôn là OpenAI)
@@ -67,9 +67,9 @@ scripts/migrate.js, seed_botlife.js, import_poc.js
 1. Nạp tên quen của subject (cho keyterms và khối tên) song song với đời sống của Buddy (tiểu sử, nhật ký, tâm trạng).
 2. Đầu vào: giọng thì gửi STT kèm keyterms và mã ngôn ngữ; clip dưới 0,3 giây hoặc transcript rỗng thì trả `no_speech: true` với câu "tớ chưa nghe rõ" theo vai và ngôn ngữ, mặt `confused`, có âm thanh. Chữ thì dùng nguyên, tối đa 2000 ký tự.
 3. Ký ức, chờ tối đa `MEMORY_WAIT_MS`, nhánh nào về trước thì dùng trước; hết giờ vẫn giữ những nhánh đã về.
-4. Prompt theo thứ tự của nguyên mẫu: AN TOÀN, CÁCH NÓI, VAI + TÍNH CÁCH, ĐỜI SỐNG, KÝ ỨC, rồi luật thẻ cảm xúc (luôn được nối thêm, kể cả khi có `LLM_SYSTEM_PROMPT`), rồi các khối ngữ cảnh của lượt.
+4. Prompt theo thứ tự của nguyên mẫu: AN TOÀN, CÁCH NÓI, VAI + TÍNH CÁCH, ĐỜI SỐNG, KÝ ỨC, rồi luật thẻ cảm xúc và (khi `speech.audioTags` bật) luật thẻ giọng nói, cả hai luôn được nối thêm kể cả khi có `LLM_SYSTEM_PROMPT`, rồi các khối ngữ cảnh của lượt.
 5. Gọi LLM (không streaming). Trả lời rỗng hoặc bị từ chối là lỗi.
-6. Tách cảm xúc, TTS câu đã làm sạch bằng giọng của đồ chơi. TTS lỗi thì vẫn trả chữ, `audio_b64: null`.
+6. Tách cảm xúc, TTS câu đã làm sạch (vẫn giữ thẻ giọng nói khi model diễn được) bằng giọng của đồ chơi. `reply` gửi về backend không bao giờ còn thẻ nào. TTS lỗi thì vẫn trả chữ, `audio_b64: null`.
 7. Lượt được giao xong mới ghi lịch sử (giữ nguyên thẻ để model tiếp tục gắn thẻ) và học (nếu `learn` bật).
 
 ### Subject và phạm vi ký ức
@@ -109,6 +109,7 @@ File `.env.example` chia 8 nhóm. Các giá trị trong `.env` chép từ `app-b
 - `STT_NO_VERBATIM=1`: bỏ từ đệm và nói lắp. Lưu ý đã đo: "Không, không, không" bị gộp còn một "Không", mất sự nhấn mạnh.
 - `STT_LOGGING=1`: `0` là zero-retention, đúng ra nên dùng cho sản phẩm trẻ em nhưng tài khoản hiện tại bị 403 và hỏng cả request. Đây là query param, đặt nhầm vào form thì API im lặng bỏ qua.
 - `TTS_OUTPUT_FORMAT` phải là `pcm_*`: đồ chơi phát PCM16 thô. Giọng đọc (`voice_id`) nằm trong DB của backend, gửi sang theo từng lượt.
+- `TTS_MODEL=eleven_v4_turbo`: model này DIỄN thẻ giọng nói (`[whispers]` thì thầm thật, `[giggles]` cười thật, `[slowly]` nói chậm lại), còn Flash v2.5 đọc to chữ trong thẻ. `speech.audioTags` chỉ bật với `eleven_v4`, `eleven_v4_turbo`, `eleven_v3`, `eleven_v3_conversational` (và `TTS_AUDIO_TAGS` khác `0`); khi đó prompt bắt mỗi câu trả lời có 1 đến 3 thẻ trong `VOICE_TAGS`, tắt thì prompt giống hệt trước. Đo thật ngày 09/10/2026: 15 thẻ trong danh sách không bị giọng nào đọc to (5 giọng, 2 thứ tiếng), 20/20 câu trả lời thật có thẻ. Đổi lại TTS batch chậm hơn Flash rõ rệt: cùng 10 câu trả lời, trung vị 4,7 đến 6,5 s so với 1,2 đến 2,1 s của Flash, câu 280 ký tự mất khoảng 16 s. Giọng nghe hơi khác Flash (Phan Anh 152 lên 163 Hz, Cam Hong 327 xuống 250 Hz trên cùng một câu), nên mẫu giọng đã được ghi lại bằng v4 Turbo.
 - `scripts/voice_samples.js` ghi cho mỗi giọng một câu chào của Buddy bằng đúng lệnh `createTts` của một lượt (cùng model, định dạng và `language_code`), bọc PCM thành WAV tại `frontend/public/voice-samples/<id>.wav` để phụ huynh nghe thử trong trang web. Mỗi lần chạy tốn khoảng 60 ký tự ElevenLabs cho một giọng; giọng mới thêm vào backend cần chạy lại cho giọng đó.
 
 **5. Memory.**

@@ -1,7 +1,8 @@
 // Pure prompt assembly. Section order is the prototype's, most important
 // first, and the prompt tells the model that the order is the tie-break:
 // AN TOÀN, CÁCH NÓI, VAI + TÍNH CÁCH, ĐỜI SỐNG, KÝ ỨC. The emotion-tag rule
-// closes the static part, and the per-turn context blocks come after it so
+// (and the voice-tag rule after it) closes the static part, and the per-turn
+// context blocks come after it so
 // the static prefix stays cache-friendly.
 
 import { textFor } from './text/index.js';
@@ -28,10 +29,16 @@ export function personaBlock({ lang, role, personality }) {
 // `override` is LLM_SYSTEM_PROMPT: it replaces the persona verbatim, but the
 // language and tag rules still ride along: without them the toy could answer
 // in a language its STT and TTS are not set for, and every reply would wear
-// the neutral face.
-export function buildSystemPrompt({ lang, buddy, child = null, life = '', override = '' }) {
+// the neutral face. `audioTags` (config speech.audioTags) is true only when
+// the TTS model performs voice tags; off, the prompt is the one without them.
+export function buildSystemPrompt({ lang, buddy, child = null, life = '', override = '', audioTags = false }) {
   const t = textFor(lang);
-  const tag = [...t.replyLanguage, '', ...t.emotionTag].join('\n');
+  const tag = [
+    ...t.replyLanguage,
+    '',
+    ...t.emotionTag({ audioTags }),
+    ...(audioTags ? ['', ...t.voice] : []),
+  ].join('\n');
   if (override) return `${override}\n\n${tag}`;
 
   const name = String(buddy?.name || '').trim() || DEFAULT_BUDDY_NAME;
@@ -40,7 +47,7 @@ export function buildSystemPrompt({ lang, buddy, child = null, life = '', overri
     '',
     ...t.safety({ name }),
     '',
-    ...t.speech,
+    ...t.speech({ audioTags }),
     '',
     personaBlock({ lang, role: buddy?.role, personality: buddy?.personality }),
     '',

@@ -24,6 +24,16 @@ test('a minimal development env boots with the prototype defaults', () => {
   assert.ok(Object.isFrozen(config));
 });
 
+test('voice tags are on only for a TTS model that performs them', () => {
+  assert.equal(loadConfig(minimal).speech.ttsModel, 'eleven_v4_turbo');
+  assert.equal(loadConfig(minimal).speech.audioTags, true);
+  assert.equal(loadConfig({ ...minimal, TTS_MODEL: 'eleven_v4' }).speech.audioTags, true);
+  // Flash reads "[whispers]" aloud as a word.
+  assert.equal(loadConfig({ ...minimal, TTS_MODEL: 'eleven_flash_v2_5' }).speech.audioTags, false);
+  assert.equal(loadConfig({ ...minimal, TTS_AUDIO_TAGS: '0' }).speech.audioTags, false);
+  assert.equal(loadConfig({ ...minimal, TTS_ENABLED: '0' }).speech.audioTags, false);
+});
+
 test('ElevenLabs is required: a brain that cannot hear or speak has no job', () => {
   assert.throws(() => loadConfig({ ...minimal, ELEVENLABS_API_KEY: '' }), /ELEVENLABS_API_KEY/);
 });

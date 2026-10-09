@@ -123,7 +123,9 @@ cut -d, -f2,4 manifests/WEBDEMO2611.csv     # serial và mã ghép, không in b�
 - `HOST=127.0.0.1`, `TRUST_PROXY=2` (Cloudflare rồi nginx, để giới hạn tần
   suất theo IP thật của người dùng).
 - `brain.env` giữ nguyên các khóa API và tham số của bản dev; `LLM_LOG_FILE`
-  và `STT_DUMP_WAV` để trống (production từ chối chúng).
+  và `STT_DUMP_WAV` để trống (production từ chối chúng). Model TTS là dòng
+  `TTS_MODEL` trong file này (thiếu dòng đó thì dùng mặc định `eleven_v4_turbo`):
+  đổi model thì sửa dòng đó rồi deploy lại, và ghi lại mẫu giọng cho khớp.
 
 Backend gửi ping WebSocket mỗi 30 giây: Cloudflare cắt kết nối im lặng quá
 100 giây, mà đồ chơi trên web không gửi heartbeat.

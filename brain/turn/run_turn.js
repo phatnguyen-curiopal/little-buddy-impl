@@ -152,6 +152,7 @@ export async function runTurn(deps, { meta, audio = null, text = null, signal })
     child,
     life: life.block,
     override: config.llm.systemPromptOverride,
+    audioTags: config.speech.audioTags,
   });
   const m = config.memory;
   const system = mem
@@ -186,16 +187,21 @@ export async function runTurn(deps, { meta, audio = null, text = null, signal })
   } finally {
     timings.llm = Date.now() - llmStarted;
   }
-  const { emotion, clean, tagged } = parseEmotion(result.text);
+  const { emotion, clean, spoken, tagged, voiceTags } = parseEmotion(result.text, {
+    audioTags: config.speech.audioTags,
+  });
   if (!clean) throw new LlmError('empty', 'reply was only a tag');
   // A prompt regression that stops the tags would otherwise look like a run
-  // of calm faces; this makes it countable in the logs.
+  // of calm faces (or a flat voice); this makes it countable in the logs.
   if (!tagged) log.warn('emotion_tag_missing', { turn_id: meta.turn_id });
+  if (config.speech.audioTags && !voiceTags) log.warn('voice_tag_missing', { turn_id: meta.turn_id });
   if (result.moderation?.flagged) {
     log.warn('moderation_flagged', { turn_id: meta.turn_id, categories: result.moderation.top });
   }
 
-  const voice = await speak(clean);
+  // The voice tags are for the speech engine only: the reply the backend
+  // gets and memory both take `clean`.
+  const voice = await speak(spoken);
 
   const response = respond({
     noSpeech: false,

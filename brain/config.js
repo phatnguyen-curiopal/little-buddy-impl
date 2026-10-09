@@ -9,6 +9,9 @@ const ELEVENLABS_DEFAULT_BASE = 'https://api.elevenlabs.io';
 const NODE_ENVS = new Set(['development', 'test', 'production']);
 export const PROVIDERS = ['openai', 'anthropic', 'qwen'];
 const KEY_ENVS = { openai: 'OPENAI_API_KEY', anthropic: 'ANTHROPIC_API_KEY', qwen: 'QWEN_API_KEY' };
+// The TTS models that perform voice tags ("[whispers]"); every other model
+// reads them aloud.
+const TAG_MODELS = ['eleven_v4', 'eleven_v4_turbo', 'eleven_v3', 'eleven_v3_conversational'];
 
 function fail(message) {
   throw new Error(`config: ${message}`);
@@ -141,6 +144,8 @@ export function loadConfig(env = process.env) {
   if (/realtime/.test(sttModel)) fail(`ELEVENLABS_STT_MODEL=${sttModel} is a realtime model; batch takes scribe_v1 or scribe_v2`);
   const ttsOutputFormat = str(env, 'TTS_OUTPUT_FORMAT', 'pcm_16000');
   if (!/^pcm_\d+$/.test(ttsOutputFormat)) fail('TTS_OUTPUT_FORMAT must be pcm_* (the toy plays raw PCM16)');
+  const ttsEnabled = onUnlessZero(env, 'TTS_ENABLED');
+  const ttsModel = str(env, 'TTS_MODEL', 'eleven_v4_turbo');
   const speech = {
     sttModel,
     keyterms: onUnlessZero(env, 'STT_KEYTERMS'),
@@ -148,8 +153,11 @@ export function loadConfig(env = process.env) {
     audioEvents: offUnlessOne(env, 'STT_AUDIO_EVENTS'),
     noVerbatim: offUnlessOne(env, 'STT_NO_VERBATIM'),
     logging: onUnlessZero(env, 'STT_LOGGING'),
-    ttsEnabled: onUnlessZero(env, 'TTS_ENABLED'),
-    ttsModel: str(env, 'TTS_MODEL', 'eleven_flash_v2_5'),
+    ttsEnabled,
+    ttsModel,
+    // Off with any other model, so the prompt never asks for a tag that
+    // would be read aloud.
+    audioTags: ttsEnabled && TAG_MODELS.includes(ttsModel) && onUnlessZero(env, 'TTS_AUDIO_TAGS'),
     ttsOutputFormat,
     ttsSampleRate: Number(ttsOutputFormat.split('_')[1]) || 16000,
   };

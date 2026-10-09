@@ -35,7 +35,7 @@ meta = {
 {
   "no_speech": false,
   "heard": "what the child said (transcript) or the typed text",
-  "reply": "Buddy's answer, emotion tag already stripped",
+  "reply": "Buddy's answer, emotion and voice tags already stripped",
   "emotion": "one of the 14 emotions",
   "audio_b64": "base64 PCM16 LE mono" | null,
   "audio_rate": 16000 | null,

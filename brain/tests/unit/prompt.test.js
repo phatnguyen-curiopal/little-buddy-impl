@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { buildSystemPrompt, personaBlock, withContext } from '../../persona/prompt.js';
 import en from '../../persona/text/en.js';
 import vi from '../../persona/text/vi.js';
+import { EMOTIONS, VOICE_TAGS } from '../../turn/emotion.js';
 
 const buddy = { name: 'Mây', role: 'friend', personality: 'ENFP' };
 const child = { name: 'Bông', birth_year: 2020 };
@@ -43,6 +44,50 @@ test('an LLM_SYSTEM_PROMPT override replaces the persona but keeps the tag rule'
   assert.doesNotMatch(prompt, /AN TOÀN/);
   assert.match(prompt, /CẢM XÚC TRÊN MẶT/);
   assert.match(prompt, /\[sleepy\]/);
+});
+
+test('without audio tags the prompt asks for no voice tag and forbids every other tag', () => {
+  for (const lang of ['vi', 'en']) {
+    const prompt = buildSystemPrompt({ lang, buddy, child });
+    assert.equal(prompt, buildSystemPrompt({ lang, buddy, child, audioTags: false }));
+    assert.doesNotMatch(prompt, /\nGIỌNG NÓI\n|\nVOICE\n|\[whispers\]/);
+  }
+  assert.match(buildSystemPrompt({ lang: 'vi', buddy, child }), /DUY NHẤT được phép: chỉ một thẻ/);
+  assert.match(buildSystemPrompt({ lang: 'en', buddy, child }), /It is the ONLY symbol allowed/);
+});
+
+test('with audio tags the voice section closes the prompt and the speech rules make room for it', () => {
+  const vi_ = buildSystemPrompt({ lang: 'vi', buddy, child, audioTags: true });
+  order(vi_, ['CÁCH NÓI', 'KÝ ỨC', '\nNGÔN NGỮ\n', '\nCẢM XÚC TRÊN MẶT\n', '\nGIỌNG NÓI\n']);
+  const viSpeech = vi_.slice(vi_.indexOf('CÁCH NÓI'), vi_.indexOf('VAI: bạn thân'));
+  assert.match(viSpeech, /NGOẠI LỆ: thẻ cảm xúc ở đầu câu trả lời .*\n.*các thẻ giọng nói/);
+  assert.doesNotMatch(vi_, /DUY NHẤT/);
+  assert.match(vi_, /Thẻ mặt luôn đứng ĐẦU TIÊN/);
+  assert.match(vi_, /MỖI câu trả lời phải có từ 1 đến 3 thẻ giọng nói/);
+
+  const en_ = buildSystemPrompt({ lang: 'en', buddy, child, audioTags: true });
+  order(en_, ['HOW TO TALK', 'MEMORY', '\nLANGUAGE\n', '\nFACE\n', '\nVOICE\n']);
+  assert.match(en_, /The exceptions: the emotion tag at the start/);
+  assert.doesNotMatch(en_, /ONE exception|ONLY symbol allowed/);
+  assert.match(en_, /EVERY answer must contain 1 to 3 voice tags/);
+});
+
+test('an override keeps the voice section too, since the tags are what TTS performs', () => {
+  const prompt = buildSystemPrompt({ lang: 'en', buddy, child, override: 'You are a robot.', audioTags: true });
+  assert.ok(prompt.startsWith('You are a robot.'));
+  order(prompt, ['\nFACE\n', '\nVOICE\n']);
+});
+
+test('the prompt lists exactly the voice tags the parser lets through, in both languages', () => {
+  for (const text of [vi, en]) {
+    const listed = text.voice.map((line) => line.match(/^ {2}\[([a-z]+)\] /)?.[1]).filter(Boolean);
+    assert.deepEqual(listed, [...VOICE_TAGS]);
+    // Every tag the rules or the example mention is one the parser keeps (or
+    // the face tag of the example).
+    for (const [, tag] of text.voice.join('\n').matchAll(/\[([a-z]+)\]/g)) {
+      assert.ok(VOICE_TAGS.includes(tag) || EMOTIONS.includes(tag), tag);
+    }
+  }
 });
 
 test('the reply language rule follows the toy setting, override or not', () => {

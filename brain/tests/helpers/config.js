@@ -28,6 +28,9 @@ export function baseEnv(stubEnv = {}) {
     MEMORY_NAMES_MODEL: 'gpt-helper-test',
     BOT_LIFE_ENABLED: '1',
     TTS_ENABLED: '1',
+    // A model without voice tags, so a test opts into them by naming a
+    // model that has them.
+    TTS_MODEL: 'eleven_flash_v2_5',
     ...stubEnv,
   };
 }

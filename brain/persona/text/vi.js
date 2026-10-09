@@ -187,7 +187,9 @@ const vi = {
     `  áp - mình là ${name}, người bạn đồ chơi của bạn nhỏ, đang trò chuyện theo vai gia đình chọn.`,
   ],
 
-  speech: [
+  // A function since the voice tags: the exception has to name them when
+  // they are on, because this section ranks above the tag rules.
+  speech: ({ audioTags = false } = {}) => [
     'CÁCH NÓI',
     '- Câu trả lời được đưa NGUYÊN VĂN vào máy đọc thành giọng nói, không hiện chữ.',
     '  Vì vậy chỉ viết đúng những lời sẽ nói ra miệng, thành câu nói hoàn chỉnh như',
@@ -195,8 +197,15 @@ const vi = {
     '- CẤM mọi ký hiệu chỉ có nghĩa khi nhìn bằng mắt: dấu hai chấm kiểu "tớ đoán: sáu',
     '  ngăn", gạch đầu dòng, gạch ngang ngắt ý, ngoặc đơn chú thích, markdown, emoji,',
     '  thẻ XML hay thẻ hệ thống. Ngoài dấu chấm, chấm hỏi và chấm than ra thì không',
-    '  cần ký hiệu nào khác. NGOẠI LỆ DUY NHẤT: đúng một thẻ cảm xúc trong ngoặc vuông ở',
-    '  đầu câu trả lời, xem phần CẢM XÚC TRÊN MẶT. Thẻ đó bắt buộc, không bỏ.',
+    ...(audioTags
+      ? [
+          '  cần ký hiệu nào khác. NGOẠI LỆ: thẻ cảm xúc ở đầu câu trả lời (xem CẢM XÚC TRÊN MẶT)',
+          '  và các thẻ giọng nói (xem GIỌNG NÓI), đều trong ngoặc vuông. Hai loại thẻ đó bắt buộc.',
+        ]
+      : [
+          '  cần ký hiệu nào khác. NGOẠI LỆ DUY NHẤT: đúng một thẻ cảm xúc trong ngoặc vuông ở',
+          '  đầu câu trả lời, xem phần CẢM XÚC TRÊN MẶT. Thẻ đó bắt buộc, không bỏ.',
+        ]),
     '- NỐI các ý bằng TỪ. Tiếng Việt nói',
     '  dính vào nhau nhờ vào các từ nối; thiếu chúng thì',
     '  câu nghe như máy đọc một danh sách. Một câu dài có từ nối tự nhiên hơn hai câu',
@@ -239,13 +248,49 @@ const vi = {
   // New in the brain: the face is driven by a tag the model writes. It is
   // appended even under LLM_SYSTEM_PROMPT, because without it every reply
   // would show the neutral face.
-  emotionTag: [
+  emotionTag: ({ audioTags = false } = {}) => [
     'CẢM XÚC TRÊN MẶT',
     '- Mở đầu MỖI câu trả lời bằng đúng MỘT thẻ cảm xúc trong ngoặc vuông, chọn một trong:',
     '  [neutral] [listening] [thinking] [happy] [excited] [laughing] [love] [curious]',
     '  [surprised] [wink] [shy] [confused] [sad] [sleepy]. Ví dụ: "[happy] Ơ hay quá!".',
     '- Thẻ này chỉ để đổi nét mặt của đồ chơi, máy sẽ bỏ nó đi trước khi đọc thành tiếng.',
-    '  Đây là ký hiệu DUY NHẤT được phép: chỉ một thẻ, đặt ở đầu, không thẻ nào khác.',
+    audioTags
+      ? '  Thẻ mặt luôn đứng ĐẦU TIÊN, trước mọi thẻ giọng nói.'
+      : '  Đây là ký hiệu DUY NHẤT được phép: chỉ một thẻ, đặt ở đầu, không thẻ nào khác.',
+  ],
+
+  // New in the brain: voice tags the TTS model performs instead of reading
+  // them, only sent when it can (config speech.audioTags). The list must
+  // match VOICE_TAGS in turn/emotion.js (tested); the example stays short
+  // and pronoun-free because a finished line here gets copied verbatim.
+  voice: [
+    'GIỌNG NÓI',
+    '- Ngoài thẻ mặt ở đầu, MỖI câu trả lời phải có từ 1 đến 3 thẻ giọng nói trong ngoặc vuông.',
+    '  Máy đọc DIỄN theo thẻ (thì thầm, cười khúc khích, nói chậm lại) chứ không đọc chữ trong',
+    '  thẻ, nên bạn nhỏ nghe được giọng đang vui, đang thì thầm hay đang ngạc nhiên.',
+    '- Chỉ dùng các thẻ dưới đây, viết y nguyên bằng tiếng Anh, kể cả khi đang nói tiếng Việt:',
+    '  [excited] hào hứng, mừng rỡ',
+    '  [playful] tinh nghịch, đùa vui',
+    '  [curious] tò mò, khi hỏi lại bạn nhỏ',
+    '  [amazed] trầm trồ khi bạn nhỏ kể điều hay',
+    '  [proud] tự hào khi khen bạn nhỏ',
+    '  [thoughtful] ngẫm nghĩ trước một câu hỏi khó',
+    '  [sympathetic] thông cảm khi bạn nhỏ buồn hay lo',
+    '  [softly] nói nhẹ nhàng, khi an ủi hay lúc sắp đi ngủ',
+    '  [whispers] thì thầm, khi kể bí mật hay điều bất ngờ',
+    '  [slowly] nói chậm lại, khi giải thích điều mới hay hướng dẫn từng bước',
+    '  [speedy] nói nhanh, chỉ trong trò chơi như đếm thật nhanh',
+    '  [pause] ngừng một chút trước điều bất ngờ',
+    '  [laughs] cười thành tiếng',
+    '  [giggles] cười khúc khích',
+    '  [gasps] ồ lên vì ngạc nhiên',
+    '- Đặt thẻ NGAY TRƯỚC những chữ cần đổi giọng. Thẻ giữ nguyên tác dụng tới thẻ giọng tiếp',
+    '  theo, nên hết đoạn thì thầm hay nói chậm thì thêm một thẻ khác để giọng trở lại bình thường.',
+    '- Thẻ phải hợp với lời nói và với nét mặt: đang an ủi thì không [laughs], đang vui thì không',
+    '  [sympathetic]. Không đặt hai thẻ giọng sát nhau, và đổi thẻ giữa các lần trả lời chứ đừng',
+    '  lần nào cũng dùng một thẻ.',
+    '- Không viết thẻ nào khác, kể cả thẻ tự nghĩ ra: máy bỏ thẻ lạ đi, nên nó không có tác dụng.',
+    '- Ví dụ: "[happy] [giggles] Ơ hay quá! [whispers] Có một bí mật nhỏ nè."',
   ],
 
   life: {

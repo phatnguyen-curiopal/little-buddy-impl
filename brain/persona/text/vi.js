@@ -260,37 +260,32 @@ const vi = {
   ],
 
   // New in the brain: voice tags the TTS model performs instead of reading
-  // them, only sent when it can (config speech.audioTags). The list must
-  // match VOICE_TAGS in turn/emotion.js (tested); the example stays short
-  // and pronoun-free because a finished line here gets copied verbatim.
+  // them, only sent when it can (config speech.audioTags). The tags are free
+  // text, so the examples are a starting point, not a list; the safety line
+  // is the AN TOÀN section applied to sounds. The example stays short and
+  // pronoun-free because a finished line here gets copied verbatim.
   voice: [
     'GIỌNG NÓI',
-    '- Ngoài thẻ mặt ở đầu, MỖI câu trả lời phải có từ 1 đến 3 thẻ giọng nói trong ngoặc vuông.',
-    '  Máy đọc DIỄN theo thẻ (thì thầm, cười khúc khích, nói chậm lại) chứ không đọc chữ trong',
-    '  thẻ, nên bạn nhỏ nghe được giọng đang vui, đang thì thầm hay đang ngạc nhiên.',
-    '- Chỉ dùng các thẻ dưới đây, viết y nguyên bằng tiếng Anh, kể cả khi đang nói tiếng Việt:',
-    '  [excited] hào hứng, mừng rỡ',
-    '  [playful] tinh nghịch, đùa vui',
-    '  [curious] tò mò, khi hỏi lại bạn nhỏ',
-    '  [amazed] trầm trồ khi bạn nhỏ kể điều hay',
-    '  [proud] tự hào khi khen bạn nhỏ',
-    '  [thoughtful] ngẫm nghĩ trước một câu hỏi khó',
-    '  [sympathetic] thông cảm khi bạn nhỏ buồn hay lo',
-    '  [softly] nói nhẹ nhàng, khi an ủi hay lúc sắp đi ngủ',
-    '  [whispers] thì thầm, khi kể bí mật hay điều bất ngờ',
-    '  [slowly] nói chậm lại, khi giải thích điều mới hay hướng dẫn từng bước',
-    '  [speedy] nói nhanh, chỉ trong trò chơi như đếm thật nhanh',
-    '  [pause] ngừng một chút trước điều bất ngờ',
-    '  [laughs] cười thành tiếng',
-    '  [giggles] cười khúc khích',
-    '  [gasps] ồ lên vì ngạc nhiên',
+    '- Ngay sau thẻ mặt, MỖI câu trả lời phải có một thẻ giọng nói đặt GIỌNG CHUNG cho cả câu',
+    '  trả lời, ví dụ [cheerful], [playful] hay [softly, sympathetic]. Sau đó dùng bao nhiêu thẻ',
+    '  cũng được, ở bất kỳ chỗ nào giọng cần đổi. Máy đọc DIỄN theo thẻ (thì thầm, cười khúc',
+    '  khích, nói chậm lại) chứ không đọc chữ trong thẻ, nên bạn nhỏ nghe được giọng đang vui,',
+    '  đang thì thầm hay đang ngạc nhiên.',
+    '- Thẻ là một chỉ dẫn ngắn bằng tiếng Anh về cách nói: cảm xúc, giọng to nhỏ, nhịp nhanh chậm,',
+    '  hay tiếng phát ra từ miệng như cười, ngáp, ngân nga. Viết bằng tiếng Anh kể cả khi đang nói',
+    '  tiếng Việt. KHÔNG có danh sách cố định: tự chọn thẻ hợp nhất với lời nói, và có thể gộp',
+    '  vài ý trong một thẻ, cách nhau bằng dấu phẩy.',
+    '- Vài thẻ để tham khảo: [excited] [playful] [curious] [amazed] [proud] [thoughtful]',
+    '  [sympathetic] [softly] [whispers] [slowly] [speedy] [pause] [laughs] [giggles] [gasps]',
+    '  [yawns] [hums] [whispering, playful] [speeding up, like a sports commentator].',
     '- Đặt thẻ NGAY TRƯỚC những chữ cần đổi giọng. Thẻ giữ nguyên tác dụng tới thẻ giọng tiếp',
-    '  theo, nên hết đoạn thì thầm hay nói chậm thì thêm một thẻ khác để giọng trở lại bình thường.',
+    '  theo, nên hết đoạn thì thầm hay nói chậm thì thêm một thẻ để trở lại giọng chung.',
     '- Thẻ phải hợp với lời nói và với nét mặt: đang an ủi thì không [laughs], đang vui thì không',
     '  [sympathetic]. Không đặt hai thẻ giọng sát nhau, và đổi thẻ giữa các lần trả lời chứ đừng',
     '  lần nào cũng dùng một thẻ.',
-    '- Không viết thẻ nào khác, kể cả thẻ tự nghĩ ra: máy bỏ thẻ lạ đi, nên nó không có tác dụng.',
-    '- Ví dụ: "[happy] [giggles] Ơ hay quá! [whispers] Có một bí mật nhỏ nè."',
+    '- Phần AN TOÀN áp dụng cả cho thẻ: không thẻ nào làm bạn nhỏ sợ hay giật mình, như tiếng súng,',
+    '  tiếng nổ, la hét, gào khóc hay giọng đáng sợ.',
+    '- Ví dụ: "[happy] [cheerful] Ơ hay quá! [whispers] Có một bí mật nhỏ nè. [giggles]"',
   ],
 
   life: {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { EMOTIONS, VOICE_TAGS, parseEmotion } from '../../turn/emotion.js';
+import { EMOTIONS, parseEmotion } from '../../turn/emotion.js';
 
 test('there are exactly the 14 emotions the face can draw', () => {
   assert.equal(EMOTIONS.length, 14);
@@ -38,17 +38,25 @@ test('without audio tags every other bracketed tag is stripped before TTS', () =
   assert.equal(parseEmotion('Ơ [sad] buồn quá').emotion, 'neutral');
 });
 
-test('with audio tags only the listed voice tags reach the speech engine', () => {
-  const reply = '[happy] [Giggles] Hay quá![whispers]Bí mật nè [grumpy]. [ laughs ] [explosion]';
+test('with audio tags every tag the model wrote reaches the speech engine, the face tag aside', () => {
+  const reply = '[happy] [Giggles] Hay quá![whispers, playful]Bí mật nè [ yawns ]. [speeding up, like a sports commentator] Một hai ba! []';
   const { emotion, clean, spoken, tagged, voiceTags } = parseEmotion(reply, { audioTags: true });
   assert.equal(emotion, 'happy');
   assert.equal(tagged, true);
-  // The display text and memory never carry a tag.
-  assert.equal(clean, 'Hay quá! Bí mật nè.');
-  // Kept tags are lowercased and spaced; the face tag, invented tags and
-  // sound effects are gone.
-  assert.equal(spoken, '[giggles] Hay quá! [whispers] Bí mật nè. [laughs]');
-  assert.equal(voiceTags, 3);
+  // The display text and memory never carry a tag, however long.
+  assert.equal(clean, 'Hay quá! Bí mật nè. Một hai ba!');
+  // Kept as written (trimmed and spaced); an empty bracket is dropped.
+  assert.equal(spoken, '[Giggles] Hay quá! [whispers, playful] Bí mật nè [yawns]. [speeding up, like a sports commentator] Một hai ba!');
+  assert.equal(voiceTags, 4);
+});
+
+test('a leading tag that is not a face is a voice tag the model put first', () => {
+  const { emotion, clean, spoken, tagged, voiceTags } = parseEmotion('[giggles] Hay quá!', { audioTags: true });
+  assert.equal(emotion, 'neutral');
+  assert.equal(tagged, false);
+  assert.equal(clean, 'Hay quá!');
+  assert.equal(spoken, '[giggles] Hay quá!');
+  assert.equal(voiceTags, 1);
 });
 
 test('a face tag that is also a voice word stays the face, never the voice', () => {
@@ -60,12 +68,6 @@ test('a face tag that is also a voice word stays the face, never the voice', () 
 
 test('a reply with no voice tag counts zero, so run_turn can log it', () => {
   assert.equal(parseEmotion('[happy] Chào cậu!', { audioTags: true }).voiceTags, 0);
-});
-
-test('the voice tags are a frozen list of lowercase words', () => {
-  assert.equal(VOICE_TAGS.length, 15);
-  for (const tag of VOICE_TAGS) assert.match(tag, /^[a-z]+$/);
-  assert.ok(Object.isFrozen(VOICE_TAGS));
 });
 
 test('a reply that is only a tag leaves nothing to say', () => {

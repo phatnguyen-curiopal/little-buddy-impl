@@ -29,18 +29,18 @@ beforeEach(async () => {
 });
 
 test('the model is asked for voice tags and only the speech engine hears them', async () => {
-  stub.state.reply = '[happy] [giggles] Hay quá! [whispers] Bí mật nè [grumpy].';
+  stub.state.reply = '[happy] [giggles] Hay quá! [whispering, playful] Bí mật nè [yawns].';
   const meta = makeMeta();
   const { status, body } = await postText(brain.url, meta, 'Tớ tìm được xương khủng long');
   assert.equal(status, 200);
 
   const system = stub.of('openai.chat')[0].body.messages[0].content;
   assert.match(system, /\nGIỌNG NÓI\n/);
-  assert.match(system, /\[whispers\] thì thầm/);
+  assert.match(system, /KHÔNG có danh sách cố định/);
 
   const [tts] = stub.of('eleven.tts');
   assert.equal(tts.body.model_id, 'eleven_v4_turbo');
-  assert.equal(tts.body.text, '[giggles] Hay quá! [whispers] Bí mật nè.');
+  assert.equal(tts.body.text, '[giggles] Hay quá! [whispering, playful] Bí mật nè [yawns].');
   assert.equal(body.reply, 'Hay quá! Bí mật nè.');
   assert.equal(body.emotion, 'happy');
   assert.ok(!logLines.some((l) => l.event === 'voice_tag_missing'));

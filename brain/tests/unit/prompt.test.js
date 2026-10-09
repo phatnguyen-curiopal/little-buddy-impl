@@ -4,7 +4,6 @@ import { test } from 'node:test';
 import { buildSystemPrompt, personaBlock, withContext } from '../../persona/prompt.js';
 import en from '../../persona/text/en.js';
 import vi from '../../persona/text/vi.js';
-import { EMOTIONS, VOICE_TAGS } from '../../turn/emotion.js';
 
 const buddy = { name: 'Mây', role: 'friend', personality: 'ENFP' };
 const child = { name: 'Bông', birth_year: 2020 };
@@ -63,13 +62,16 @@ test('with audio tags the voice section closes the prompt and the speech rules m
   assert.match(viSpeech, /NGOẠI LỆ: thẻ cảm xúc ở đầu câu trả lời .*\n.*các thẻ giọng nói/);
   assert.doesNotMatch(vi_, /DUY NHẤT/);
   assert.match(vi_, /Thẻ mặt luôn đứng ĐẦU TIÊN/);
-  assert.match(vi_, /MỖI câu trả lời phải có từ 1 đến 3 thẻ giọng nói/);
+  assert.match(vi_, /MỖI câu trả lời phải có một thẻ giọng nói đặt GIỌNG CHUNG/);
+  assert.match(vi_, /dùng bao nhiêu thẻ\n {2}cũng được/);
 
   const en_ = buildSystemPrompt({ lang: 'en', buddy, child, audioTags: true });
   order(en_, ['HOW TO TALK', 'MEMORY', '\nLANGUAGE\n', '\nFACE\n', '\nVOICE\n']);
   assert.match(en_, /The exceptions: the emotion tag at the start/);
   assert.doesNotMatch(en_, /ONE exception|ONLY symbol allowed/);
-  assert.match(en_, /EVERY answer must contain 1 to 3 voice tags/);
+  assert.match(en_, /EVERY answer must have one voice tag that sets the OVERALL TONE/);
+  assert.match(en_, /use as many tags as you like/);
+  assert.doesNotMatch(vi_ + en_, /1 đến 3|1 to 3/);
 });
 
 test('an override keeps the voice section too, since the tags are what TTS performs', () => {
@@ -78,16 +80,18 @@ test('an override keeps the voice section too, since the tags are what TTS perfo
   order(prompt, ['\nFACE\n', '\nVOICE\n']);
 });
 
-test('the prompt lists exactly the voice tags the parser lets through, in both languages', () => {
-  for (const text of [vi, en]) {
-    const listed = text.voice.map((line) => line.match(/^ {2}\[([a-z]+)\] /)?.[1]).filter(Boolean);
-    assert.deepEqual(listed, [...VOICE_TAGS]);
-    // Every tag the rules or the example mention is one the parser keeps (or
-    // the face tag of the example).
-    for (const [, tag] of text.voice.join('\n').matchAll(/\[([a-z]+)\]/g)) {
-      assert.ok(VOICE_TAGS.includes(tag) || EMOTIONS.includes(tag), tag);
-    }
-  }
+test('the voice tags are open, with examples, and the safety rule covers them', () => {
+  const vi_ = vi.voice.join('\n');
+  assert.match(vi_, /KHÔNG có danh sách cố định/);
+  assert.match(vi_, /\[whispering, playful\]/);
+  assert.match(vi_, /Phần AN TOÀN áp dụng cả cho thẻ/);
+  const en_ = en.voice.join('\n');
+  assert.match(en_, /There is NO fixed list/);
+  assert.match(en_, /\[whispering, playful\]/);
+  assert.match(en_, /The SAFETY section applies to tags too/);
+  // The section names the safety section by its real heading.
+  assert.match(buildSystemPrompt({ lang: 'en', buddy, child }), /^SAFETY/m);
+  for (const text of [vi, en]) assert.doesNotMatch(text.voice.join('\n'), /Use only|Chỉ dùng/);
 });
 
 test('the reply language rule follows the toy setting, override or not', () => {

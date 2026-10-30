@@ -9,6 +9,9 @@ import { EMBEDDING_DIMS, type ModelGateway, type NameQuestion, type StructuredRe
 
 export interface FakeOptions {
   transcript?: string;
+  // What the streaming recogniser commits, when it should differ from the
+  // batch transcript (an empty string: the stream heard nothing).
+  streamed?: string;
   replyFor?: (messages: ChatMessage[]) => string;
 }
 
@@ -41,8 +44,21 @@ function fakeNames(text: string, names: NameQuestion[]): Classification['names']
   return names.map((n) => ({ ref: n.ref, meant: text.split(/(?<=[.!?])\s+/).some((s) => s.slice(1).includes(n.name)) }));
 }
 
-export function fakeClassify(text: string, names?: NameQuestion[]): Classification {
-  return names?.length ? { ...fakeLabels(text), names: fakeNames(text, names) } : fakeLabels(text);
+// A child's sounds read the way the live classifier is asked to: a habit the
+// child is known for, or the one test mishearing ("đau lăn"), is a guess;
+// thinking sounds are clear; babble ("ba la ba la") is unclear.
+function fakeMeaning(text: string, habits: [string, string][] = []): Pick<Classification, 'meant' | 'clarity'> {
+  if (/\b(ba la|bla bla)\b/i.test(nameKey(text))) return { meant: text, clarity: 'unclear' };
+  for (const [heard, meant] of habits) {
+    if (text.toLowerCase().includes(heard.toLowerCase())) return { meant: text.replace(new RegExp(heard, 'i'), meant), clarity: 'clear' };
+  }
+  if (/đau lăn/i.test(text)) return { meant: text.replace(/đau lăn/i, 'đau răng'), clarity: 'unsure' };
+  return { meant: text, clarity: 'clear' };
+}
+
+export function fakeClassify(text: string, names?: NameQuestion[], habits?: [string, string][]): Classification {
+  const labels = { ...fakeLabels(text), ...fakeMeaning(text, habits) };
+  return names?.length ? { ...labels, names: fakeNames(text, names) } : labels;
 }
 
 function fakeLabels(text: string): Classification {
@@ -112,9 +128,11 @@ export function createFakeGateway(opts: FakeOptions = {}): ModelGateway & { call
     // A word per 300 ms of audio, shown in a partial every 900 ms like the
     // realtime model's bursts, so the voice service can classify while the
     // child is talking.
-    openTranscription({ onPartial }) {
+    openTranscription({ onPartial, previousText }) {
       count('openTranscription');
-      const words = (opts.transcript ?? 'My dog Mochi fell in a puddle').split(' ');
+      if (previousText) count('previousText');
+      const full = opts.transcript ?? 'My dog Mochi fell in a puddle';
+      const words = (opts.streamed ?? full).split(' ').filter(Boolean);
       let bytes = 0;
       let shown = 0;
       let closed = false;
@@ -135,14 +153,18 @@ export function createFakeGateway(opts: FakeOptions = {}): ModelGateway & { call
           count('sttFinish');
           return bytes < 3200 ? '' : words.join(' ');
         },
+        async recheck() {
+          count('sttRecheck');
+          return bytes < 3200 ? '' : full;
+        },
         close() {
           closed = true;
         },
       };
     },
-    async classify({ text, names }) {
+    async classify({ text, names, habits }) {
       count('classify');
-      return fakeClassify(text, names);
+      return fakeClassify(text, names, habits);
     },
     async *reply({ messages, signal, onUsage }) {
       count('reply');

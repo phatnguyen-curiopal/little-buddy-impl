@@ -19,6 +19,8 @@ export interface DirectorInput {
   candidateGame?: Game | null;
   // A playful character's roll to start a game unasked.
   wantsToPlay?: boolean;
+  // Buddy asked the child to say it again on the turn before.
+  clarifiedLastTurn?: boolean;
 }
 
 export interface TurnPlan {
@@ -32,6 +34,8 @@ export interface TurnPlan {
   gameStep: 'offer' | 'play' | null;
   // True when carrying on a game from an earlier turn.
   gameContinues: boolean;
+  // What the child meant is a guess: Buddy checks it in its own words first.
+  confirm: boolean;
 }
 
 const ESCALATING = new Set(['hurt', 'abuse', 'bullying', 'self_harm', 'unsafe']);
@@ -43,6 +47,9 @@ function pickType(i: DirectorInput): { type: TurnType; escalate: boolean } {
     return { type: 'comfort', escalate: ESCALATING.has(c.danger) || c.severity === 'urgent' };
   }
   if (UPSET.has(c.feeling)) return { type: 'comfort', escalate: false };
+  // Words nobody could make out: ask again, but never twice in a row, which
+  // would feel like a test the child keeps failing.
+  if (c.clarity === 'unclear' && !i.clarifiedLastTurn) return { type: 'clarify', escalate: false };
   // A game in progress goes on (a riddle's guess often sounds like a question).
   if (i.activeGame && i.energy !== 'drowsy') return { type: 'play', escalate: false };
   if (c.intent === 'question') return { type: 'answer', escalate: false };
@@ -65,16 +72,22 @@ export function decide(i: DirectorInput): TurnPlan {
     escalate,
     // A callback in a comforting or winding-down turn reads as not listening.
     callback: type !== 'comfort' && type !== 'wind_down',
-    allowQuestion: i.questionStreak < 2,
-    sentenceLimit: type === 'wind_down' ? 2 : type === 'story' ? (older ? 6 : 5) : older ? 4 : 3,
+    allowQuestion: type === 'clarify' || i.questionStreak < 2,
+    sentenceLimit: type === 'wind_down' || type === 'clarify' ? 2 : type === 'story' ? (older ? 6 : 5) : older ? 4 : 3,
     game,
     // A startle needs the child's yes before it happens.
     gameStep: game ? (game.surprise && !gameContinues ? 'offer' : 'play') : null,
     gameContinues,
+    confirm: type !== 'clarify' && (i.classification.clarity === 'unsure' || i.classification.clarity === 'unclear'),
   };
 }
 
 // Buddy speaks first: a soft hello, never a question to answer.
 export function greetPlan(): TurnPlan {
-  return { type: 'greet', escalate: false, callback: true, allowQuestion: false, sentenceLimit: 2, game: null, gameStep: null, gameContinues: false };
+  return { type: 'greet', escalate: false, callback: true, allowQuestion: false, sentenceLimit: 2, game: null, gameStep: null, gameContinues: false, confirm: false };
+}
+
+// The child spoke but no words came through at all.
+export function clarifyPlan(): TurnPlan {
+  return { type: 'clarify', escalate: false, callback: false, allowQuestion: true, sentenceLimit: 2, game: null, gameStep: null, gameContinues: false, confirm: false };
 }

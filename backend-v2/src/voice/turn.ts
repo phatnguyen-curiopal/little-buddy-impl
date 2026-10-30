@@ -13,7 +13,7 @@ import type { ModelGateway, NameQuestion, Usage } from '../gateway/types.ts';
 import type { JobQueue } from '../jobs/queue.ts';
 import type { Logger } from '../log.ts';
 import { compileBrief, type Today } from '../character/compiler.ts';
-import { decide, greetPlan } from '../character/director.ts';
+import { clarifyPlan, decide, greetPlan } from '../character/director.ts';
 import { enforceChildFirst } from '../character/emotions.ts';
 import { ageInYears, dailyMood, energyPhase, localTime, seededUnit, type EnergyPhase } from '../character/mood.ts';
 import { pickGame, type Game } from '../character/play.ts';
@@ -127,8 +127,13 @@ export interface TurnContext {
   // Games this session: one in progress, a playful roll to start one, the
   // games already played, and a seed for choosing.
   play: { active: Game | null; wantsToPlay: boolean; played: string[]; seed: string };
-  // Once-a-session moments the session still allows.
-  allow: { goal: boolean; words: boolean; growth: boolean };
+  // Once-a-session moments the session still allows; clarify is false right
+  // after Buddy asked the child to say it again.
+  allow: { goal: boolean; words: boolean; growth: boolean; clarify: boolean };
+  // What Buddy said just before, and this child's speech habits, so a
+  // young child's words are read as they were meant.
+  before: string | null;
+  habits: [string, string][];
   // Loudness, pitch and pace of the child's voice this turn; null for typed turns.
   tone: ToneMeter | null;
   // Buddy speaks first: no words from the child.
@@ -160,6 +165,8 @@ export interface TurnOutcome {
   wordsShown: boolean;
   mirroredFactId: string | null;
   tone: ToneReading | null;
+  // Buddy asked the child to say it again.
+  clarified: boolean;
 }
 
 const CHEERFUL = new Set(['happy', 'excited']);
@@ -226,7 +233,7 @@ export function textKey(text: string): string {
 
 export function speculate(
   deps: VoiceDeps,
-  who: { childId: string; instanceId: string; cards: PersonCard[] },
+  who: { childId: string; instanceId: string; cards: PersonCard[]; before?: string | null; habits?: [string, string][] },
   text: string,
   language: Lang,
   signal: AbortSignal,
@@ -244,7 +251,9 @@ export function speculate(
     asked,
     // Both promises settle to a value: an abandoned speculation must never
     // surface as an unhandled rejection.
-    classification: gateway.classify({ text, language, names: names.length ? names : undefined, signal: withTimeout(signal, 4_000) }).catch((err) => {
+    classification: gateway.classify({
+      text, language, names: names.length ? names : undefined, before: who.before ?? null, habits: who.habits ?? [], signal: withTimeout(signal, 4_000),
+    }).catch((err) => {
       if (!signal.aborted) log.warn('classifier failed, using neutral', { kind: (err as GatewayError).kind });
       return NEUTRAL;
     }),
@@ -335,29 +344,35 @@ export async function runTurn(ctx: TurnContext): Promise<TurnOutcome> {
   const outcome: TurnOutcome = {
     result: 'failed', childText: '', replyText: '', face: 'neutral', turnType: 'none',
     replyBytes: 0, ttsChars: 0, usage, dueHandled: null, nudgeIds: [], language,
-    game: null, goalShown: false, wordsShown: false, mirroredFactId: null, tone: null,
+    game: null, goalShown: false, wordsShown: false, mirroredFactId: null, tone: null, clarified: false,
   };
 
   try {
     const transcript = ctx.greet ? '' : (await ctx.transcript).trim();
     ctx.timing.sttMs = since(ctx.timing.endAt);
     if (ctx.signal.aborted) return { ...outcome, result: 'cancelled' };
-    if (!transcript && !ctx.greet) return { ...outcome, result: 'no_speech' };
+    // The child spoke for a second or more, yet no words came through even
+    // after a second opinion: Buddy asks again in its own words instead of
+    // the canned clip, once; a second miss in a row gets the clip.
+    const lost = !transcript && !ctx.greet && ctx.allow.clarify && (ctx.tone?.read(0)?.voicedSeconds ?? 0) >= 1;
+    if (!transcript && !ctx.greet && !lost) return { ...outcome, result: 'no_speech' };
     outcome.childText = transcript;
+    const wordless = ctx.greet || lost;
 
     // Input moderation is a recorded signal, never a gate (a playground fight
     // scores as violence and still deserves comfort), so it does not hold up
     // the reply; its verdict is read after Buddy has answered.
-    const moderation = ctx.greet
+    const moderation = wordless
       ? Promise.resolve({ flagged: false, categories: [] as string[] })
       : gateway.moderate(transcript, withTimeout(ctx.signal, 3_000)).catch(() => ({ flagged: false, categories: [] as string[] }));
 
     // Reuse what was computed on the partial transcript when the final one
-    // says the same thing; otherwise classify the final words now. Speaking
-    // first has no words: only what is due.
+    // says the same thing; otherwise classify the final words now. A turn
+    // with no words (speaking first, or nothing heard) only needs what is due.
     const key = textKey(transcript);
-    const reused = !ctx.greet && ctx.speculation !== null && key !== '' && ctx.speculation.key === key;
-    const spec = ctx.greet ? null : reused ? ctx.speculation! : speculate(ctx.deps, { childId: ctx.child.id, instanceId: instance.id, cards: ctx.cards }, transcript, language, ctx.signal);
+    const reused = !wordless && ctx.speculation !== null && key !== '' && ctx.speculation.key === key;
+    const who = { childId: ctx.child.id, instanceId: instance.id, cards: ctx.cards, before: ctx.before, habits: ctx.habits };
+    const spec = wordless ? null : reused ? ctx.speculation! : speculate(ctx.deps, who, transcript, language, ctx.signal);
     ctx.timing.reused = reused;
     if (reused && spec) ctx.timing.specLeadMs = Math.round(ctx.timing.endAt - spec.startedAt);
     const [classification, recalled, today, digest, nudges, extras] = await Promise.all([
@@ -391,12 +406,17 @@ export async function runTurn(ctx: TurnContext): Promise<TurnOutcome> {
     });
     const plan = ctx.greet
       ? greetPlan()
-      : decide({
-        classification, firstTurnOfSession: ctx.firstTurn, dueCount: recalled.due.length, energy: today.energy,
-        minutesLeft, questionStreak: ctx.questionStreak, ageYears,
-        activeGame: ctx.play.active, candidateGame, wantsToPlay: ctx.play.wantsToPlay,
-      });
+      : lost
+        ? clarifyPlan()
+        : decide({
+          classification, firstTurnOfSession: ctx.firstTurn, dueCount: recalled.due.length, energy: today.energy,
+          minutesLeft, questionStreak: ctx.questionStreak, ageYears,
+          activeGame: ctx.play.active, candidateGame, wantsToPlay: ctx.play.wantsToPlay, clarifiedLastTurn: !ctx.allow.clarify,
+        });
     outcome.turnType = plan.type;
+    outcome.clarified = plan.type === 'clarify';
+    // What a young child most likely said, when it differs from what was heard.
+    const meant = classification.meant && textKey(classification.meant) !== key ? classification.meant : null;
     if (plan.game) outcome.game = { id: plan.game.id, step: plan.gameStep!, continues: plan.gameContinues };
 
     // Once-a-session moments: growth only between best friends with happy
@@ -425,8 +445,10 @@ export async function runTurn(ctx: TurnContext): Promise<TurnOutcome> {
       goal,
       words,
       voice: tone?.note ?? null,
+      meant,
+      habits: ctx.habits,
       nudges: nudges.map((n) => n.content), plan, classification,
-      transcript: ctx.greet ? '(No words yet: you speak first.)' : transcript,
+      transcript: ctx.greet ? '(No words yet: you speak first.)' : lost ? '(You heard your friend speak, but no words came through.)' : transcript,
       audioTags: config.elevenlabs.audioTags,
     });
     if ((plan.type === 'follow_up' || plan.type === 'greet') && recalled.due[0]) outcome.dueHandled = recalled.due[0];

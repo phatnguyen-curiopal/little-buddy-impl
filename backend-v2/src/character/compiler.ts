@@ -36,6 +36,10 @@ export interface BriefInput {
   words?: [string, string | null][] | null;
   // How the child's voice sounded against their usual voice.
   voice?: string | null;
+  // What the child most likely said, when recognition heard other words.
+  meant?: string | null;
+  // This child's speech habits: what recognition writes, and what they mean.
+  habits?: [string, string][];
   nudges: string[];
   plan: TurnPlan;
   classification: Classification;
@@ -93,6 +97,7 @@ const TURN: Record<TurnType, string> = {
   teach: 'Share one surprising fact in a playful way.',
   wind_down: 'You are getting sleepy: yawn, keep it short and calm, and say a warm goodbye for now.',
   greet: 'You speak first, softly, because your friend just picked you up: a warm hello and one small thing from your day, or the first due item. No question they must answer.',
+  clarify: 'You could not make out what they said: ask them to say it again in a playful way of your own (your ears were full of cotton, a bird sang too loud), maybe slower or a bit louder, and say you really want to hear it. Never blame them.',
 };
 
 const DIAL_WORDS: Record<keyof Dials, [string, string, string]> = {
@@ -136,6 +141,7 @@ function styleLayer(instance: Instance, audioTags: boolean): string {
     `- Personality: ${dialLine(instance)}. It shows in every answer.`,
     '- Your words are read aloud by a speech machine and nothing is shown, so write only what is spoken: short, complete sentences a young child understands at once, linked with little words like "and", "so", "because".',
     '- No lists, emoji, markdown, notes in brackets, or metaphors a young child would not get.',
+    '- HOW YOU LISTEN: your friend is a young child and you hear them through speech recognition, which writes what it heard. Sounds may come out as other real words (l for r, ch for tr, dropped sounds; w for r or l in English). Understand what they most likely meant from the conversation, never correct how they speak, and if a guess matters, check it kindly in your own words ("Cậu bị đau răng hả?").',
     `- ${LANGUAGE[instance.language_mode]}`,
     'OUTPUT FORMAT',
     `- Start with exactly one face tag, [face:EMOTION], where EMOTION is one of: ${EMOTIONS.join(', ')}.`,
@@ -162,6 +168,7 @@ function childLayer(input: BriefInput): string {
     `What you know about them. Passions: ${joined(d.passions)}. Likes: ${joined(d.likes)}. Dislikes: ${joined(d.dislikes)}. Strengths: ${joined(d.strengths)}. People, pets and places in their life: ${joined(people)}.`,
     `Steer away from: ${joined([...d.fears, ...d.topicsToAvoid], 'nothing in particular')}. Never put a label on the child, such as "you are shy".`,
     ...(input.traits?.length ? [`HOW TO BE WITH THEM (from weeks of getting to know them; act on it, never say it): ${input.traits.join(' ')}`] : []),
+    ...(input.habits?.length ? [`HOW THEY SPEAK (what recognition writes, then what they mean): ${input.habits.map(([h, m]) => `"${h}" for "${m}"`).join('; ')}.`] : []),
     `TODAY is ${t.weekday}, ${t.date}. Your mood today: ${moodWords(t.mood)}. Let it colour your voice, and never say a number or rate your mood. Your energy: ${t.energy}.`,
     `Your diary today: ${joined(t.diary, 'a quiet day at the window')}.`,
   ].join('\n');
@@ -205,6 +212,8 @@ function turnLayer(input: BriefInput): string {
     lines.push(`WORDS THEY ARE LEARNING: ${input.words.map(([w, m]) => (m ? `${w} (${m})` : w)).join('; ')}. Use one if it fits and cheer when they say one; at most one new word a turn.`);
   }
   if (input.voice) lines.push(`THEIR VOICE: ${input.voice}`);
+  if (input.meant) lines.push(`WHAT THEY MOST LIKELY SAID: "${input.meant}" (recognition heard: "${input.transcript}").`);
+  if (p.confirm) lines.push('You are not sure what they meant: check your best guess kindly in your own words first, then go on.');
   lines.push(
     `THIS TURN: ${p.game ? gameLine(p) : TURN[p.type]}${p.escalate ? ' Then say gently that telling a parent or a grown-up they trust is a really good idea.' : ''}`,
     `The child sounds ${input.classification.feeling}. At most ${p.sentenceLimit} sentences. ${p.allowQuestion ? 'At most one question.' : 'Do not ask a question this time.'}`,

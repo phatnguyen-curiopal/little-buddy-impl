@@ -24,12 +24,17 @@ export interface StructuredRequest {
 export interface SttStream {
   write(pcm: Buffer): void;
   finish(): Promise<string>;
+  // A second opinion from batch recognition on the audio this stream kept,
+  // for when the stream heard little or nothing.
+  recheck(): Promise<string>;
   close(): void;
 }
 
 export interface SttStreamOptions {
   language: Lang;
   keyterms: string[];
+  // What Buddy said just before, so recognition expects an answer to it.
+  previousText?: string | null;
   signal?: AbortSignal;
   onPartial?: (text: string) => void;
 }
@@ -46,7 +51,8 @@ export interface NameQuestion {
 export interface ModelGateway {
   transcribe(input: { pcm: Buffer; language: Lang; keyterms: string[]; signal?: AbortSignal }): Promise<string>;
   openTranscription(opts: SttStreamOptions): SttStream;
-  classify(input: { text: string; language: Lang; names?: NameQuestion[]; signal?: AbortSignal }): Promise<Classification>;
+  // before: what Buddy said just before; habits: this child's speech, heard and meant.
+  classify(input: { text: string; language: Lang; names?: NameQuestion[]; before?: string | null; habits?: [string, string][]; signal?: AbortSignal }): Promise<Classification>;
   reply(input: { messages: ChatMessage[]; cacheKey?: string; signal?: AbortSignal; onUsage?: (u: Usage) => void }): AsyncIterable<string>;
   speak(input: { text: string; voiceId: string; language: Lang; signal?: AbortSignal }): AsyncIterable<Buffer>;
   embed(texts: string[], signal?: AbortSignal): Promise<number[][]>;

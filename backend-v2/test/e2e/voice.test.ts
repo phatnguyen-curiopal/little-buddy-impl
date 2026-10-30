@@ -250,6 +250,86 @@ describe('voice service end to end', () => {
     assert.ok(Math.abs(b.rows[0].pitch_mean - 300) < 10);
   });
 
+  // One and a half seconds of a 250 Hz voice: enough speech for a second opinion.
+  const spoken = () => {
+    const pcm = Buffer.alloc(48_000);
+    for (let i = 0; i < 24_000; i += 1) pcm.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 250 * i) / 16_000) * 0.3 * 32767), i * 2);
+    return pcm;
+  };
+  const briefing = (opts: Parameters<typeof createFakeGateway>[0] = {}) => {
+    const briefs: string[] = [];
+    const g = createFakeGateway({
+      ...opts,
+      replyFor: (messages) => {
+        briefs.push(messages.map((m) => m.content).join('\n'));
+        return '[face:curious] Hửm?';
+      },
+    });
+    return { g, briefs };
+  };
+
+  it('asks batch recognition for a second opinion when the stream heard nothing', async () => {
+    const { g } = briefing({ streamed: '', transcript: 'Con thích ăn kẹo' });
+    const { url: u } = await timedVoice(g);
+    const f = await createFamily(db, config);
+    const t = toyFor(f);
+    await t.connect(u);
+    assert.equal((await t.turn({ pcm: spoken() })).result, 'answered');
+    assert.equal(g.calls.sttRecheck, 1);
+    const stored = await db.query<{ child_text: string }>('SELECT child_text FROM turn WHERE child_id = $1', [f.childId]);
+    assert.equal(stored.rows[0].child_text, 'Con thích ăn kẹo');
+  });
+
+  it('asks again in its own words when no words came through, and plays the clip on a second miss', async () => {
+    const { g, briefs } = briefing({ streamed: '', transcript: '' });
+    const { url: u } = await timedVoice(g);
+    const f = await createFamily(db, config);
+    const t = toyFor(f);
+    await t.connect(u);
+    const first = await t.turn({ pcm: spoken() });
+    assert.deepEqual([first.result, first.clips], ['answered', []]);
+    assert.ok(briefs[0].includes('You could not make out what they said') && briefs[0].includes('no words came through'));
+    const second = await t.turn({ pcm: spoken() });
+    assert.deepEqual([second.result, second.clips], ['no_speech', ['didnt_catch']], 'never two "say it again" turns in a row');
+    const stored = await db.query<{ turn_type: string }>('SELECT turn_type FROM turn WHERE child_id = $1', [f.childId]);
+    assert.deepEqual(stored.rows, [{ turn_type: 'clarify' }]);
+  });
+
+  it('reads what a young child meant, checks the guess, and asks again when it is babble', async () => {
+    const { g, briefs } = briefing();
+    const { url: u } = await timedVoice(g);
+    const f = await createFamily(db, config);
+    const t = toyFor(f);
+    await t.connect(u);
+    await t.turn({ text: 'Bo ơi con bị đau lăn quá' });
+    assert.ok(briefs[0].includes('WHAT THEY MOST LIKELY SAID: "Bo ơi con bị đau răng quá"'));
+    assert.ok(briefs[0].includes('check your best guess'));
+    await t.turn({ text: 'Ừm, ờ' });
+    assert.ok(!briefs[1].includes('You could not make out what they said'), 'thinking sounds are not a miss');
+    await t.turn({ text: 'Ba la ba la mi mo' });
+    assert.ok(briefs[2].includes('You could not make out what they said'));
+  });
+
+  it('gives recognition what Buddy just said and the child\'s own words', async () => {
+    const { g } = briefing();
+    const keyterms: string[][] = [];
+    const open = g.openTranscription.bind(g);
+    g.openTranscription = (opts) => {
+      keyterms.push(opts.keyterms);
+      return open(opts);
+    };
+    const { url: u } = await timedVoice(g);
+    const f = await createFamily(db, config);
+    await db.query("INSERT INTO speech_lexicon (child_id, kind, heard, meant, source) VALUES ($1, 'term', 'Pikachu', 'Pikachu', 'learned')", [f.childId]);
+    const t = toyFor(f);
+    await t.connect(u);
+    await t.turn({ text: 'Chào Bo!' });
+    assert.equal(g.calls.previousText ?? 0, 0, 'nothing said before the first turn');
+    await t.turn({ text: 'Con thích Pikachu' });
+    assert.equal(g.calls.previousText, 1, 'the second turn hears what Buddy said');
+    assert.ok(keyterms[1].includes('Pikachu'));
+  });
+
   it('treats a too-short clip as no speech, without a model call', async () => {
     const before = gateway.calls.reply ?? 0;
     const r = await toys[0].turn({ pcm: Buffer.alloc(1000) });

@@ -17,6 +17,7 @@ import { localTime } from '../character/mood.ts';
 import { loadDeviceSecret, verifyChallenge } from '../devices/credentials.ts';
 import { alsoWord, type PersonCard } from '../memory/names.ts';
 import { loadPeople } from '../memory/recall.ts';
+import { loadLexicon, speechHabits, speechTerms } from '../memory/speech.ts';
 import { randomToken } from '../util/crypto.ts';
 import { CLOSE, PROTOCOL_VERSION, parseToyMessage, type ToyMessage } from './protocol.ts';
 import { foldBaseline, ToneMeter, type VoiceBaseline } from './tone.ts';
@@ -40,6 +41,9 @@ interface TurnState {
   buddy: { instance: Instance; pack: CharacterPack };
   language: Lang;
   cards: PersonCard[];
+  // What Buddy said just before, and this child's speech habits.
+  before: string | null;
+  habits: [string, string][];
   stt: SttStream;
   tone: ToneMeter | null;
   // Buddy speaks first: a turn the server started, with no words to hear.
@@ -102,6 +106,8 @@ export class DeviceSession {
   private turnsSinceGame = 99;
   private turnCount = 0;
   private shown = { goal: false, words: false, growth: false };
+  // Buddy asked the child to say it again on the last turn.
+  private clarifiedLast = false;
   private seqDown = 0;
   private closed = false;
   private inbox: Promise<void> = Promise.resolve();
@@ -241,7 +247,9 @@ export class DeviceSession {
     this.device = device;
 
     const loaded = await this.loadChild();
-    const [buddy, people] = loaded ? await Promise.all([activeBuddy(db, loaded.child.id), loadPeople(db, loaded.child.id)]) : [null, []];
+    const [buddy, people, lexicon] = loaded
+      ? await Promise.all([activeBuddy(db, loaded.child.id), loadPeople(db, loaded.child.id), loadLexicon(db, loaded.child.id)])
+      : [null, [], []];
     const blocked = this.gate(loaded, buddy);
     if (blocked || !loaded || !buddy) {
       this.send({ type: 'play_clip', turn_id: turnId, clip: blocked ?? 'napping' });
@@ -252,19 +260,27 @@ export class DeviceSession {
     const language = speechLanguage(loaded.child, buddy.instance);
     const abort = new AbortController();
     const prefetch = prefetchFor(this.deps, loaded.child, buddy.instance, loaded.controls);
+    // Buddy's last words, unless the chat has gone quiet long enough to be a new one.
+    const recent = Date.now() - this.lastTurnAt < this.deps.config.voice.sessionIdleMs;
+    const before = recent ? ([...this.history].reverse().find((m) => m.role === 'assistant')?.content ?? null) : null;
     let t: TurnState | undefined;
     const stt = gateway.openTranscription({
       language,
       // A name that is also an ordinary word is already in the recogniser's
-      // vocabulary; biasing towards it only invites a stray capital.
-      keyterms: [loaded.child.name, loaded.child.nickname ?? '', buddy.pack.name, ...people.filter((p) => !alsoWord(p)).map((p) => p.display_name)],
+      // vocabulary; biasing towards it only invites a stray capital. The
+      // child's own words (a toy, a cartoon) are what it may not know.
+      keyterms: [
+        loaded.child.name, loaded.child.nickname ?? '', buddy.pack.name,
+        ...people.filter((p) => !alsoWord(p)).map((p) => p.display_name), ...speechTerms(lexicon),
+      ],
+      previousText: before,
       signal: abort.signal,
       // Bound to this turn's state, so a late partial from an older stream lands on a finished turn.
       onPartial: (text) => t && this.onPartial(t, text),
     });
     t = {
-      id: turnId, bytes: 0, abort, phase: 'listening', loaded, buddy, language, cards: people, stt, tone: new ToneMeter(), greet: false,
-      prefetch, partial: '', spec: null, specAbort: null, specCount: 0,
+      id: turnId, bytes: 0, abort, phase: 'listening', loaded, buddy, language, cards: people, before, habits: speechHabits(lexicon),
+      stt, tone: new ToneMeter(), greet: false, prefetch, partial: '', spec: null, specAbort: null, specCount: 0,
     };
     this.turn = t;
     this.send({ type: 'face', turn_id: turnId, emotion: 'listening', phase: 'listening' });
@@ -313,7 +329,11 @@ export class DeviceSession {
     t.specAbort?.abort();
     t.specAbort = new AbortController();
     t.specCount += 1;
-    t.spec = speculate(this.deps, { childId: t.loaded.child.id, instanceId: t.buddy.instance.id, cards: t.cards }, text, t.language, AbortSignal.any([t.abort.signal, t.specAbort.signal]));
+    t.spec = speculate(
+      this.deps,
+      { childId: t.loaded.child.id, instanceId: t.buddy.instance.id, cards: t.cards, before: t.before, habits: t.habits },
+      text, t.language, AbortSignal.any([t.abort.signal, t.specAbort.signal]),
+    );
   }
 
   // Stops everything a turn still has running: the model and database calls
@@ -348,6 +368,7 @@ export class DeviceSession {
     this.turnsSinceGame = 99;
     this.turnCount = 0;
     this.shown = { goal: false, words: false, growth: false };
+    this.clarifiedLast = false;
     return true;
   }
 
@@ -377,9 +398,23 @@ export class DeviceSession {
       t.stt.close();
       return Promise.resolve(typed ?? '');
     }
-    const transcript = t.stt.finish();
+    const transcript = t.stt.finish().then((text) => this.secondOpinion(t, text));
     if (t.partial) this.speculateOn(t, t.partial);
     return transcript;
+  }
+
+  // A stream that came back empty, or with far too few words for the speech
+  // the child made (under one word per two seconds of voice), gets a second
+  // opinion from batch recognition on the audio it kept. It costs about a
+  // second, so only those turns pay it.
+  private async secondOpinion(t: TurnState, heard: string): Promise<string> {
+    const voiced = t.tone?.read(0)?.voicedSeconds ?? 0;
+    const count = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+    if (voiced < 1 || count(heard) >= voiced * 0.5) return heard;
+    const second = await t.stt.recheck().catch(() => '');
+    const better = count(second) > count(heard);
+    this.deps.log.info('stt second opinion', { device_id: this.device?.id, turn_id: t.id, voiced_s: Math.round(voiced * 10) / 10, better });
+    return better ? second : heard;
   }
 
   private async processTurn(t: TurnState, msg: Extract<ToyMessage, { type: 'turn_end' }>, timing: TurnTiming): Promise<void> {
@@ -416,7 +451,9 @@ export class DeviceSession {
         played: this.gamesPlayed,
         seed,
       },
-      allow: { goal: !this.shown.goal, words: !this.shown.words, growth: !this.shown.growth },
+      allow: { goal: !this.shown.goal, words: !this.shown.words, growth: !this.shown.growth, clarify: !this.clarifiedLast },
+      before: t.before,
+      habits: t.habits,
       tone: typed ? null : t.tone,
       greet: t.greet,
       transcript,
@@ -463,6 +500,7 @@ export class DeviceSession {
 
   private afterTurn(outcome: TurnOutcome): void {
     this.turnCount += 1;
+    this.clarifiedLast = outcome.clarified;
     if (outcome.goalShown) this.shown.goal = true;
     if (outcome.wordsShown) this.shown.words = true;
     if (outcome.mirroredFactId) this.shown.growth = true;
@@ -497,10 +535,10 @@ export class DeviceSession {
     );
     if (recent.rowCount) return;
     const turnId = randomUUID();
-    const silent: SttStream = { write() {}, finish: async () => '', close() {} };
+    const silent: SttStream = { write() {}, finish: async () => '', recheck: async () => '', close() {} };
     const t: TurnState = {
       id: turnId, bytes: 0, abort: new AbortController(), phase: 'processing', loaded, buddy, language: speechLanguage(loaded.child, buddy.instance),
-      cards: [], stt: silent, tone: null, greet: true, prefetch: prefetchFor(this.deps, loaded.child, buddy.instance, loaded.controls),
+      cards: [], before: null, habits: [], stt: silent, tone: null, greet: true, prefetch: prefetchFor(this.deps, loaded.child, buddy.instance, loaded.controls),
       partial: '', spec: null, specAbort: null, specCount: 0,
     };
     this.turn = t;

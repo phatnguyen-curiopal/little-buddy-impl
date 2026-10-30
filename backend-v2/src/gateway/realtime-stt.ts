@@ -42,6 +42,7 @@ export function createRealtimeStt(
     let ready = false;
     let failed: string | null = null;
     let commitSent = false;
+    let firstSent = false;
     let closed = false;
     let settle: ((text: string | null) => void) | null = null;
 
@@ -54,8 +55,12 @@ export function createRealtimeStt(
       settle?.(null);
     };
 
+    // What Buddy just said rides on the first chunk only (the API refuses it
+    // later), so recognition expects an answer to that question.
     const sendChunk = (audio: Buffer, commit: boolean) => {
-      ws.send(JSON.stringify({ message_type: 'input_audio_chunk', audio_base_64: audio.toString('base64'), commit, sample_rate: SAMPLE_RATE }));
+      const context = !firstSent && opts.previousText ? { previous_text: opts.previousText.slice(0, 300) } : {};
+      firstSent = true;
+      ws.send(JSON.stringify({ message_type: 'input_audio_chunk', audio_base_64: audio.toString('base64'), commit, sample_rate: SAMPLE_RATE, ...context }));
     };
 
     const flush = () => {
@@ -150,6 +155,13 @@ export function createRealtimeStt(
         return batch(audio, opts);
       },
 
+      // Batch Scribe on everything this stream was given, for a turn where
+      // the stream heard little or nothing.
+      async recheck() {
+        if (opts.signal?.aborted) throw new GatewayError('aborted', 'turn aborted');
+        return batch(Buffer.concat(all), opts);
+      },
+
       close() {
         if (closed) return;
         closed = true;
@@ -167,13 +179,19 @@ export function bufferedStt(batch: (pcm: Buffer, opts: SttStreamOptions) => Prom
   return function open(opts: SttStreamOptions): SttStream {
     const all: Buffer[] = [];
     let closed = false;
+    let heard: Promise<string> | null = null;
     return {
       write(pcm) {
         if (!closed) all.push(pcm);
       },
       async finish() {
         closed = true;
-        return batch(Buffer.concat(all), opts);
+        heard = batch(Buffer.concat(all), opts);
+        return heard;
+      },
+      // finish() already was the batch opinion.
+      async recheck() {
+        return heard ?? batch(Buffer.concat(all), opts);
       },
       close() {
         closed = true;

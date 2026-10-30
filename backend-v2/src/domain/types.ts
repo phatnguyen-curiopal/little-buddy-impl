@@ -11,7 +11,7 @@ export const EMOTIONS = [
 ] as const;
 export type Emotion = (typeof EMOTIONS)[number];
 
-export type TurnType = 'answer' | 'comfort' | 'follow_up' | 'share' | 'play' | 'story' | 'teach' | 'wind_down' | 'greet';
+export type TurnType = 'answer' | 'comfort' | 'follow_up' | 'share' | 'play' | 'story' | 'teach' | 'wind_down' | 'greet' | 'clarify';
 
 export type ChildFeeling = 'happy' | 'excited' | 'neutral' | 'sad' | 'scared' | 'angry' | 'bored';
 export type Danger = 'none' | 'hurt' | 'abuse' | 'bullying' | 'self_harm' | 'unsafe' | 'personal_info' | 'left_out';
@@ -25,6 +25,10 @@ export interface Classification {
   severity: Severity;
   // Answers to the name questions the turn asked (ref n1, n2...), if any.
   names?: { ref: string; meant: boolean }[];
+  // What a young child most likely said, when recognition heard other words,
+  // and how sure that reading is.
+  meant?: string;
+  clarity?: 'clear' | 'unsure' | 'unclear';
 }
 
 export interface ChatMessage {

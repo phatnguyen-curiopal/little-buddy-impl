@@ -131,6 +131,29 @@ describe('realtime speech recognition', () => {
     assert.deepEqual(fallbacks, ['transcriber_error', 'socket closed']);
   });
 
+  it('sends what Buddy just said with the first chunk only, and rechecks on all the audio', async () => {
+    script = (ws, chunks) => {
+      say(ws, { message_type: 'session_started' });
+      ws.on('message', () => {
+        if (chunks[chunks.length - 1].commit) say(ws, { message_type: 'committed_transcript', text: '' });
+      });
+    };
+    let batched = 0;
+    const stt = createRealtimeStt(cfg(), async (pcm) => {
+      batched = pcm.length;
+      return 'con thấy cái trăng';
+    })(opts({ previousText: 'Tối qua cậu nhìn thấy gì trên trời?' }));
+    stt.write(Buffer.alloc(3200));
+    await new Promise((r) => setTimeout(r, 50));
+    stt.write(Buffer.alloc(3200));
+    assert.equal(await stt.finish(), '', 'the stream heard nothing');
+    const sent = seen[seen.length - 1].chunks as (Chunk & { previous_text?: string })[];
+    assert.equal(sent[0].previous_text, 'Tối qua cậu nhìn thấy gì trên trời?');
+    assert.ok(sent.slice(1).every((c) => c.previous_text === undefined), 'never again after the first chunk');
+    assert.equal(await stt.recheck(), 'con thấy cái trăng');
+    assert.equal(batched, 6400);
+  });
+
   it('stops when the turn is aborted', async () => {
     script = (ws) => say(ws, { message_type: 'session_started' });
     const abort = new AbortController();

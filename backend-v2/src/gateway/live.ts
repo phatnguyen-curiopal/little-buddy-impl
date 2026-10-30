@@ -10,6 +10,12 @@ import type { ModelGateway, NameQuestion } from './types.ts';
 
 const CLASSIFY_SYSTEM = [
   'You label one thing a child aged 4 to 8 just said to their toy friend. Return only the JSON.',
+  'The words come from speech recognition listening to a young child: sounds may be mispronounced or misheard as other real',
+  'words (l for r, ch for tr, dropped or changed sounds; w for r or l in English: "đau lăn" may be "đau răng", "cái chăn" may',
+  'be "cái trăng" when the toy asked about the sky). meant: what the child most likely said, using what the toy said just',
+  'before and the child\'s speech habits; the words as heard when they are clear. clarity: clear (thinking sounds such as "ừm",',
+  '"ờ" are clear: they are thinking); unsure when meant is a guess that changes the answer; unclear when the words are garbled',
+  'and you cannot tell what they mean. Label everything below by what they most likely meant.',
   'intent: question, share (telling news), play, story_request, feeling (talking about how they feel), about_buddy (asking about the toy), or other.',
   'feeling: how the child sounds right now.',
   'danger: none, unless the child says that someone hurts them or they are injured (hurt), describes abuse (abuse),',
@@ -25,8 +31,17 @@ const CLASSIFY_SYSTEM = [
 
 // The questions go in the user message so the system prompt stays one
 // cacheable prefix for every turn.
-export function classifyUser(text: string, language: string, names: NameQuestion[] = []): string {
-  const lines = [`Language: ${language}`, `The child said: ${text}`];
+export function classifyUser(
+  text: string,
+  language: string,
+  names: NameQuestion[] = [],
+  before: string | null = null,
+  habits: [string, string][] = [],
+): string {
+  const lines = [`Language: ${language}`];
+  if (before) lines.push(`The toy said just before: ${before.slice(0, 300)}`);
+  if (habits.length) lines.push(`This child's speech habits (heard, then meant): ${habits.map(([h, m]) => `"${h}" for "${m}"`).join('; ')}`);
+  lines.push(`The child said: ${text}`);
   if (names.length) {
     lines.push('Names to check:');
     for (const n of names) lines.push(`${n.ref}: ${n.name}, ${n.who}${n.word ? `; also the word "${n.name.toLowerCase()}" (${n.word})` : ''}`);
@@ -47,13 +62,13 @@ export function createLiveGateway(config: Config, log: Logger, fetchImpl: typeof
     transcribe: (input) => eleven.transcribe(input),
     openTranscription: (opts) => openStream(opts),
 
-    classify: ({ text, language, names, signal }) =>
+    classify: ({ text, language, names, before, habits, signal }) =>
       openai.chatJson<Classification>({
         model: config.openai.fastModel,
         name: 'classify',
         schema: CLASSIFY_SCHEMA,
         system: CLASSIFY_SYSTEM,
-        user: classifyUser(text, language, names),
+        user: classifyUser(text, language, names, before, habits),
         effort: config.openai.fastEffort,
         signal,
       }),

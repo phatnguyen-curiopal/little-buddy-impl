@@ -8,6 +8,7 @@ import { LEARN_SCHEMA, type LearnResult } from '../gateway/schemas.ts';
 import type { Logger } from '../log.ts';
 import { localTime } from '../character/mood.ts';
 import { alsoWord, bareName, cueFrom, kindsMatch, matchName, nameKey, type PersonCard } from './names.ts';
+import { noteSpeech } from './speech.ts';
 import { toVectorLiteral } from './vec.ts';
 
 const LEARN_SYSTEM = [
@@ -34,6 +35,10 @@ const LEARN_SYSTEM = [
   '  language (by child), with the meaning in the other language; else an empty list.',
   '- Growth: when the child shows that something they found hard or were scared of is now fine, add a strengths fact and put',
   '  the old fact in corrects.',
+  '- misheard: words speech recognition wrote wrongly for this young child, with what they meant, only when the talk shows it',
+  '  (they confirmed Buddy\'s guess, or nothing else makes sense): "đau lăn" for "đau răng". Else an empty list.',
+  '- terms: the child\'s own words a recogniser may not know (a toy\'s or cartoon\'s name, a made-up word they keep using), never',
+  '  everyday words.',
   '- If the speaker is clearly not the child (a sibling or friend introduced themselves), extract nothing about the child.',
 ].join('\n');
 
@@ -92,6 +97,14 @@ export async function learnFromTurn(deps: { db: Db; gateway: ModelGateway; log: 
   ).rows.map((r) => r.statement);
 
   const today = localTime(child.time_zone).date;
+  // The exchange before this one: a child's "Dạ!" confirms the guess Buddy
+  // checked there, which is how a misheard word is learned.
+  const before = (
+    await db.query<{ child_text: string; reply_text: string }>(
+      'SELECT child_text, reply_text FROM turn WHERE session_id = $1 AND created_at < $2 ORDER BY created_at DESC LIMIT 1',
+      [turn.session_id, turn.created_at],
+    )
+  ).rows[0];
   const extracted = await gateway.structured<LearnResult>({
     tier: 'fast',
     name: 'learn',
@@ -101,6 +114,7 @@ export async function learnFromTurn(deps: { db: Db; gateway: ModelGateway; log: 
       `Today: ${today}`,
       `Known people, pets, toys and places:\n${people.map(rosterLine).join('\n') || 'none'}`,
       `Known facts: ${known.join('; ') || 'none'}`,
+      ...(before ? [`Before that, the child said: ${before.child_text || '(nothing)'}`, `and Buddy replied: ${before.reply_text}`] : []),
       `Child said: ${turn.child_text}`,
       `Buddy replied: ${turn.reply_text}`,
     ].join('\n'),
@@ -208,6 +222,14 @@ export async function learnFromTurn(deps: { db: Db; gateway: ModelGateway; log: 
       );
       if (replaced.length) await q.query('UPDATE fact SET superseded_by = $2 WHERE id = ANY($1::uuid[])', [replaced, factId]);
       n += 1;
+    }
+
+    // How this child speaks: what recognition got wrong, and their own words.
+    for (const m of extracted.misheard ?? []) {
+      if (await noteSpeech(q, turn.child_id, { kind: 'misheard', heard: m.heard, meant: m.meant, source: 'learned' })) n += 1;
+    }
+    for (const term of extracted.terms ?? []) {
+      if (await noteSpeech(q, turn.child_id, { kind: 'term', heard: term, meant: term, source: 'learned' })) n += 1;
     }
 
     // A word the child says comes back for review later and later: 1, 3, 7,

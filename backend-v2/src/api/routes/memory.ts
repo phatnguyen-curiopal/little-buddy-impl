@@ -8,8 +8,9 @@ import { FACT_CATEGORIES, PERSON_KINDS } from '../../gateway/schemas.ts';
 import { buildDigest } from '../../memory/digest.ts';
 import { forgetEverything } from '../../memory/forget.ts';
 import { nameKey } from '../../memory/names.ts';
+import { inUse, loadLexicon, noteSpeech } from '../../memory/speech.ts';
 import { isUsable, loadTraits, traitGuidance, TRAITS } from '../../memory/traits.ts';
-import { notFound } from '../../util/errors.ts';
+import { HttpError, notFound } from '../../util/errors.ts';
 import { childFor, ifMatch, missingOrStale, page, paging, sendWithEtag, uuidParam, type ApiDeps } from '../context.ts';
 
 const PERSON = `id, display_name, kind, relation, details, aliases, cues, also_word, round(closeness::numeric, 2)::float AS closeness,
@@ -54,6 +55,45 @@ export function registerMemory(app: FastifyInstance, deps: ApiDeps) {
     if (!(TRAITS as readonly string[]).includes(name)) throw notFound('trait');
     const r = await db.query('DELETE FROM trait WHERE child_id = $1 AND name = $2', [child.id, name]);
     if (!r.rowCount) throw notFound('trait');
+    return reply.code(204).send();
+  });
+
+  // How the child speaks: what speech recognition writes and what they mean,
+  // and their own words. A parent's entry counts at once; a learned one from
+  // its second time.
+  app.get('/children/:childId/speech', async (req) => {
+    const child = await childFor(deps, req);
+    const rows = await loadLexicon(db, child.id);
+    return { data: rows.map((r) => ({ ...r, in_use: inUse(r) })) };
+  });
+
+  app.post('/children/:childId/speech', {
+    schema: {
+      body: {
+        type: 'object', additionalProperties: false, required: ['heard', 'meant'],
+        properties: {
+          kind: { type: 'string', enum: ['misheard', 'term'] },
+          heard: { type: 'string', minLength: 1, maxLength: 60 },
+          meant: { type: 'string', minLength: 1, maxLength: 60 },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const child = await childFor(deps, req);
+    const b = req.body as { kind?: 'misheard' | 'term'; heard: string; meant: string };
+    const kind = b.kind ?? 'misheard';
+    if (!(await noteSpeech(db, child.id, { kind, heard: b.heard, meant: kind === 'term' ? b.heard : b.meant, source: 'parent' }))) {
+      throw new HttpError(400, 'bad-entry', 'Heard and meant must differ for a misheard word.');
+    }
+    const row = (await loadLexicon(db, child.id)).find((r) => r.kind === kind && r.heard.toLowerCase() === b.heard.trim().toLowerCase());
+    return reply.code(201).send(row ? { ...row, in_use: inUse(row) } : null);
+  });
+
+  app.delete('/children/:childId/speech/:entryId', async (req, reply) => {
+    const child = await childFor(deps, req);
+    const id = uuidParam((req.params as { entryId: string }).entryId, 'entry');
+    const r = await db.query('DELETE FROM speech_lexicon WHERE id = $1 AND child_id = $2', [id, child.id]);
+    if (!r.rowCount) throw notFound('entry');
     return reply.code(204).send();
   });
 

@@ -90,6 +90,16 @@ Giai đoạn 3 trong lộ trình của tài liệu sản phẩm, cộng thêm th
 - **Buddy nói trước**: đã làm nhưng tắt, theo quyết định "tạm thời không". Chỉ chạy khi cả máy chủ (`SPEAK_FIRST=1`) và phụ huynh (`speak_first`) cho phép, khi đồ chơi báo `status` với `event: "wake"`, một lần mỗi ngày, sau ít nhất 3 giờ không nói chuyện; máy chủ gửi `buddy_turn` trước khi có mặt và âm thanh.
 - Migration `005_growing_up.sql`; API mới: `GET /children/:id/traits`, `DELETE /children/:id/traits/:name`, `GET /children/:id/words`, và hai công tắc `surprise_play`, `speak_first` trong `PUT /children/:id/controls` (không bắt buộc, client cũ vẫn chạy).
 
+## Nghe trẻ nói chưa rõ
+
+Thử bằng giọng tổng hợp đọc kiểu trẻ nhỏ: Scribe kéo âm của trẻ về một từ có thật, đôi khi đúng ("hông thít" thành "không thích"), đôi khi thành một từ sai mà trông vẫn hợp lệ ("cái chăng" là mặt trăng thành "cái chăn", "đau lăng" thành "đau lăn"). Đưa câu hỏi của Buddy cho Scribe làm ngữ cảnh không cứu được "trăng"; còn model có ngữ cảnh thì đọc lại đúng cả năm câu. Nên phần sửa nằm ở tầng ngôn ngữ, đi kèm các lời gọi vốn đã có:
+
+1. **Classifier và brief biết đây là lời trẻ nhỏ qua máy nghe**: classifier nhận câu Buddy vừa nói và thói quen nói của bé, trả về `meant` (bé muốn nói gì) và `clarity` (`clear`, `unsure`, `unclear`); tiếng ậm ừ khi đang nghĩ vẫn là `clear`. Brief luôn dặn Buddy hiểu ý bé từ cuộc trò chuyện, không bao giờ sửa cách bé nói, và ghi "bé nhiều khả năng đã nói" khi khác chữ nghe được. Không thêm độ trễ.
+2. **Ngữ cảnh cho máy nghe**: câu Buddy vừa nói đi kèm khúc âm thanh đầu tiên (`previous_text` của Scribe realtime); từ riêng của bé (đồ chơi, nhân vật hoạt hình) vào keyterms.
+3. **Thói quen nói của từng bé** (`speech_lexicon`, migration 006): learner ghi "đau lăn" là "đau răng" khi bé xác nhận lời đoán của Buddy ở lượt trước; chỉ dùng từ lần thứ hai. Phụ huynh thêm, xem, xóa được (`GET`, `POST`, `DELETE /children/:id/speech`), và mục của phụ huynh dùng ngay, không bao giờ bị learner ghi đè.
+4. **Hỏi lại như một người bạn**: lời đoán quan trọng mà chưa chắc thì Buddy kiểm tra bằng lời của mình ("Cậu bị đau răng hả?"); chữ nghe không ra thì Buddy hỏi lại theo cách vui của nó, tối đa một lần liên tiếp; nguy hiểm và cảm xúc vẫn được ưu tiên trước.
+5. **Ý kiến thứ hai**: khi luồng realtime trả về rỗng hoặc quá ít chữ so với lượng giọng nói (dưới một chữ cho mỗi hai giây), Scribe batch chạy lại trên âm thanh đã giữ, chỉ những lượt đó tốn thêm khoảng một giây. Vẫn không có chữ nào thì Buddy hỏi lại bằng lời thay cho clip, lần sau mới dùng clip.
+
 ## Triển khai
 
 backend-v2 chạy trên máy chủ demo, cạnh bản demo chứ không thay nó: Parent API ở `https://little-buddy.curiopal.com/v2/...`, socket đồ chơi ở `wss://little-buddy.curiopal.com/v2/device`. Mỗi lần push lên `main` tự triển khai cả hai; cách vận hành ở `deploy/README.md`. Image chạy thẳng mã TypeScript trên Node 24.
@@ -97,7 +107,7 @@ backend-v2 chạy trên máy chủ demo, cạnh bản demo chứ không thay nó
 ## Kiểm thử
 
 ```
-npm test                      # 153 test (40 test là "một năm của ba bé"), không cần Docker
+npm test                      # 166 test (40 test là "một năm của ba bé"), không cần Docker
 npm run typecheck
 GATEWAY=live npm run smoke:live   # gọi OpenAI và ElevenLabs thật bằng câu giả lập, in thời gian
 ```
@@ -138,7 +148,7 @@ Kịch bản trượt là một phát hiện, không phải lỗi kịch bản: 
 
 ## Đã kiểm chứng ngày 30/10/2026
 
-- 153 test đều đạt; typecheck sạch.
+- 166 test đều đạt; typecheck sạch.
 - Migration chạy trên PostgreSQL 16.15 + pgvector 0.6.0 của máy demo, trong một database tạm đã xóa sau đó: 39 bảng, 72 index, cột `vector(1536)`, hàm partition, hàng đợi job (chống trùng, `SKIP LOCKED`) đều đúng.
 - Gọi vendor thật: câu trả lời có token đầu sau 1,5 s; giọng nói có âm thanh đầu sau 0,34 s; Scribe batch nhận lại câu tiếng Việt đúng từng chữ trong 1,3 s. Classifier, trung vị của 5 lần khi đã ấm: gpt-5.6-luna 1,1 s, gpt-5.4-nano và gpt-5.4-mini 0,9 s, gpt-4.1-mini 0,7 s; cả bốn gán nhãn đúng ba câu thử, kể cả "anh con đánh con đau lắm" là hurt, urgent.
 - Lượt nói đầy đủ qua voice service: giọng tiếng Việt tổng hợp gửi đúng nhịp micro rồi 1,3 s im lặng (như bộ phát hiện giọng của đồ chơi web), đo từ `turn_end` đến lúc đồ chơi nghe âm thanh đầu tiên của Buddy, mỗi cấu hình 4 lượt sau một lượt khởi động. Buddy nghe đúng từng chữ và đáp đúng vai ("Wowee, tớ vui lây luôn, Bông ơi! Cậu vẽ chú mèo màu gì thế?").

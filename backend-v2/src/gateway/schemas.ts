@@ -27,7 +27,11 @@ export const EPISODE_CATEGORIES = ['family', 'school', 'friends', 'pets', 'feeli
 export const TRAITS = ['outgoing', 'cautious', 'sensitive', 'persistent', 'curious'] as const;
 export type Trait = (typeof TRAITS)[number];
 
+export const CLARITY = ['clear', 'unsure', 'unclear'] as const;
+
 export const CLASSIFY_SCHEMA = obj({
+  meant: str,
+  clarity: enumOf(CLARITY),
   intent: enumOf(INTENTS),
   feeling: enumOf(FEELINGS),
   danger: enumOf(DANGERS),
@@ -63,6 +67,10 @@ export interface LearnResult {
   canon: { statement: string; topic: string | null }[];
   // Second-language words met in play (bilingual mode or an English goal).
   words?: { word: string; language: 'vi' | 'en'; meaning: string | null; by: 'buddy' | 'child' }[];
+  // Words speech recognition got wrong for this child, and the child's own
+  // words a recogniser may miss.
+  misheard?: { heard: string; meant: string }[];
+  terms?: string[];
 }
 
 export const LEARN_SCHEMA = obj({
@@ -90,6 +98,8 @@ export const LEARN_SCHEMA = obj({
   relationship: listOf({ kind: enumOf(['inside_joke', 'nickname', 'ritual', 'shared_story', 'secret_greeting']), content: str }),
   canon: listOf({ statement: str, topic: nullableStr }),
   words: listOf({ word: str, language: enumOf(['vi', 'en']), meaning: nullableStr, by: enumOf(['buddy', 'child']) }),
+  misheard: listOf({ heard: str, meant: str }),
+  terms: strList,
 });
 
 export interface TraitsResult {

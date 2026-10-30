@@ -1,98 +1,67 @@
 import { useEffect, useRef, useState } from 'react';
 import { BuddyAvatar, BuddyFigure } from '../components/Buddy.jsx';
 import { Icon } from '../components/ui.jsx';
-import { DESIGNS, normalizeDesign } from '../lib/designs.js';
 import { useI18n } from '../lib/i18n.jsx';
-import { api } from '../lib/api.js';
-import { MOOD_START, chosenVoice, clampMood, sampleUrl, settingsOf, voicesFor } from '../lib/toySettings.js';
-import { GROUPS, NAME_MAX, NAME_SUGGESTIONS, QUESTIONS, ROLES, TYPES, scoreQuiz, suggestName, typeOf } from '../lib/personality.js';
+import { LANGUAGE_MODES, ROLES, designFor } from '../lib/buddy.js';
+import { GROUPS, QUESTIONS, TYPES, scoreQuiz, typeOf } from '../lib/personality.js';
+import { characterWho, fitVoice, ownVoicesOf, pickVoice, pickedVoice, sampleUrl, voiceChosen, voiceGroup } from '../lib/wizard.js';
 
-// Buddy's profile: a name, how the website draws it (design), how it talks
-// to the child (role) and one of 16 personalities, found with a short quiz
-// or picked directly. The pieces are screen-sized so the add-toy wizard can
-// show one per step while the drawer puts them on one page for quick edits.
+// A child's Buddy: a character (Bo, Pip or Luna, each drawn in its own
+// design), how it talks to the child (role), the language it speaks, one of
+// 16 personalities found with a short quiz or picked directly, and a voice.
+// The pieces are screen-sized so the add-a-Buddy wizard shows one per step
+// while the drawer puts them on one page for quick edits.
 
-export function ProfileSummary({ profile, onEdit }) {
+const typeOrNull = (code) => (code ? typeOf(code) : null);
+
+// What Buddy sounds like, in words: the voice a parent picked, or the
+// character's own. Buddy speaks out loud in one language, and backend-v2
+// keeps only a picked voice of that language, so a name is the whole story.
+export function voiceName(t, voices, voiceId, name) {
+  const picked = pickedVoice(voices, voiceId);
+  return picked ? picked.name : t('wzOwnVoice', { name });
+}
+
+// The drawer's view of a Buddy, next to its avatar.
+export function BuddySummary({ buddy, voices }) {
   const { t } = useI18n();
-  const type = typeOf(profile.personality);
-  const design = normalizeDesign(profile.design);
-  if (onEdit) {
-    const rows = [
-      ['name', t('nameLabel'), profile.name],
-      ['look', t('designLabel'), `${t(`design_${design}`)} · ${t(`designTag_${design}`)}`],
-      ['role', t('roleShort'), `${t(`role_${profile.role}`)} · ${t(`roleSays_${profile.role}`)}`],
-      ['personality', t('personalityLabel'), `${t(`ptype_${type.code}`)} (${type.code}) · ${t(`source_${profile.personality_source}`)}`],
-    ];
-    return (
-      <div className="review card">
-        <div className="review-figure"><BuddyFigure design={design} emotion={type.emotion} /></div>
-        {rows.map(([step, label, value]) => (
-          <div key={step} className="review-row">
-            <span className="review-text"><span className="muted small">{label}</span><b>{value}</b></span>
-            <button type="button" className="btn btn-soft btn-sm" onClick={() => onEdit(step)}>{t('edit')}</button>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const type = typeOrNull(buddy.personality);
   return (
     <div className="p-summary">
-      <BuddyAvatar design={design} emotion={type.emotion} size="lg" />
+      <BuddyAvatar design={designFor(buddy.character_slug)} emotion={type?.emotion ?? 'happy'} size="lg" />
       <div>
-        <div className="p-name">{profile.name}</div>
-        <div className="muted small">{t('designLabel')}: {t(`design_${design}`)}</div>
-        <div className="muted small">{t(`role_${profile.role}`)} · {t(`ptype_${type.code}`)} <span className="mono">{type.code}</span> · {t(`source_${profile.personality_source}`)}</div>
-        <div className="muted small">{t(`ptypeDesc_${type.code}`)}</div>
-        <SettingsLine profile={profile} />
+        <div className="p-name">{buddy.character_name}</div>
+        <div className="muted small">{t(`role_${buddy.role}`)} · {t(`roleSays_${buddy.role}`)}</div>
+        <div className="muted small">
+          {type ? <>{t(`ptype_${type.code}`)} <span className="mono">{type.code}</span></> : t('wzNoPersonality')}
+        </div>
+        {type && <div className="muted small">{t(`ptypeDesc_${type.code}`)}</div>}
+        <div className="muted small">{t(`wzMode_${buddy.language_mode}`)} · {voiceName(t, voices, buddy.voice_id, buddy.character_name)}</div>
       </div>
     </div>
   );
 }
 
-function SettingsLine({ profile }) {
+// The wizard's last look before saving: every choice with a way back to it.
+export function BuddyReview({ draft, character, voices, onEdit }) {
   const { t } = useI18n();
-  const s = settingsOf(profile);
-  const parts = [
-    s.language === 'en' ? t('sumLang_en') : t('sumLang_vi'),
-    s.learn ? t('sumLearnOn') : t('sumLearnOff'),
-    s.mood_pin === null ? t('sumMoodAuto') : t('sumMoodPin', { n: s.mood_pin }),
+  const type = typeOrNull(draft.personality);
+  const name = character?.name ?? 'Buddy';
+  const rows = [
+    ['personality', t('personalityLabel'), type ? `${t(`ptype_${type.code}`)} (${type.code})` : t('wzNoPersonality')],
+    ['role', t('wzRoleLabel'), `${t(`role_${draft.role}`)} · ${t(`roleSays_${draft.role}`)}`],
+    ['language', t('wzLanguageLabel'), t(`wzMode_${draft.language}`)],
+    ['character', t('wzCharacterLabel'), name],
+    ['voice', t('wzVoiceLabel'), voiceName(t, voices, draft.voice_id, name)],
   ];
-  return <div className="muted small">{parts.join(' · ')}</div>;
-}
-
-export function NameField({ value, onChange, error = '', autoFocus = false }) {
-  const { t } = useI18n();
   return (
-    <div className="pe-section">
-      <label className="pe-label" htmlFor="buddy-name">{t('nameLabel')}</label>
-      <input id="buddy-name" className="input input--big" value={value} maxLength={NAME_MAX} autoComplete="off"
-        onChange={(e) => onChange(e.target.value)} data-autofocus={autoFocus || undefined} aria-describedby="buddy-name-msg" />
-      <p id="buddy-name-msg" className={error ? 'msg msg--bad' : 'muted small'}>{error || t('nameHelp')}</p>
-      <button type="button" className="btn btn-soft btn-sm self-start" onClick={() => onChange(suggestName(value))}>{Icon.spark}{t('suggestName')}</button>
-      <div className="chips">
-        {NAME_SUGGESTIONS.slice(0, 8).map((n) => (
-          <button key={n} type="button" className="pill-btn" aria-pressed={value === n} onClick={() => onChange(n)}>{n}</button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Every design side by side, each a small live toy. The previews are drawn
-// without their own button, since each card already is one.
-export function DesignPicker({ value, onChange, autoFocus = false }) {
-  const { t } = useI18n();
-  const current = normalizeDesign(value);
-  return (
-    <div className="design-grid" role="group" aria-label={t('designLabel')}>
-      {DESIGNS.map((d) => (
-        <button key={d} type="button" className="choice design-card" aria-pressed={current === d} onClick={() => onChange(d)}
-          data-autofocus={(autoFocus && current === d) || undefined}>
-          {d === 'miu' && <span className="badge-new">{t('designNew')}</span>}
-          <span className="design-stage"><BuddyFigure design={d} emotion={current === d ? 'happy' : 'neutral'} /></span>
-          <b>{t(`design_${d}`)}</b>
-          <span className="muted small">{t(`designTag_${d}`)}</span>
-        </button>
+    <div className="review card">
+      <div className="review-figure"><BuddyFigure design={designFor(character?.slug)} emotion={type?.emotion ?? 'happy'} /></div>
+      {rows.map(([step, label, value]) => (
+        <div key={step} className="review-row">
+          <span className="review-text"><span className="muted small">{label}</span><b>{value}</b></span>
+          <button type="button" className="btn btn-soft btn-sm" onClick={() => onEdit(step)} aria-label={t('wzEditWhat', { what: label })}>{t('edit')}</button>
+        </div>
       ))}
     </div>
   );
@@ -100,15 +69,15 @@ export function DesignPicker({ value, onChange, autoFocus = false }) {
 
 const ROLE_ICONS = {
   friend: <path d="M8 11a3 3 0 100-6 3 3 0 000 6zM16 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 2.5-5 5-5s5 2 5 5M11 20c0-3 2.5-5 5-5s5 2 5 5" />,
-  daddy: <path d="M9 8a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM3 21c0-4 2.7-7 6-7s6 3 6 7M18 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM15.5 21c0-2.5 1.2-4 2.5-4s2.5 1.5 2.5 4" />,
-  mommy: <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />,
+  sibling: <path d="M9 8a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM3 21c0-4 2.7-7 6-7s6 3 6 7M18 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM15.5 21c0-2.5 1.2-4 2.5-4s2.5 1.5 2.5 4" />,
+  parent_figure: <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />,
   teacher: <path d="M3 8l9-4 9 4-9 4-9-4zM7 10v5c0 1.5 2.2 3 5 3s5-1.5 5-3v-5M21 8v6" />,
 };
 
-export function RolePicker({ value, onChange, autoFocus = false }) {
+export function RolePicker({ value, onChange, autoFocus = false, labelledBy }) {
   const { t } = useI18n();
   return (
-    <div className="role-grid" role="group" aria-label={t('roleLabel')}>
+    <div className="role-grid" role="group" aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : t('wzRoleLabel')}>
       {ROLES.map((r) => (
         <button key={r} type="button" className="choice role-card" aria-pressed={value === r} onClick={() => onChange(r)}
           data-autofocus={(autoFocus && value === r) || undefined}>
@@ -116,6 +85,60 @@ export function RolePicker({ value, onChange, autoFocus = false }) {
           <span className="role-text"><b>{t(`role_${r}`)}</b><span className="muted small">{t(`roleSays_${r}`)}</span></span>
         </button>
       ))}
+    </div>
+  );
+}
+
+// Badges rather than flags: a language is not a country.
+const LANG_BADGE = {
+  vi: <span>VI</span>,
+  en: <span>EN</span>,
+  bilingual: <span className="wz-lang-two"><span>VI</span><span>EN</span></span>,
+};
+
+export function LanguagePicker({ value, onChange, autoFocus = false, labelledBy }) {
+  const { t } = useI18n();
+  return (
+    <div className="wz-langs" role="group" aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : t('wzLanguageLabel')}>
+      {LANGUAGE_MODES.map((m) => (
+        <button key={m} type="button" className="choice role-card wz-lang" aria-pressed={value === m} onClick={() => onChange(m)}
+          data-autofocus={(autoFocus && value === m) || undefined}>
+          <span className="role-icon wz-lang-badge" aria-hidden="true">{LANG_BADGE[m]}</span>
+          <span className="role-text"><b>{t(`wzMode_${m}`)}</b><span className="muted small">{t(`wzModeSays_${m}`)}</span></span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// The characters a child can befriend, each drawn as itself. matchSlug is
+// the questionnaire's best match, currentSlug the child's Buddy today (the
+// drawer's character change).
+export function CharacterPicker({ characters, value, onChange, matchSlug = null, currentSlug = null, autoFocus = false, labelledBy }) {
+  const { t } = useI18n();
+  return (
+    <div className="wz-chars" role="group" aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : t('wzCharacterLabel')}>
+      {characters.map((c) => {
+        const on = value === c.slug;
+        const tags = c.slug === matchSlug || c.slug === currentSlug;
+        return (
+          <button key={c.slug} type="button" className="choice wz-char" aria-pressed={on} onClick={() => onChange(c.slug)}
+            data-autofocus={(autoFocus && on) || undefined}>
+            <span className="wz-char-stage"><BuddyFigure design={designFor(c.slug)} emotion={on ? 'excited' : 'happy'} /></span>
+            <span className="wz-char-text">
+              {tags && (
+                <span className="wz-char-tags">
+                  {c.slug === matchSlug && <span className="chip wz-best">{Icon.spark}{t('wzBestMatch')}</span>}
+                  {c.slug === currentSlug && <span className="chip chip--rest">{t('wzCurrent')}</span>}
+                </span>
+              )}
+              <b className="wz-char-name">{c.name}</b>
+              <span className="muted small">{characterWho(c, t)}</span>
+            </span>
+            <span className="radio-dot" aria-hidden="true" />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -201,137 +224,29 @@ export function PersonalityPicker({ value, onPick, design }) {
   );
 }
 
-// The drawer's one-page editor, for changing one thing on an existing Buddy.
-// Controlled: value is { name, design, role, personality, personality_source } plus
-// the conversation settings (language, voice_id, learn, mood_pin).
-export function ProfileEditor({ value, onChange, nameError = '' }) {
-  const { t } = useI18n();
-  const [tab, setTab] = useState('pick');
-  const [quizKey, setQuizKey] = useState(0);
-  const set = (patch) => onChange({ ...value, ...patch });
-  const type = typeOf(value.personality);
-
-  return (
-    <div className="profile-editor">
-      <div className="card"><NameField value={value.name} onChange={(name) => set({ name })} error={nameError} autoFocus /></div>
-      <section className="pe-section card">
-        <p className="pe-label">{t('designLabel')}</p>
-        <DesignPicker value={value.design} onChange={(design) => set({ design })} />
-      </section>
-      <section className="pe-section card">
-        <p className="pe-label">{t('roleLabel')}</p>
-        <RolePicker value={value.role} onChange={(role) => set({ role })} />
-      </section>
-      <section className="pe-section card">
-        <p className="pe-label">{t('personalityLabel')}</p>
-        <div className="p-current">
-          <BuddyAvatar design={value.design} emotion={type.emotion} />
-          <span><b>{t(`ptype_${type.code}`)}</b> <span className="mono">{type.code}</span><br /><span className="small">{t(`source_${value.personality_source}`)}</span></span>
-        </div>
-        <div className="seg" role="group" aria-label={t('personalityLabel')}>
-          <button type="button" aria-pressed={tab === 'quiz'} onClick={() => { setTab('quiz'); setQuizKey((k) => k + 1); }}>{t('tabQuiz')}</button>
-          <button type="button" aria-pressed={tab === 'pick'} onClick={() => setTab('pick')}>{t('tabPick')}</button>
-        </div>
-        {tab === 'quiz'
-          ? <PersonalityQuiz key={quizKey} design={value.design} onResult={(code) => { set({ personality: code, personality_source: 'quiz' }); setTab('pick'); }} />
-          : <PersonalityPicker design={value.design} value={value.personality} onPick={(code) => set({ personality: code, personality_source: 'picked' })} />}
-      </section>
-      <ToySettings value={value} onChange={set} />
-    </div>
-  );
-}
-
-// Voices change rarely; one request per page is enough.
-let voicesOnce = null;
-function useVoices() {
-  const [state, setState] = useState({ voices: [], failed: false, loaded: false });
-  useEffect(() => {
-    let live = true;
-    voicesOnce ??= api.voices().then((out) => out.voices ?? []).catch((err) => {
-      voicesOnce = null;
-      throw err;
-    });
-    voicesOnce.then((voices) => live && setState({ voices, failed: false, loaded: true }), () => live && setState({ voices: [], failed: true, loaded: true }));
-    return () => {
-      live = false;
-    };
-  }, []);
-  return state;
-}
-
-// How Buddy talks, as opposed to who Buddy is: language, voice, memory and
-// mood. Only the drawer shows these; the add-toy wizard keeps the defaults.
-export function ToySettings({ value, onChange }) {
-  const { t } = useI18n();
-  const { voices, failed, loaded } = useVoices();
-  const s = settingsOf(value);
-  const pinned = s.mood_pin !== null;
-  // Voices belong to one language, so a new language starts from its default
-  // voice (the backend would drop the old one too).
-  const setLanguage = (language) => language !== s.language && onChange({ language, voice_id: null });
-  return (
-    <div className="card settings">
-      <h3 className="card-title">{t('settingsTitle')}</h3>
-      <section className="pe-section">
-        <p className="pe-label" id="conv-lang">{t('convLang')}</p>
-        <div className="seg" role="group" aria-labelledby="conv-lang">
-          <button type="button" aria-pressed={s.language === 'vi'} onClick={() => setLanguage('vi')}>{t('langVi')}</button>
-          <button type="button" aria-pressed={s.language === 'en'} onClick={() => setLanguage('en')}>{t('langEn')}</button>
-        </div>
-        <p className="muted small">{t('convLangHelp')}</p>
-      </section>
-      <section className="pe-section">
-        <p className="pe-label" id="buddy-voice">{t('voiceLabel')}</p>
-        {loaded && !failed && (
-          <VoicePicker voices={voices} language={s.language} value={s.voice_id} onChange={(voice_id) => onChange({ voice_id })} />
-        )}
-        {failed && <p className="msg msg--bad">{t('voicesFailed')}</p>}
-      </section>
-      <section className="pe-section">
-        <label className="switch-row" htmlFor="buddy-learn">
-          <span><span className="pe-label">{t('learnLabel')}</span><span className="muted small">{t('learnHelp')}</span></span>
-          <input id="buddy-learn" type="checkbox" role="switch" className="switch" checked={s.learn} onChange={(e) => onChange({ learn: e.target.checked })} />
-        </label>
-      </section>
-      <section className="pe-section">
-        <p className="pe-label" id="buddy-mood">{t('moodLabel')}</p>
-        <div className="seg" role="group" aria-labelledby="buddy-mood">
-          <button type="button" aria-pressed={!pinned} onClick={() => onChange({ mood_pin: null })}>{t('moodAuto')}</button>
-          <button type="button" aria-pressed={pinned} onClick={() => onChange({ mood_pin: pinned ? s.mood_pin : MOOD_START })}>{t('moodPinned')}</button>
-        </div>
-        {pinned && (
-          <div className="mood-pin">
-            <input type="range" className="range" min="0" max="100" step="1" value={s.mood_pin} aria-label={t('moodValue', { n: s.mood_pin })}
-              onChange={(e) => onChange({ mood_pin: clampMood(e.target.value) })} />
-            <div className="mood-scale"><span>{t('moodLow')}</span><b>{t('moodValue', { n: s.mood_pin })}</b><span>{t('moodHigh')}</span></div>
-          </div>
-        )}
-        <p className="muted small">{pinned ? t('moodPinnedHelp') : t('moodAutoHelp')}</p>
-      </section>
-    </div>
-  );
-}
-
 const STOP_ICON = <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg>;
 
-// The voices of the toy's language, each with Buddy's greeting to listen to
-// before choosing. Picking the default stores null, so the toy keeps
-// following a later change of default; any other voice is stored by id. One
-// audio element for the whole list, so two samples never talk over each other.
-function VoicePicker({ voices, language, value, onChange }) {
+// The voices of the one language Buddy speaks out loud (for a bilingual
+// Buddy, the child's first language), each with Buddy's greeting to listen
+// to before choosing. The character's own voice comes first and is what a
+// Buddy with no pick speaks with, so choosing it stores null; any other
+// voice is stored by id. One audio element for the whole list, so two
+// samples never talk over each other. child is the Buddy's child.
+export function VoicePicker({ voices, own, mode, child, value, onChange, name, labelledBy, autoFocus = false }) {
   const { t } = useI18n();
   const audio = useRef(null);
   const [playing, setPlaying] = useState(null);
   const [missing, setMissing] = useState(() => new Set());
-  const own = voicesFor(voices, language);
-  const chosen = chosenVoice(voices, language, value);
+  const group = voiceGroup(voices, own, mode, child);
+  const ownKey = own ? `${own.vi ?? ''}|${own.en ?? ''}` : '';
 
   useEffect(() => () => audio.current?.pause(), []);
-  // A language switch replaces every card, so a sample from the old list stops.
+  // Another language or character replaces the list, so a sample from the
+  // old one stops.
   useEffect(() => {
     audio.current?.pause();
     setPlaying(null);
-  }, [language]);
+  }, [group.language, ownKey]);
 
   const toggle = (id) => {
     const el = (audio.current ??= new Audio());
@@ -354,26 +269,95 @@ function VoicePicker({ voices, language, value, onChange }) {
     });
   };
 
-  if (!own.length) return <p className="muted small">{t('voiceNoneForLang')}</p>;
+  let focusGiven = false;
   return (
-    <div className="voice-list" role="group" aria-labelledby="buddy-voice">
-      {own.map((v) => {
-        const on = playing === v.id;
-        return (
-          <div key={v.id} className="voice-row">
-            <button type="button" className="voice-play" aria-pressed={on} aria-label={on ? t('voiceStop', { name: v.label }) : t('voicePlay', { name: v.label })} onClick={() => toggle(v.id)}>
-              {on ? STOP_ICON : Icon.play}
-            </button>
-            <button type="button" className="choice voice-pick" aria-pressed={chosen?.id === v.id} onClick={() => onChange(v.is_default ? null : v.id)}>
-              <span className="voice-name">{v.label}</span>
-              {v.is_default && <span className="chip chip--pop">{t('voiceDefaultTag')}</span>}
-              {chosen?.id === v.id && <span className="voice-check">{Icon.check}</span>}
-            </button>
-            {missing.has(v.id) && <p className="voice-missing muted small">{t('voiceSampleMissing')}</p>}
-          </div>
-        );
-      })}
-      <p className="muted small">{t('voiceHelp')}</p>
+    <div className="voice-list" role="group" aria-labelledby={labelledBy}>
+      {mode === 'bilingual' && (
+        <p className="muted small">{t(`wzVoiceBilingual_${group.language}`, { name, child: child?.name ?? t('wzKid') })}</p>
+      )}
+      <div className="wz-voice-group">
+        {group.voices.map((v) => {
+          const sample = v.sample;
+          const label = v.label ?? t('wzOwnVoice', { name });
+          const on = Boolean(sample) && playing === sample;
+          const chosen = voiceChosen(v, value, voices);
+          const focus = autoFocus && chosen && !focusGiven;
+          if (focus) focusGiven = true;
+          return (
+            <div key={v.id ?? `own-${group.language}`} className={`voice-row ${sample ? '' : 'wz-voice-solo'}`}>
+              {sample && (
+                <button type="button" className="voice-play" aria-pressed={on} onClick={() => toggle(sample)}
+                  aria-label={on ? t('wzVoiceStop', { name: label }) : t('wzVoicePlay', { name: label })}>
+                  {on ? STOP_ICON : Icon.play}
+                </button>
+              )}
+              <button type="button" className="choice voice-pick" aria-pressed={chosen} onClick={() => onChange(pickVoice(v))}
+                data-autofocus={focus || undefined}>
+                <span className="voice-name">{label}</span>
+                {v.is_default && v.id && <span className="chip chip--pop">{t('wzOwnVoiceTag', { name })}</span>}
+                {chosen && <span className="voice-check">{Icon.check}</span>}
+              </button>
+              {sample && missing.has(sample) && <p className="voice-missing muted small">{t('wzVoiceMissing')}</p>}
+            </div>
+          );
+        })}
+        {group.voices.length === 1 && <p className="muted small">{t('wzVoiceNone')}</p>}
+      </div>
+      <p className="muted small">{t('wzVoiceHelp', { name })}</p>
+    </div>
+  );
+}
+
+// The drawer's one-page editor for an existing Buddy. Controlled: value is
+// { personality, role, language, voice_id }. character is the drawer's own
+// section for changing the character, which saves on its own; child is the
+// Buddy's child.
+export function BuddyEditor({ value, onChange, buddy, child, voices, character }) {
+  const { t } = useI18n();
+  const [tab, setTab] = useState('pick');
+  const [quizKey, setQuizKey] = useState(0);
+  const set = (patch) => onChange({ ...value, ...patch });
+  const design = designFor(buddy.character_slug);
+  const type = typeOrNull(value.personality);
+  // Voices belong to one language, so a new language keeps a picked voice
+  // only if Buddy still speaks with it (backend-v2 would drop it too).
+  const setLanguage = (language) => language !== value.language && set({ language, voice_id: fitVoice(value.voice_id, voices, language, child) });
+
+  return (
+    <div className="profile-editor">
+      {character}
+      <section className="pe-section card">
+        <p className="pe-label" id="ed-role">{t('wzRoleLabel')}</p>
+        <RolePicker value={value.role} onChange={(role) => set({ role })} labelledBy="ed-role" autoFocus />
+      </section>
+      <section className="pe-section card">
+        <p className="pe-label" id="ed-personality">{t('personalityLabel')}</p>
+        <div className="p-current">
+          <BuddyAvatar design={design} emotion={type?.emotion ?? 'neutral'} />
+          <span>
+            {type
+              ? <><b>{t(`ptype_${type.code}`)}</b> <span className="mono">{type.code}</span><br /><span className="small">{t(`ptypeDesc_${type.code}`)}</span></>
+              : <b>{t('wzNoPersonality')}</b>}
+          </span>
+        </div>
+        <div className="seg" role="group" aria-labelledby="ed-personality">
+          <button type="button" aria-pressed={tab === 'quiz'} onClick={() => { setTab('quiz'); setQuizKey((k) => k + 1); }}>{t('tabQuiz')}</button>
+          <button type="button" aria-pressed={tab === 'pick'} onClick={() => setTab('pick')}>{t('tabPick')}</button>
+        </div>
+        {tab === 'quiz'
+          ? <PersonalityQuiz key={quizKey} design={design} onResult={(code) => { set({ personality: code }); setTab('pick'); }} />
+          : <PersonalityPicker design={design} value={value.personality} onPick={(code) => set({ personality: code })} />}
+      </section>
+      <section className="pe-section card">
+        <p className="pe-label" id="ed-language">{t('wzLanguageLabel')}</p>
+        <LanguagePicker value={value.language} onChange={setLanguage} labelledBy="ed-language" />
+        <p className="muted small">{t('wzLangB')}</p>
+      </section>
+      <section className="pe-section card">
+        <p className="pe-label" id="ed-voice">{t('wzVoiceLabel')}</p>
+        <VoicePicker voices={voices} own={ownVoicesOf(buddy)} mode={value.language} child={child} value={value.voice_id}
+          onChange={(voice_id) => set({ voice_id })} name={buddy.character_name} labelledBy="ed-voice" />
+      </section>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import en from '../src/i18n/en.js';
 import { EMOTIONS } from '../src/lib/emotions.js';
 import { APP_SCREENS } from '../src/lib/routes.js';
 import { TYPES, GROUPS, QUESTIONS, ROLES } from '../src/lib/personality.js';
-import { DESIGNS } from '../src/lib/designs.js';
+import { waitWords } from '../src/lib/format.js';
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const placeholders = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -53,25 +53,44 @@ test('every literal key used in the source exists', async () => {
   assert.deepEqual(missing, []);
 });
 
+// The kinds of turn backend-v2 records (src/domain/types.ts TurnType); the
+// activity rows name each one.
+const TURN_TYPES = ['answer', 'react', 'comfort', 'encourage', 'follow_up', 'share', 'play', 'story', 'teach', 'wind_down', 'greet', 'clarify'];
+
+// backend-v2's problem codes a parent can meet, in lib/api.js's snake case.
+const ERROR_CODES = [
+  'rate_limited', 'network_error', 'invalid_credentials', 'email_taken', 'invalid_request', 'unauthorized', 'not_found', 'invalid_claim',
+  'device_claimed', 'child_has_toy', 'web_toy_limit', 'web_toy_off', 'toy_not_active', 'toy_held', 'toy_in_family', 'payments_disabled', 'purchase_not_pending',
+  'consent_required', 'stale_write', 'precondition_required', 'buddy_exists', 'confirm_required', 'no_cast', 'bad_entry', 'internal', 'http_error',
+];
+
 test('keys built at runtime exist', () => {
   const dynamic = [
     ...EMOTIONS.flatMap((e) => [`emo_${e}`, `emoWhen_${e}`]),
     ...APP_SCREENS.map((r) => `nav_${r.name}`),
     ...['starter', 'family', 'big'].map((p) => `pack_${p}`),
-    ...['disabled', 'no_credits', 'not_claimed', 'daily_limit', 'quiet_hours', 'abandoned', 'failed', 'accepted'].map((r) => `r_${r}`),
-    ...['debit', 'purchase', 'welcome', 'grant', 'refund', 'expiry'].map((k) => `l_${k}`),
+    ...['awake', 'resting', 'support', 'revoked'],
+    ...TURN_TYPES.map((tt) => `tt_${tt}`),
     ...[1, 2, 3, 4, 5].flatMap((n) => [`demo${n}q`, `demo${n}a`]),
     ...[1, 2, 3].flatMap((n) => [`s${n}t`, `s${n}b`]),
     ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`sa${n}t`, `sa${n}b`, `q${n}`, `a${n}`]),
-    ...['awake', 'resting', 'support', 'revoked'],
     ...TYPES.flatMap((ty) => [`ptype_${ty.code}`, `ptypeDesc_${ty.code}`]),
     ...GROUPS.map((g) => `group_${g}`),
     ...QUESTIONS.flatMap((q) => [`pq${q.n}`, `pq${q.n}a`, `pq${q.n}b`]),
     ...ROLES.flatMap((r) => [`role_${r}`, `roleSays_${r}`]),
-    ...DESIGNS.flatMap((d) => [`design_${d}`, `designTag_${d}`]),
-    ...['quiz', 'picked', 'default'].map((s) => `source_${s}`),
-    ...['rate_limited', 'network_error', 'invalid_credentials', 'email_taken', 'claim_code_invalid', 'purchase_not_pending', 'disabled_by_operator', 'web_toy_limit', 'web_toy_disabled'].map((c) => `err_${c}`),
+    ...ERROR_CODES.map((c) => `err_${c}`),
+    // A 429's wording for each size of wait, from none to a day.
+    ...[null, 30, 720, 86400].map((s) => waitWords(s).key),
+    // The week chart's words for a single answer, picked beside the plural.
+    'chartTotalOne', 'tipOne',
   ];
   const missing = dynamic.filter((k) => !(k in vi) || !(k in en));
   assert.deepEqual(missing, []);
+});
+
+test('roles are backend-v2 roles, and a parent figure never claims to be the parent', () => {
+  assert.deepEqual(ROLES, ['friend', 'sibling', 'parent_figure', 'teacher']);
+  assert.match(vi.roleSays_sibling, /“anh”.*“em”/);
+  assert.match(vi.roleSays_parent_figure, /“cô”.*“con”.*không bao giờ nhận là bố mẹ/);
+  assert.match(en.roleSays_parent_figure, /never claims to be/);
 });

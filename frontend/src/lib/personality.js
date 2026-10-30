@@ -1,6 +1,9 @@
-// Buddy's personality: one of the 16 four-letter types (same codes as the
-// backend's personalities table). Pure, so node --test covers the scoring.
-import { DEFAULT_DESIGN } from './designs.js';
+// Buddy's personality: one of the 16 four-letter types, the codes backend-v2
+// takes for a Buddy (a type sets its five dials). Pure, so node --test covers
+// the scoring.
+
+// How Buddy talks to the child lives with the rest of backend-v2's model.
+export { ROLES } from './buddy.js';
 
 // Four families of types, used to group the picker. Each type also has the
 // face that best shows its temperament in the preview.
@@ -54,15 +57,3 @@ export function scoreQuiz(answers) {
   });
   return AXES.map(([x, y], i) => ((votes[i][x] ?? 0) > (votes[i][y] ?? 0) ? x : y)).join('');
 }
-
-// Short, easy to say, easy for a four-year-old to call out.
-export const NAME_SUGGESTIONS = ['Buddy', 'Bin', 'Mít', 'Sóc', 'Kem', 'Bắp', 'Na', 'Tôm', 'Nấm', 'Bơ', 'Mochi', 'Bông'];
-
-export function suggestName(current, random = Math.random) {
-  const pool = NAME_SUGGESTIONS.filter((n) => n !== current);
-  return pool[Math.floor(random() * pool.length)];
-}
-
-export const ROLES = ['friend', 'daddy', 'mommy', 'teacher'];
-export const DEFAULT_PROFILE = Object.freeze({ name: 'Buddy', design: DEFAULT_DESIGN, role: 'friend', personality: 'ENFP', personality_source: 'default' });
-export const NAME_MAX = 24;

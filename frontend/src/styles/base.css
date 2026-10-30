@@ -188,7 +188,7 @@ img, svg { max-width: 100%; }
 
 /* Forms */
 .field { display: grid; gap: 6px; }
-.field label { font-weight: 800; font-size: 14.5px; }
+.field label, .field .field-label { font-weight: 800; font-size: 14.5px; }
 .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .input {
   width: 100%; min-height: 52px; border-radius: 16px;

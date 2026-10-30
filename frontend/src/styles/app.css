@@ -23,6 +23,8 @@
 .coin-counter-main b { font: 800 21px/1 var(--display); min-width: 1.4ch; }
 .coin-counter-plus { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; background: var(--pop); color: #FFFFFF; box-shadow: 0 2px 0 var(--pop-deep); }
 .coin-counter-plus svg { width: 18px; height: 18px; }
+/* Without a plus (buying not open yet) the pill closes evenly around the number. */
+.coin-counter--solo .coin-counter-main { padding-right: 10px; }
 .coin-counter.is-low .coin-counter-main b { color: var(--gold-deep); }
 .coin-counter.is-out .coin-counter-main b { color: var(--bad); }
 
@@ -35,13 +37,22 @@
   box-shadow: 0 -4px 0 var(--pop-soft), 0 -12px 28px rgba(11, 18, 32, 0.07);
 }
 .tab { display: grid; justify-items: center; gap: 2px; padding-bottom: 10px; text-decoration: none; color: var(--muted); font: 800 13px/1 var(--display); }
-.tab-icon { display: grid; place-items: center; width: 52px; height: 34px; border-radius: 999px; transition: background-color 0.2s ease; }
+.tab-icon { position: relative; display: grid; place-items: center; width: 52px; height: 34px; border-radius: 999px; transition: background-color 0.2s ease; }
 .tab[aria-current="page"] { color: var(--pop-text); }
 .tab[aria-current="page"] .tab-icon { background: var(--pop-soft); }
 .tab--talk { color: var(--pop-text); }
 .tab--talk .tab-icon { width: 68px; height: 68px; border-radius: 50%; margin-top: -26px; margin-bottom: 4px; background: var(--pop); color: #FFFFFF; border: 5px solid var(--surface); box-shadow: 0 5px 0 var(--pop-deep), 0 0 0 6px var(--pop-soft); }
 .tab--talk[aria-current="page"] .tab-icon { background: var(--pop); box-shadow: 0 5px 0 var(--pop-deep), 0 0 0 6px var(--glow); }
 .tab--talk svg { width: 28px; height: 28px; }
+/* Unread safety alerts on the Care icon: a small red count on its corner,
+   ringed in the bar's colour so it reads on top of the icon. */
+.nav-badge {
+  position: absolute; top: -6px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px;
+  display: grid; place-items: center; border-radius: 999px;
+  background: var(--bad); color: #FFFFFF; font: 800 12.5px/1 var(--display);
+  box-shadow: 0 0 0 3px var(--surface);
+}
+.tab-icon .nav-badge { top: -4px; right: 2px; }
 
 @media (min-width: 900px) {
   .app { display: grid; grid-template-columns: clamp(208px, 17vw, 250px) minmax(0, 1fr); }
@@ -57,7 +68,7 @@
   .rail-item { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border: 0; border-radius: 18px; background: none; text-decoration: none; color: var(--muted); font: 800 18px var(--display); text-align: left; width: 100%; }
   .rail-item:hover { background: var(--surface-2); color: var(--ink); }
   .rail-item[aria-current="page"] { background: var(--pop-soft); color: var(--pop-text); }
-  .rail-icon { display: grid; place-items: center; width: 34px; }
+  .rail-icon { position: relative; display: grid; place-items: center; width: 34px; }
   .rail-add { width: 100%; }
   .rail-foot { margin-top: auto; display: grid; gap: 8px; }
   .rail-foot .lang { justify-self: start; }
@@ -121,6 +132,8 @@
 .toy-card-text { display: grid; gap: 4px; min-width: 0; }
 .toy-card-text h3 { font-size: 26px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toy-card-text > .muted { font-weight: 700; font-size: 14px; }
+.toy-card-text .chips { gap: 6px; }
+.toy-card > .note { margin: 0 2px; }
 .toy-card-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .toy-card-actions .btn { flex: 1 1 90px; }
 .toy-card-actions .btn-pop:first-child { flex-basis: 100%; }
@@ -153,6 +166,9 @@
 .balance-num b { font: 800 58px/1 var(--display); }
 .balance-num small { font: 800 20px var(--display); color: #E3ECFF; align-self: flex-end; padding-bottom: 6px; }
 .balance-hint { color: #E3ECFF; font-size: 14.5px; font-weight: 600; max-width: 70%; }
+.balance-soon { display: flex; align-items: center; gap: 8px; border-radius: 16px; padding: 10px 14px; background: rgba(255, 255, 255, 0.16); color: #FFFFFF; font-size: 14.5px; font-weight: 700; }
+.balance-soon svg { flex: none; }
+.credits-soon { margin-bottom: 12px; }
 .balance .banner { width: 100%; }
 .shop { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
 .shop-item {
@@ -192,9 +208,19 @@ button.shop-item:active { transform: translateY(3px); }
 .activity { display: grid; gap: 14px; }
 .family { display: grid; gap: 18px; }
 .family-kids { display: grid; gap: 12px; }
-.kids { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.kid-card { display: grid; justify-items: start; gap: 4px; background: var(--surface); border-radius: 24px; padding: 16px; box-shadow: 0 5px 0 var(--line); }
-.kid-card b { font: 800 22px var(--display); margin-top: 6px; }
+.kids { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.kid-card { display: grid; align-content: start; gap: 10px; background: var(--surface); border-radius: 24px; padding: 16px; box-shadow: 0 5px 0 var(--line); }
+.kid-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.kid-names { display: grid; min-width: 0; }
+.kid-names b { font: 800 22px/1.15 var(--display); overflow-wrap: anywhere; }
+.kid-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px; border-radius: 16px; background: var(--surface-2); }
+.kid-row .buddy-avatar { flex: none; }
+.kid-row-icon { flex: none; width: 40px; display: grid; place-items: center; color: var(--pop-text); }
+.kid-row-text { display: grid; min-width: 0; font-weight: 700; }
+.kid-row-text b { font: 800 18px var(--display); }
+.kid-card .row-actions .btn { flex: 1 1 auto; }
+.row-value { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.row-edit { display: grid; gap: 10px; padding: 12px 0; border-bottom: 2px solid var(--surface-2); }
 .child-form { display: grid; gap: 12px; }
 @media (min-width: 900px) {
   .family { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }

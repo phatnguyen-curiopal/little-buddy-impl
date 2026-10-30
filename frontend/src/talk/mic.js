@@ -1,7 +1,7 @@
 import { FRAME_BYTES, levelFromRms, workletSource } from './dsp.js';
 
 // The web toy's microphone. The Talk screen is hands-free, so one capture
-// lasts the whole visit: it opens once the stream is ready and is released
+// lasts the whole visit: it opens once the toy has signed in and is released
 // when the page is left, muted, or the toy stops answering. Which frames
 // become a turn is decided by the caller (useWebToy.js) with vad.js.
 //
@@ -9,14 +9,15 @@ import { FRAME_BYTES, levelFromRms, workletSource } from './dsp.js';
 // 640-byte frames; see dsp.js). This thread only measures loudness for the
 // ring and hands frames to the caller.
 
-// The backend's default TURN_MAX_SEC; the server does not announce its
-// value, so a backend configured lower still ends the turn first, and
-// useWebToy then closes the turn on that turn_done.
-export const TURN_MAX_SEC = 120;
-// The server abandons a turn that is still open at TURN_MAX_SEC; ending a
-// little earlier leaves room for the last frames and turn_end to arrive.
-export const TURN_CAP_MS = (TURN_MAX_SEC - 3) * 1000;
 export const FRAME_MS = 20;
+// backend-v2's default MAX_TURN_SECONDS. The server does not announce its
+// value: one configured lower ends the turn itself (its thinking face
+// arrives while the child still talks), and useWebToy follows it.
+export const TURN_MAX_SEC = 30;
+// The server counts bytes, not time, so the toy counts the frames it sent
+// (the pre-roll included) and says turn_end (reason cap) half a second
+// before the server would cut the turn on its own.
+export const TURN_CAP_FRAMES = Math.floor((TURN_MAX_SEC * 1000 - 500) / FRAME_MS);
 
 // getUserMedia exists only in a secure context (https or localhost).
 export function micSupported() {

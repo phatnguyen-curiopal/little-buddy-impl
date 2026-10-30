@@ -1,0 +1,120 @@
+// wizard strings for the backend-v2 port (en). A key here overrides the same key
+// in ../en.js; tests/i18n.test.js checks both languages together.
+// The add-a-Buddy wizard, the toy drawer and the pay sheet (dashboard/layers.jsx,
+// dashboard/profile.jsx). Every key starts with wz so no other part collides.
+export default {
+  wzTitle: 'Add a Buddy', wzStepOf: 'Step {n} of {total}',
+
+  // the code on the card
+  wzCodeT: 'Enter the code on the card in the box',
+  wzCodeHelp: 'The code has 8 characters, like XXXX-XXXX. It never uses I, L, O, U, 0 or 1, so nothing is easy to misread.',
+  wzCodeBad: 'Codes never contain “{c}”. Please check the card again.',
+  wzCodeWrong: "This code doesn't match a toy, or it has already been used. Please check the card.",
+  wzNoCode: 'No card? Make a Buddy on the web', wzHaveCode: 'Have a toy with a card? Enter its code',
+
+  // the child
+  wzChildT: 'Who is this Buddy for?',
+  wzChildHelpCode: 'Each child has a Buddy of their own. This toy will carry that Buddy.',
+  wzChildHelpWeb: 'A web Buddy lives right here on the site; your child talks to it on the Talk screen.',
+  wzAgeYears: 'Age {n}', wzKidHasBuddy: 'friends with {name}', wzChildAwake: 'has an awake toy',
+  wzChildAwakeHelp: 'A child has one awake toy at a time. To add a toy for a child who has one, pause or remove the other toy first.',
+  wzChildResume: "Finish {name}'s Buddy",
+  wzAddChild: 'Add a child', wzChildName: "Child's name", wzNeedChildName: "Please enter your child's name.",
+  wzBirthDate: 'Birthday', wzBirthHelp: 'Buddy uses the age to talk at the right level.',
+  wzBirth_invalid: "That date doesn't look right. Please check it.", wzBirth_future: "A birthday can't be in the future.",
+  wzBirth_too_old: 'Buddy is made for young children. Please check the year.',
+  wzChildLangs: 'Speaks', wzChildLang_vi: 'Vietnamese', wzChildLang_en: 'English', wzChildLang_both: 'Both',
+  wzChildSave: 'Add child',
+  wzClaiming: 'Checking the code…', wzCreating: 'Making the Buddy…',
+  wzErrChildHasToy: '{name} already has an awake toy, and a child has one at a time. Pick another child, or pause the other toy first.',
+  wzErrWebLimit: 'Your family already has as many web Buddies as allowed. Remove one on the Toys page to make a new one.',
+  wzErrWebOff: "Web Buddies aren't available right now. You can still add a toy with the code on its card.",
+  wzAdded: "The toy is home! Now let's find the right Buddy for {name}.",
+  wzAddedWeb: "The web Buddy has a home! Now let's find the right Buddy for {name}.",
+
+  // a child who already has a Buddy
+  wzExistingT: "{name} is already {child}'s friend!",
+  wzExistingB: '{name} will live in this new toy, still the friend {child} already knows.',
+  wzExistingWebB: '{name} now lives right here on the site, still the friend {child} already knows.',
+  wzExistingResumeB: '{name} is ready to talk with {child}.',
+  wzExistingDone: 'Great, all done', wzAdjust: 'Adjust {name}',
+
+  // personality, role, language
+  wzPersonalityT: "What should {child}'s Buddy be like?",
+  wzPersonalityB: 'Take a short quiz or pick one of 16 personalities. You can change it any time.',
+  wzNoPersonality: 'No personality picked yet',
+  wzRoleT: 'Who should Buddy be to your child?', wzRoleLabel: "Buddy's role",
+  wzRoleB: 'The role sets how Buddy speaks to your child. You can change it any time.',
+  wzLangT: 'Which language should Buddy speak?', wzLanguageLabel: 'Conversation language',
+  wzLangB: "This is separate from the website's language. You can change it any time.",
+  wzMode_vi: 'Vietnamese', wzMode_en: 'English', wzMode_bilingual: 'Bilingual',
+  wzModeSays_vi: 'Buddy listens and speaks in Vietnamese', wzModeSays_en: 'Buddy listens and speaks in English',
+  wzModeSays_bilingual: 'Buddy answers in whichever language your child uses',
+
+  // the character
+  wzCharT: "Who will be {child}'s Buddy?",
+  wzCharB: 'From your choices, we marked the best match. You can pick any of them.',
+  wzCharLoading: 'Finding the best match…', wzBestMatch: 'Best match', wzCurrent: 'Current', wzCharacterLabel: 'Character',
+  wzWho_bo: 'A small cloud sprite who floated down into the toy to find a best friend.',
+  wzWho_pip: 'A tiny star who tumbled into the toy and loves building things.',
+  wzWho_luna: 'A gentle moon rabbit who came down a moonbeam into the toy.',
+
+  // the voice
+  wzVoiceT: 'What should {name} sound like?',
+  wzVoiceB: 'Every character has a voice of its own, and you can switch to another one.',
+  wzVoiceLabel: 'Voice', wzOwnVoice: "{name}'s own voice", wzOwnVoiceTag: "{name}'s voice",
+  wzVoicePlay: 'Listen: {name}', wzVoiceStop: 'Stop: {name}',
+  wzVoiceMissing: 'No sample for this voice yet.', wzVoiceNone: 'No other voices for this language yet.',
+  wzVoiceHelp: 'Tap play to hear {name} say hello in each voice.',
+  wzVoiceBilingual_vi: "In bilingual mode {name} answers in whichever language your child just used, but always speaks with a Vietnamese voice, {child}'s first language, so only Vietnamese voices are listed.",
+  wzVoiceBilingual_en: "In bilingual mode {name} answers in whichever language your child just used, but always speaks with an English voice, {child}'s first language, so only English voices are listed.",
+
+  // review, done, leaving early
+  wzReviewT: "Check {child}'s Buddy", wzReviewB: 'Tap “Edit” to change anything.',
+  wzEditWhat: 'Edit {what}', wzSaveBuddy: 'Save Buddy',
+  wzReadyT: '{name} is ready!',
+  wzReadyB: "In a few seconds the toy's screen turns to a happy face. Your child just taps the button and asks.",
+  wzReadyWebB: '{name} lives right here on the site. Open Talk so your child can ask the first question.',
+  wzTalkTo: 'Talk to {name}',
+  wzLeaveT: 'Stop here?',
+  wzLeaveSaveB: "We'll save {name} with what you've chosen so far; adjust the rest later on the Toys page.",
+  wzLeaveLaterB: 'The toy is already in your family, but {child} has no Buddy yet. Until then the toy just naps when tapped. You can finish any time on the Toys page.',
+  wzLeaveLaterWebB: 'The web Buddy has a home, but {child} has no Buddy yet. Until then it just naps when your child calls. You can finish any time on the Toys page.',
+  wzKeepGoing: 'Keep going', wzSaveClose: 'Save and close', wzCloseLater: 'Finish later',
+
+  // the toy drawer
+  wzBuddyOf: "{child}'s {name}", wzForChild: "{name}'s Buddy", wzToyNoChild: 'Toy {serial}', wzKid: 'your child',
+  wzEditBuddy: 'Adjust Buddy', wzEditT: 'Adjust {name}', wzSaved: '{name} saved',
+  wzStale: 'Someone just changed {name} somewhere else. We loaded the newest version and kept your edits; check them and save again.',
+  wzNoBuddyT: '{child} has no Buddy yet',
+  wzNoBuddyB: 'Until then the toy just naps when tapped. Pick a personality, a role and a voice so Buddy is ready to talk.',
+  wzNoBuddyWebB: 'Until then Buddy just naps when your child calls. Pick a personality, a role and a voice so Buddy is ready to talk.',
+  wzFinishSetup: 'Finish setting up',
+  wzCharChange: 'Change character', wzCharChangeB: 'Pick another character for {child}. We marked the best match.',
+  wzCharConfirmT: 'Switch to {name}?',
+  wzCharConfirmB: "A new character means a new friendship: {name} will get to know {child} from the start, in {name}'s own voice. Everything Buddy has learned about {child} is kept.",
+  wzCharConfirmYes: 'Switch to {name}', wzCharKeep: 'Keep {name}', wzCharChanged: "{name} is now {child}'s friend",
+  wzCharPersonalityLost: "We couldn't give {name} the personality you picked yet. It is still selected below: tap Save to apply it.",
+  wzCareT: 'What {name} knows, alerts and rules',
+  wzCareB: "Learning from conversations, {name}'s mood, quiet hours and daily limits for {child} live here.",
+  wzCareAlerts: 'Unread alerts: {n}',
+  wzKind: 'Kind', wzKindWeb: 'Web Buddy', wzKindToy: 'Toy', wzFor: 'For',
+  wzOnline: 'Connection', wzOnlineYes: 'Online', wzOnlineNo: 'Offline',
+  wzLastSeen: 'Last seen', wzSerial: 'Serial', wzFirmware: 'Firmware',
+  wzPause: 'Pause', wzWake: 'Wake up', wzPausedToast: '{name} is resting', wzWokeToast: '{name} is awake',
+  wzPauseExplain: 'While resting, Buddy just naps when tapped. No credits are used.',
+  wzPauseExplainWeb: 'While resting, Buddy just sleeps and does not talk. No credits are used.',
+  wzSupport: 'Support has paused this toy. Contact support to turn it back on.',
+  wzErrWakeBusy: '{child} has another awake toy. Pause that one first, then wake this one.',
+  wzRemove: 'Remove from family', wzRemoveWeb: 'Delete web Buddy',
+  wzRemoveAsk: 'Remove this toy from your family? {name} and everything {name} knows about {child} are kept. The code on the card works again, for example if you give the toy away.',
+  wzRemoveAskBare: 'Remove this toy from your family? The code on the card works again, for example if you give the toy away.',
+  wzRemoveAskWeb: "Delete this web Buddy? Once deleted it can't be brought back. {name} and everything {name} knows about {child} are kept, and you can make a new web Buddy any time.",
+  wzRemoveAskWebBare: "Delete this web Buddy? Once deleted it can't be brought back, but you can make a new web Buddy any time.",
+  wzRemoveYes: 'Remove toy', wzRemoveYesWeb: 'Delete for good', wzRemoved: 'Toy removed', wzRemovedWeb: 'Web Buddy deleted',
+
+  // buying credits
+  wzPayOffT: 'Buying opens soon',
+  wzPayOffB: "You can't buy more credits just yet. Checkout is being finished and will open soon.",
+  wzPayBalance: 'Credits left: {b}',
+};

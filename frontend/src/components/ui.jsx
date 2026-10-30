@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../lib/i18n.jsx';
+import { waitWords } from '../lib/format.js';
 
 const svg = (d, { w = 22, sw = 2.4, fill = 'none' } = {}) => (
   <svg viewBox="0 0 24 24" width={w} height={w} fill={fill} stroke={fill === 'none' ? 'currentColor' : 'none'} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{d}</svg>
@@ -30,6 +31,7 @@ export const Icon = {
   play: svg(<path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />, { w: 18 }),
   spark: svg(<path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />, { w: 20 }),
   lock: svg(<><rect x="5" y="10.5" width="14" height="10" rx="3" /><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5" /></>, { w: 18 }),
+  heart: svg(<path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />),
 };
 
 // A credit, drawn as a gold coin: the one thing the parent spends.
@@ -132,14 +134,30 @@ export function ToastProvider({ children }) {
 
 export const useToast = () => useContext(ToastContext);
 
-// API error to a sentence a parent can act on.
+// API error to a sentence a parent can act on: err_<code> (lib/api.js keeps
+// backend-v2's problem codes in snake case), for a refused field the words
+// for that field when the dictionaries have them (errField_<field>_<code>,
+// then errField_<field>), and for a 429 how long to wait, from its
+// Retry-After (lib/format.js waitWords).
 export function useErrorText() {
   const { t } = useI18n();
   return useCallback((err) => {
     if (!err) return '';
-    if (err.code === 'rate_limited') return t('err_rate_limited', { s: err.retryAfter ?? 60 });
-    const key = `err_${err.code}`;
-    const text = t(key);
-    return text === key ? t('err_generic') : text;
+    if (err.code === 'rate_limited') {
+      const wait = waitWords(err.retryAfter);
+      return t(wait.key, wait.vars);
+    }
+    const known = (key) => {
+      const text = t(key);
+      return text === key ? null : text;
+    };
+    if (err.code === 'invalid_request') {
+      for (const f of err.fields ?? []) {
+        const field = String(f?.field ?? '').replace(/\W/g, '_');
+        const text = field && (known(`errField_${field}_${f.code}`) ?? known(`errField_${field}`));
+        if (text) return text;
+      }
+    }
+    return known(`err_${err.code}`) ?? t('err_generic');
   }, [t]);
 }

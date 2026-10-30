@@ -1,16 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { DEFAULT_DESIGN, DESIGNS, designOf, normalizeDesign } from '../src/lib/designs.js';
-import { DEFAULT_PROFILE } from '../src/lib/personality.js';
+import { DEFAULT_DESIGN, DESIGNS, ROBOTS, normalizeDesign } from '../src/lib/designs.js';
 
-test('four designs, miu by default, the same codes as the backend', async () => {
+test('four designs, Miu by default and three robots', () => {
   assert.deepEqual(DESIGNS, ['miu', 'orbit', 'volt', 'glim']);
   assert.equal(DEFAULT_DESIGN, 'miu');
-  assert.equal(DEFAULT_PROFILE.design, DEFAULT_DESIGN);
-  const roles = await readFile(new URL('../../backend/personalization/roles.js', import.meta.url), 'utf8');
-  assert.match(roles, /DESIGNS = Object\.freeze\(\['miu', 'orbit', 'volt', 'glim'\]\)/);
-  assert.match(roles, /DEFAULT_DESIGN = 'miu'/);
+  assert.deepEqual([...ROBOTS].sort(), ['glim', 'orbit', 'volt']);
 });
 
 test('an unknown or missing design falls back to the default', () => {
@@ -18,12 +14,6 @@ test('an unknown or missing design falls back to the default', () => {
   assert.equal(normalizeDesign('classic'), 'miu');
   assert.equal(normalizeDesign(undefined), 'miu');
   assert.equal(normalizeDesign(null), 'miu');
-});
-
-test('a toy is drawn in its own design; one without a profile in the default', () => {
-  assert.equal(designOf({ profile: { design: 'glim' } }), 'glim');
-  assert.equal(designOf({ profile: null }), 'miu');
-  assert.equal(designOf(undefined), 'miu');
 });
 
 test('every shape the stylesheet uses is generated', async () => {

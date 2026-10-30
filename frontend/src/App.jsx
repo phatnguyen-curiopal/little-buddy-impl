@@ -33,10 +33,13 @@ function NotFound() {
 }
 
 function Routes() {
-  const { route, pathname } = useLocation();
+  const { route, pathname, search } = useLocation();
   const { status } = useAuth();
   const { t } = useI18n();
-  const redirect = guard(route, status, pathname);
+  // The query rides along to sign-in and back: a link to one child's safety
+  // alerts should land there after the parent signs in.
+  const query = search.toString();
+  const redirect = guard(route, status, query ? `${pathname}?${query}` : pathname);
 
   useEffect(() => {
     if (redirect) navigate(redirect, { replace: true });

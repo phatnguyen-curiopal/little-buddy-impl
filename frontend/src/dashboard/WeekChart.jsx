@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useI18n } from '../lib/i18n.jsx';
 import { localeOf } from '../lib/format.js';
-import { weekFromTurns } from '../lib/stats.js';
+import { weekFromUsage } from '../lib/stats.js';
 
-// Answers per day, last seven days. One hue, bars anchored to the baseline,
-// today labelled directly; every bar has a tooltip and the numbers are also
-// in a table for screen readers.
+// Answers per day, last seven days, from every child's usage rows. One hue,
+// bars anchored to the baseline, today labelled directly; every bar has a
+// tooltip and the numbers are also in a table for screen readers.
 const W = 560;
 const H = 220;
 const L = 30;
@@ -13,10 +13,10 @@ const R = 8;
 const TOP = 28;
 const B = 30;
 
-export default function WeekChart({ turns }) {
+export default function WeekChart({ usage }) {
   const { t, lang } = useI18n();
   const [hover, setHover] = useState(null);
-  const data = weekFromTurns(turns);
+  const data = weekFromUsage(usage);
   const total = data.reduce((s, d) => s + d.n, 0);
   const pw = W - L - R;
   const ph = H - TOP - B;
@@ -30,7 +30,7 @@ export default function WeekChart({ turns }) {
 
   return (
     <section className="card chart">
-      <div className="card-head"><h2>{t('chartTitle')}</h2><span className="chart-total">{t('chartTotal', { n: total })}</span></div>
+      <div className="card-head"><h2>{t('chartTitle')}</h2><span className="chart-total">{t(total === 1 ? 'chartTotalOne' : 'chartTotal', { n: total })}</span></div>
       <div className="chart-wrap">
         <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={t('chartTitle')}>
           {[0, top / 2, top].map((v) => (
@@ -44,7 +44,7 @@ export default function WeekChart({ turns }) {
             const yt = y(d.n);
             const h = base - yt;
             const r = Math.min(10, h, bw / 2);
-            const tip = t('tip', { d: long.format(d.start), n: d.n });
+            const tip = t(d.n === 1 ? 'tipOne' : 'tip', { d: long.format(d.start), n: d.n });
             return (
               <g key={d.start}>
                 {h > 0 && <path className="bar" d={`M${x} ${base} V${yt + r} Q${x} ${yt} ${x + r} ${yt} H${x + bw - r} Q${x + bw} ${yt} ${x + bw} ${yt + r} V${base} Z`} />}

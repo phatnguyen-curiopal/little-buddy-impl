@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Downsampler, FrameChunker, FRAME_BYTES, FRAME_SAMPLES, OUT_RATE, frameRms, levelFromRms, pcm16ToFloat32, workletSource } from '../src/talk/dsp.js';
+import {
+  DOWNLINK, Downsampler, FRAME_BYTES, FRAME_SAMPLES, FRAME_VERSION, FrameChunker, HEADER_BYTES, OUT_RATE, UPLINK,
+  decodeFrame, encodeFrame, frameRms, levelFromRms, pcm16ToFloat32, workletSource,
+} from '../src/talk/dsp.js';
+import { FRAME_MS, TURN_CAP_FRAMES, TURN_MAX_SEC } from '../src/talk/mic.js';
+
+// backend-v2's own frame code, when this Node can load TypeScript.
+const backend = await import('../../backend-v2/src/audio/frames.ts').catch(() => null);
 
 const sine = (freq, rate, seconds, amp = 0.5) => Float32Array.from({ length: Math.round(rate * seconds) }, (_, i) => amp * Math.sin((2 * Math.PI * freq * i) / rate));
 
@@ -113,4 +120,44 @@ test('the worklet module runs on its own and posts 640-byte frames', () => {
     assert.deepEqual(transfer, [msg.frame]);
     assert.ok(msg.rms >= 0 && msg.rms < 1);
   }
+});
+
+test('an uplink frame is the 4-byte header, then the 640 bytes as they came', () => {
+  const pcm = Int16Array.from({ length: FRAME_SAMPLES }, (_, i) => (i % 2 ? -i : i) * 97);
+  const out = new Uint8Array(encodeFrame(0x1234, pcm.buffer));
+  assert.equal(out.byteLength, HEADER_BYTES + FRAME_BYTES);
+  assert.deepEqual([...out.subarray(0, HEADER_BYTES)], [FRAME_VERSION, UPLINK, 0x12, 0x34], 'version, direction, sequence big-endian');
+  const view = new DataView(out.buffer, HEADER_BYTES);
+  for (let i = 0; i < FRAME_SAMPLES; i += 1) assert.equal(view.getInt16(i * 2, true), pcm[i], `sample ${i} little-endian`);
+  assert.deepEqual([...new Uint8Array(encodeFrame(0x1_0005, new Uint8Array(2))).subarray(2, 4)], [0x00, 0x05], 'the sequence wraps at 16 bits');
+  assert.deepEqual([...new Uint8Array(encodeFrame(1, pcm.subarray(1, 3)))].slice(HEADER_BYTES), [...new Uint8Array(pcm.buffer, 2, 4)], 'a view is copied from its own offset');
+});
+
+test('a downlink frame decodes to its header and a view of the PCM', () => {
+  const bytes = Uint8Array.from([FRAME_VERSION, DOWNLINK, 0xff, 0xfe, 1, 2, 3]);
+  const f = decodeFrame(bytes.buffer);
+  assert.equal(f.version, FRAME_VERSION);
+  assert.equal(f.direction, DOWNLINK);
+  assert.equal(f.seq, 0xfffe);
+  assert.deepEqual([...f.payload], [1, 2, 3], 'an odd tail is the player\'s to carry');
+  assert.equal(decodeFrame(new ArrayBuffer(3)), null, 'too short for a header');
+  assert.equal(decodeFrame(new ArrayBuffer(HEADER_BYTES)).payload.byteLength, 0);
+});
+
+test('frames are byte for byte backend-v2\'s', { skip: backend ? false : 'this Node cannot load .ts' }, () => {
+  const pcm = Buffer.from(Int16Array.from({ length: FRAME_SAMPLES }, (_, i) => 1000 - i * 7).buffer);
+  const up = backend.decodeFrame(Buffer.from(encodeFrame(513, new Uint8Array(pcm))));
+  assert.deepEqual({ version: up.version, direction: up.direction, seq: up.seq }, { version: backend.FRAME_VERSION, direction: backend.UPLINK, seq: 513 });
+  assert.ok(up.payload.equals(pcm));
+  assert.equal(FRAME_BYTES, backend.FRAME_BYTES);
+  const down = backend.encodeFrame(backend.DOWNLINK, 70_000, pcm);
+  const f = decodeFrame(new Uint8Array(down.buffer, down.byteOffset, down.byteLength));
+  assert.deepEqual({ version: f.version, direction: f.direction, seq: f.seq }, { version: FRAME_VERSION, direction: DOWNLINK, seq: 70_000 & 0xffff });
+  assert.deepEqual([...f.payload], [...pcm]);
+});
+
+test('a long turn is ended before the server would cut it', () => {
+  const serverCap = TURN_MAX_SEC * OUT_RATE * 2;
+  assert.ok(TURN_CAP_FRAMES * FRAME_BYTES <= serverCap, 'every frame the toy sends still fits');
+  assert.ok(TURN_CAP_FRAMES * FRAME_MS >= (TURN_MAX_SEC - 1) * 1000, 'and the child gets nearly all of it');
 });

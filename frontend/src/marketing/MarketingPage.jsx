@@ -12,7 +12,7 @@ import { api } from '../lib/api.js';
 import { vnd, pricePerAnswer } from '../lib/format.js';
 
 // Shown if the price list cannot be fetched, so the page never renders an
-// empty pricing section. Same values as migration 004.
+// empty pricing section. Same values as backend-v2's migration 007.
 const FALLBACK_PACKS = [
   { id: 'starter', credits: 20, price_amount: 49000, currency: 'VND' },
   { id: 'family', credits: 60, price_amount: 129000, currency: 'VND' },

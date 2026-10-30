@@ -1,0 +1,68 @@
+/* The add-a-Buddy wizard and the toy drawer on backend-v2: the character
+   cards, the language choice, the voice groups and the drawer's link to what
+   Buddy knows. Everything else reuses app.css (rooms, choices, the stepper).
+   The CSS is global, so every class this file adds starts with wz-; the last
+   rule refines the wizard's own action bar from app.css. */
+
+/* Characters: each drawn as itself on a little wall, its story beside it. */
+.wz-chars { display: grid; gap: 12px; }
+.wz-char { align-items: center; gap: 14px; padding: 10px 14px 10px 10px; }
+.wz-char-stage {
+  flex: none; width: 96px; height: 112px; border-radius: 16px;
+  background-color: var(--wall); background-image: radial-gradient(var(--wall-dot) 2px, transparent 2.5px); background-size: 18px 18px;
+  display: grid; place-items: end center; overflow: hidden; padding: 6px 4px 4px;
+}
+.wz-char-stage .figure { width: 82px; }
+.wz-char-stage .figure--orbit, .wz-char-stage .figure--volt, .wz-char-stage .figure--glim { width: 74px; align-self: center; }
+.wz-char-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.wz-char-name { font: 800 22px var(--display); }
+.wz-char-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.wz-char-tags .chip svg { width: 14px; height: 14px; }
+.wz-char-mini { flex: none; width: 52px; }
+
+/* Languages: always one per row, with a text badge for the icon. */
+.wz-langs { display: grid; gap: 10px; }
+.wz-langs .wz-lang { flex-direction: row; align-items: center; }
+.wz-lang-badge { font: 800 16px/1 var(--display); letter-spacing: 0.04em; }
+.wz-lang-two { display: grid; gap: 2px; font-size: 13px; text-align: center; }
+
+/* Voices: a group per language Buddy speaks. */
+.wz-voice-group { display: grid; gap: 10px; }
+.wz-voice-group .voice-pick .chip { flex: none; }
+.wz-voice-solo .voice-pick { grid-column: 1 / -1; }
+
+/* Children in the wizard: a child with an awake toy cannot take another. */
+.wz-kid { display: grid; gap: 6px; }
+.wz-kid .kid-choice:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: 0 3px 0 var(--lip), inset 0 0 0 3px var(--line); transform: none; }
+.wz-kid .kid-choice-text .muted::first-letter { text-transform: uppercase; }
+.wz-kid-resume { justify-self: start; padding-left: 6px; }
+
+/* A long label on a chunky button wraps instead of overflowing a phone. */
+.wz-btn-wrap { white-space: normal; line-height: 1.2; padding-block: 10px; text-align: center; }
+
+/* The drawer: the way to what Buddy knows, and the toy's facts. */
+.wz-care { align-items: center; gap: 14px; padding: 14px 16px; }
+.wz-care-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.wz-care-text b { font: 800 19px var(--display); }
+.wz-care-text .chip svg { width: 14px; height: 14px; }
+.wz-care-go { flex: none; color: var(--pop-text); }
+.wz-facts .row .chip { align-self: center; }
+
+/* The best match stands out on a chosen card as well as on the others. */
+.wz-char-tags .wz-best { background: var(--pop); color: #FFFFFF; }
+
+/* A long step scrolls under the wizard's buttons; the wall fades in behind
+   them so nothing shows through. */
+/* A sticky box stops above the body's bottom padding, so a shadow of the same
+   wall fills the strip under it. */
+.wiz .wiz-actions {
+  margin-inline: -16px; padding: 10px 16px 2px;
+  background: linear-gradient(to bottom, transparent, var(--wall) 10px);
+  box-shadow: 0 24px 0 var(--wall);
+}
+
+/* Back and next side by side must fit a 360px phone: tighter sides, and a
+   long label wraps instead of pushing the step wider than the screen. */
+.wiz .wiz-row .btn { white-space: normal; line-height: 1.15; text-align: center; }
+.wiz .wiz-row .btn-lg { padding-inline: 20px; }
+.wiz .wiz-row .grow { min-width: 0; }

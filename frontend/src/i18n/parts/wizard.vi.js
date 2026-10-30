@@ -1,0 +1,120 @@
+// wizard strings for the backend-v2 port (vi). A key here overrides the same key
+// in ../vi.js; tests/i18n.test.js checks both languages together.
+// The add-a-Buddy wizard, the toy drawer and the pay sheet (dashboard/layers.jsx,
+// dashboard/profile.jsx). Every key starts with wz so no other part collides.
+export default {
+  wzTitle: 'Thêm Buddy', wzStepOf: 'Bước {n}/{total}',
+
+  // the code on the card
+  wzCodeT: 'Nhập mã trên thẻ trong hộp',
+  wzCodeHelp: 'Mã gồm 8 ký tự, dạng XXXX-XXXX. Mã không bao giờ có chữ I, L, O, U và số 0, 1 nên bạn không lo nhìn nhầm.',
+  wzCodeBad: 'Mã không có ký tự “{c}”. Bạn xem lại thẻ giúp mình nhé.',
+  wzCodeWrong: 'Mã này chưa khớp với đồ chơi nào, hoặc đã được dùng rồi. Bạn xem lại thẻ giúp mình nhé.',
+  wzNoCode: 'Không có thẻ? Tạo Buddy trên web', wzHaveCode: 'Có đồ chơi kèm thẻ? Nhập mã',
+
+  // the child
+  wzChildT: 'Buddy này dành cho bé nào?',
+  wzChildHelpCode: 'Mỗi bé có một Buddy riêng. Đồ chơi này sẽ mang Buddy của bé.',
+  wzChildHelpWeb: 'Buddy trên web sống ngay trên trang này, bé trò chuyện ở mục Trò chuyện.',
+  wzAgeYears: '{n} tuổi', wzKidHasBuddy: 'bạn của {name}', wzChildAwake: 'đang có đồ chơi thức',
+  wzChildAwakeHelp: 'Mỗi bé chỉ có một đồ chơi thức cùng lúc. Muốn thêm đồ chơi cho bé đã có, bạn cho đồ chơi kia nghỉ hoặc gỡ ra trước nhé.',
+  wzChildResume: 'Hoàn tất Buddy cho {name}',
+  wzAddChild: 'Thêm bé mới', wzChildName: 'Tên bé', wzNeedChildName: 'Nhập tên bé giúp mình nhé.',
+  wzBirthDate: 'Ngày sinh', wzBirthHelp: 'Buddy dựa vào tuổi để nói chuyện cho vừa với bé.',
+  wzBirth_invalid: 'Ngày sinh chưa đúng. Bạn xem lại giúp mình nhé.', wzBirth_future: 'Ngày sinh không thể ở tương lai.',
+  wzBirth_too_old: 'Buddy dành cho các bé nhỏ. Bạn xem lại năm sinh nhé.',
+  wzChildLangs: 'Bé nói', wzChildLang_vi: 'Tiếng Việt', wzChildLang_en: 'Tiếng Anh', wzChildLang_both: 'Cả hai',
+  wzChildSave: 'Thêm bé',
+  wzClaiming: 'Đang kiểm tra mã…', wzCreating: 'Đang tạo Buddy…',
+  wzErrChildHasToy: '{name} đang có một đồ chơi thức. Mỗi bé chỉ có một đồ chơi thức cùng lúc: bạn chọn bé khác, hoặc cho đồ chơi kia nghỉ trước nhé.',
+  wzErrWebLimit: 'Gia đình đã có đủ số Buddy trên web. Bạn gỡ bớt một Buddy trên web ở trang Đồ chơi rồi tạo Buddy mới nhé.',
+  wzErrWebOff: 'Buddy trên web hiện chưa mở. Bạn vẫn thêm được đồ chơi có mã trên thẻ.',
+  wzAdded: 'Đồ chơi đã về nhà! Giờ mình cùng tìm Buddy hợp với {name} nhé.',
+  wzAddedWeb: 'Đã có chỗ cho Buddy trên web! Giờ mình cùng tìm Buddy hợp với {name} nhé.',
+
+  // a child who already has a Buddy
+  wzExistingT: '{name} đã là bạn của {child} rồi!',
+  wzExistingB: '{name} sẽ sống trong món đồ chơi mới này, vẫn là người bạn {child} đã quen.',
+  wzExistingWebB: 'Từ giờ {name} sống ngay trên trang này, vẫn là người bạn {child} đã quen.',
+  wzExistingResumeB: '{name} đã sẵn sàng trò chuyện với {child}.',
+  wzExistingDone: 'Tuyệt, xong rồi', wzAdjust: 'Chỉnh {name}',
+
+  // personality, role, language
+  wzPersonalityT: 'Bạn muốn Buddy của {child} có tính cách thế nào?',
+  wzPersonalityB: 'Làm bài trắc nghiệm ngắn hoặc tự chọn một trong 16 tính cách. Đổi lại lúc nào cũng được.',
+  wzNoPersonality: 'Chưa chọn tính cách',
+  wzRoleT: 'Buddy nói chuyện với bé như ai?', wzRoleLabel: 'Vai của Buddy',
+  wzRoleB: 'Vai này quyết định cách Buddy xưng hô với bé. Đổi lại lúc nào cũng được.',
+  wzLangT: 'Buddy nói tiếng gì với bé?', wzLanguageLabel: 'Ngôn ngữ trò chuyện',
+  wzLangB: 'Không phụ thuộc ngôn ngữ của trang web. Đổi lại lúc nào cũng được.',
+  wzMode_vi: 'Tiếng Việt', wzMode_en: 'Tiếng Anh', wzMode_bilingual: 'Song ngữ',
+  wzModeSays_vi: 'Buddy nghe và nói tiếng Việt', wzModeSays_en: 'Buddy nghe và nói tiếng Anh',
+  wzModeSays_bilingual: 'Bé hỏi bằng tiếng nào, Buddy đáp bằng tiếng đó',
+
+  // the character
+  wzCharT: 'Ai sẽ là Buddy của {child}?',
+  wzCharB: 'Theo những gì bạn chọn, mình đã đánh dấu người bạn hợp nhất. Bạn chọn ai cũng được.',
+  wzCharLoading: 'Đang tìm người bạn hợp nhất…', wzBestMatch: 'Hợp nhất', wzCurrent: 'Hiện tại', wzCharacterLabel: 'Nhân vật',
+  wzWho_bo: 'Một chú mây nhỏ bay xuống món đồ chơi để tìm một người bạn thân.',
+  wzWho_pip: 'Một ngôi sao tí hon lỡ rơi vào món đồ chơi, mê lắp ráp đủ thứ.',
+  wzWho_luna: 'Một chú thỏ mặt trăng hiền lành theo ánh trăng xuống món đồ chơi.',
+
+  // the voice
+  wzVoiceT: '{name} sẽ nói bằng giọng nào?',
+  wzVoiceB: 'Mỗi nhân vật có giọng riêng, bạn đổi sang giọng khác cũng được.',
+  wzVoiceLabel: 'Giọng nói', wzOwnVoice: 'Giọng riêng của {name}', wzOwnVoiceTag: 'Giọng của {name}',
+  wzVoicePlay: 'Nghe thử: {name}', wzVoiceStop: 'Dừng: {name}',
+  wzVoiceMissing: 'Giọng này chưa có bản nghe thử.', wzVoiceNone: 'Chưa có giọng nào khác cho ngôn ngữ này.',
+  wzVoiceHelp: 'Bấm nút phát để nghe {name} chào bằng từng giọng.',
+  wzVoiceBilingual_vi: 'Khi song ngữ, {name} trả lời bằng ngôn ngữ bé vừa dùng nhưng luôn nói bằng giọng tiếng Việt, ngôn ngữ đầu tiên của {child}, nên ở đây chỉ có giọng tiếng Việt.',
+  wzVoiceBilingual_en: 'Khi song ngữ, {name} trả lời bằng ngôn ngữ bé vừa dùng nhưng luôn nói bằng giọng tiếng Anh, ngôn ngữ đầu tiên của {child}, nên ở đây chỉ có giọng tiếng Anh.',
+
+  // review, done, leaving early
+  wzReviewT: 'Xem lại Buddy của {child}', wzReviewB: 'Chạm “Sửa” để đổi lại bất kỳ mục nào.',
+  wzEditWhat: 'Sửa mục {what}', wzSaveBuddy: 'Lưu Buddy',
+  wzReadyT: '{name} đã sẵn sàng!',
+  wzReadyB: 'Trong vài giây, màn hình đồ chơi sẽ chuyển sang khuôn mặt vui. Bé chỉ cần chạm nút và hỏi.',
+  wzReadyWebB: '{name} sống ngay trên trang này. Mở mục Trò chuyện để bé hỏi câu đầu tiên.',
+  wzTalkTo: 'Trò chuyện với {name}',
+  wzLeaveT: 'Dừng ở đây?',
+  wzLeaveSaveB: 'Mình lưu {name} với những gì bạn đã chọn, phần còn lại bạn chỉnh sau trong trang Đồ chơi nhé.',
+  wzLeaveLaterB: 'Đồ chơi đã ở trong gia đình bạn, nhưng {child} chưa có Buddy. Trong lúc chờ, đồ chơi chỉ ngủ gật khi bé chạm nút. Bạn hoàn tất lúc nào cũng được trong trang Đồ chơi.',
+  wzLeaveLaterWebB: 'Đã có chỗ cho Buddy trên web, nhưng {child} chưa có Buddy. Trong lúc chờ, Buddy chỉ ngủ gật khi bé gọi. Bạn hoàn tất lúc nào cũng được trong trang Đồ chơi.',
+  wzKeepGoing: 'Làm tiếp', wzSaveClose: 'Lưu và đóng', wzCloseLater: 'Để sau',
+
+  // the toy drawer
+  wzBuddyOf: '{name} của {child}', wzForChild: 'Buddy của {name}', wzToyNoChild: 'Đồ chơi {serial}', wzKid: 'bé',
+  wzEditBuddy: 'Chỉnh Buddy', wzEditT: 'Chỉnh {name}', wzSaved: 'Đã lưu {name}',
+  wzStale: 'Vừa có người chỉnh {name} ở nơi khác. Mình đã tải bản mới nhất và giữ những gì bạn vừa đổi, bạn xem lại rồi lưu nhé.',
+  wzNoBuddyT: '{child} chưa có Buddy',
+  wzNoBuddyB: 'Trong lúc chờ, đồ chơi chỉ ngủ gật khi bé chạm nút. Chọn tính cách, vai và giọng nói để Buddy sẵn sàng trò chuyện.',
+  wzNoBuddyWebB: 'Trong lúc chờ, Buddy chỉ ngủ gật khi bé gọi. Chọn tính cách, vai và giọng nói để Buddy sẵn sàng trò chuyện.',
+  wzFinishSetup: 'Hoàn tất cài đặt',
+  wzCharChange: 'Đổi nhân vật', wzCharChangeB: 'Chọn một nhân vật khác cho {child}. Mình đã đánh dấu người bạn hợp nhất.',
+  wzCharConfirmT: 'Đổi sang {name}?',
+  wzCharConfirmB: 'Nhân vật mới là một tình bạn mới: {name} sẽ làm quen với {child} từ đầu, bằng giọng riêng của {name}. Những gì Buddy đã biết về {child} vẫn được giữ.',
+  wzCharConfirmYes: 'Đổi sang {name}', wzCharKeep: 'Giữ {name}', wzCharChanged: 'Giờ {name} là bạn của {child}',
+  wzCharPersonalityLost: 'Mình chưa chuyển được tính cách bạn chọn sang {name}. Tính cách đó vẫn được chọn sẵn bên dưới, bạn bấm Lưu để áp dụng nhé.',
+  wzCareT: 'Điều {name} biết, cảnh báo và quy tắc',
+  wzCareB: 'Việc học từ trò chuyện, tâm trạng của {name}, giờ nghỉ và giới hạn mỗi ngày của {child} nằm ở đây.',
+  wzCareAlerts: '{n} cảnh báo chưa xem',
+  wzKind: 'Loại', wzKindWeb: 'Buddy trên web', wzKindToy: 'Đồ chơi', wzFor: 'Dành cho',
+  wzOnline: 'Kết nối', wzOnlineYes: 'Đang trực tuyến', wzOnlineNo: 'Ngoại tuyến',
+  wzLastSeen: 'Kết nối lần cuối', wzSerial: 'Số seri', wzFirmware: 'Phần mềm',
+  wzPause: 'Cho nghỉ', wzWake: 'Đánh thức', wzPausedToast: '{name} đang nghỉ', wzWokeToast: '{name} đã thức dậy',
+  wzPauseExplain: 'Khi nghỉ, bé chạm nút sẽ chỉ thấy Buddy ngủ gật. Không trừ lượt.',
+  wzPauseExplainWeb: 'Khi nghỉ, Buddy chỉ ngủ, không trò chuyện. Không trừ lượt.',
+  wzSupport: 'Bộ phận hỗ trợ đã tạm dừng đồ chơi này. Liên hệ hỗ trợ để bật lại.',
+  wzErrWakeBusy: '{child} đang có một đồ chơi khác thức. Bạn cho đồ chơi kia nghỉ trước rồi đánh thức đồ chơi này nhé.',
+  wzRemove: 'Gỡ khỏi gia đình', wzRemoveWeb: 'Xoá Buddy trên web',
+  wzRemoveAsk: 'Gỡ đồ chơi này khỏi gia đình? {name} và những gì {name} biết về {child} vẫn được giữ. Mã trên thẻ dùng lại được, ví dụ khi bạn tặng đồ chơi cho người khác.',
+  wzRemoveAskBare: 'Gỡ đồ chơi này khỏi gia đình? Mã trên thẻ dùng lại được, ví dụ khi bạn tặng đồ chơi cho người khác.',
+  wzRemoveAskWeb: 'Xoá Buddy trên web này? Đã xoá thì không khôi phục được. {name} và những gì {name} biết về {child} vẫn được giữ, bạn tạo Buddy trên web mới lúc nào cũng được.',
+  wzRemoveAskWebBare: 'Xoá Buddy trên web này? Đã xoá thì không khôi phục được, nhưng bạn tạo Buddy trên web mới lúc nào cũng được.',
+  wzRemoveYes: 'Gỡ đồ chơi', wzRemoveYesWeb: 'Xoá hẳn', wzRemoved: 'Đã gỡ đồ chơi', wzRemovedWeb: 'Đã xoá Buddy trên web',
+
+  // buying credits
+  wzPayOffT: 'Sắp mở mua lượt',
+  wzPayOffB: 'Hiện bạn chưa mua thêm lượt được. Phần thanh toán đang được hoàn thiện và sẽ mở sớm.',
+  wzPayBalance: 'Số lượt hiện có: {b}',
+};

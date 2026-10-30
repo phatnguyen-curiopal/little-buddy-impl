@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TYPES, GROUPS, QUESTIONS, scoreQuiz, groupOf, typeOf, suggestName, NAME_SUGGESTIONS } from '../src/lib/personality.js';
+import { TYPES, GROUPS, QUESTIONS, ROLES, scoreQuiz, groupOf, typeOf } from '../src/lib/personality.js';
+import { ROLES as BUDDY_ROLES } from '../src/lib/buddy.js';
 import { EMOTIONS } from '../src/lib/emotions.js';
 
 const all = (x) => QUESTIONS.map(() => x);
@@ -58,8 +59,11 @@ test('incomplete answers are refused', () => {
   assert.throws(() => scoreQuiz(all('c')));
 });
 
-test('name suggestions never repeat the current name', () => {
-  for (let i = 0; i < 50; i += 1) assert.notEqual(suggestName('Bin'), 'Bin');
-  assert.ok(NAME_SUGGESTIONS.every((n) => n.length <= 24));
-  assert.equal(suggestName('Buddy', () => 0), NAME_SUGGESTIONS.filter((n) => n !== 'Buddy')[0]);
+test('every code has the shape backend-v2 accepts for a Buddy', () => {
+  for (const t of TYPES) assert.match(t.code, /^[EI][NS][FT][JP]$/);
+});
+
+test('the roles are backend-v2 roles, shared with lib/buddy.js', () => {
+  assert.deepEqual(ROLES, ['friend', 'sibling', 'parent_figure', 'teacher']);
+  assert.equal(ROLES, BUDDY_ROLES);
 });

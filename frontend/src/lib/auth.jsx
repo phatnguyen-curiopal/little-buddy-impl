@@ -4,6 +4,8 @@ import { api, clearSession, hasSession, onSessionChange } from './api.js';
 const AuthContext = createContext(null);
 
 // status: loading (a stored session is being restored) | signedIn | signedOut
+// me is { parent, family } once known; it can be null while signed in if the
+// backend could not be reached, and the dashboard then offers to try again.
 export function AuthProvider({ children }) {
   const [state, setState] = useState(() => ({ status: hasSession() ? 'loading' : 'signedOut', me: null }));
 
@@ -11,9 +13,16 @@ export function AuthProvider({ children }) {
     if (state.status !== 'loading') return;
     api.me()
       .then((me) => setState({ status: 'signedIn', me }))
-      .catch(() => {
-        clearSession();
-        setState({ status: 'signedOut', me: null });
+      .catch((err) => {
+        // Only a refused session ends it (api.js has already dropped a
+        // refresh token the backend turned down); a network blip or a
+        // server error must not sign a parent out.
+        if (err?.status === 401 || !hasSession()) {
+          clearSession();
+          setState({ status: 'signedOut', me: null });
+        } else {
+          setState({ status: 'signedIn', me: null });
+        }
       });
     // Runs once for the stored session only.
     // eslint-disable-next-line react-hooks/exhaustive-deps

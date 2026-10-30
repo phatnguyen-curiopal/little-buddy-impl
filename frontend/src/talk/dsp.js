@@ -1,5 +1,6 @@
-// Audio math for the web toy, pure so node --test can check it. The mic's
-// AudioWorklet runs Downsampler, FrameChunker and frameRms too: mic.js
+// Audio math and the protocol's audio frames for the web toy, pure so node
+// --test can check them. The mic's AudioWorklet runs Downsampler,
+// FrameChunker and frameRms too: mic.js
 // builds the worklet module from their source text, so the code the tests
 // exercise is the code that runs in the audio thread. That is why these
 // three must stay self-contained (no imports, no module constants, no class
@@ -8,6 +9,34 @@
 export const OUT_RATE = 16000;
 export const FRAME_SAMPLES = 320; // 20 ms at 16 kHz
 export const FRAME_BYTES = FRAME_SAMPLES * 2; // what the device protocol calls one frame
+
+// backend-v2's audio frames (src/audio/frames.ts): a 4-byte header (version,
+// direction, big-endian sequence number) before the raw PCM16 of one packet.
+export const FRAME_VERSION = 1;
+export const UPLINK = 0;
+export const DOWNLINK = 1;
+export const HEADER_BYTES = 4;
+
+// pcm is an ArrayBuffer or a typed array of PCM16 samples. The mic's Int16
+// samples are already little-endian, as the protocol wants, because every
+// platform a browser runs on is little-endian; they are copied as they are.
+export function encodeFrame(seq, pcm, direction = UPLINK) {
+  const body = ArrayBuffer.isView(pcm) ? new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength) : new Uint8Array(pcm);
+  const out = new Uint8Array(HEADER_BYTES + body.byteLength);
+  out[0] = FRAME_VERSION;
+  out[1] = direction;
+  out[2] = (seq >>> 8) & 0xff;
+  out[3] = seq & 0xff;
+  out.set(body, HEADER_BYTES);
+  return out.buffer;
+}
+
+// null for anything too short to hold a header; payload is a view, not a copy.
+export function decodeFrame(data) {
+  const u8 = ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength) : new Uint8Array(data);
+  if (u8.byteLength < HEADER_BYTES) return null;
+  return { version: u8[0], direction: u8[1], seq: (u8[2] << 8) | u8[3], payload: u8.subarray(HEADER_BYTES) };
+}
 
 // Low-pass then resample to outRate, Float32 in, Int16 out. The low-pass
 // (6th-order Butterworth as three biquads, cutoff just under the new

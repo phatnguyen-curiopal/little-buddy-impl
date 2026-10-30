@@ -1,0 +1,26 @@
+/* ---------- Talk on backend-v2 ----------
+   Additions to the Talk screen in app.css: the card that stands in for the
+   mic when every answer would only be the napping clip, the three-way
+   language button, and the development note in the log. */
+
+.talk-gate {
+  width: min(100%, 440px);
+  display: grid; gap: 10px; justify-items: center; text-align: center;
+  background: var(--surface); color: var(--ink);
+  border-radius: 24px; padding: 18px 18px 20px;
+  box-shadow: 0 5px 0 var(--lip);
+}
+.talk-gate h2 { font-size: 21px; line-height: 1.2; overflow-wrap: anywhere; }
+.talk-gate p { margin: 0; color: var(--ink-2); font-size: 15px; font-weight: 700; }
+.talk-gate .btn { margin-top: 4px; max-width: 100%; }
+.talk-gate .talk-gate-note { color: var(--muted); font-size: 14px; }
+
+/* Both languages need two codes on one round button. */
+.round.talk-lang--both { font-size: 12px; letter-spacing: -0.02em; }
+
+.talk-dev-note { margin: 0; color: var(--muted); font-size: 13px; font-weight: 700; }
+
+@media (max-height: 700px) and (max-width: 899px) {
+  .talk-gate { padding: 14px 14px 16px; gap: 8px; }
+  .talk-gate h2 { font-size: 19px; }
+}

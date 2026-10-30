@@ -8,41 +8,42 @@ import { Link } from '../lib/router.js';
 import { relativeTime } from '../lib/format.js';
 import { normalizeEmotion } from '../lib/emotions.js';
 import { reducedMotion, useCountUp } from '../lib/motion.js';
-import { designOf } from '../lib/designs.js';
+import { designFor, toyActions, toyView } from '../lib/buddy.js';
 import { useFamilyData, useLayers } from './data.jsx';
 
 export function childOf(children, id) {
   return children.find((c) => c.id === id) ?? null;
 }
 
-export function useToyName() {
-  const { t } = useI18n();
-  return (device, children) => {
-    const c = childOf(children, device.child_id);
-    const own = device.profile?.name;
-    if (own) return c ? t('buddyOf', { name: own, child: c.name }) : own;
-    return c ? t('forChild', { name: c.name }) : t('buddyUnassigned', { serial: device.serial });
-  };
+// Buying happens only where the backend takes payments (the demo checkout).
+// Production starts with payments off, and then no screen offers to buy.
+export function useCanBuy() {
+  return useFamilyData()?.me?.payments === 'demo';
 }
 
-// The name on its own, and the child it belongs to as a second line.
-export function useToyLines() {
-  const { t } = useI18n();
-  return (device, children) => {
-    const c = childOf(children, device.child_id);
-    const own = device.profile?.name;
-    return {
-      name: own || (c ? t('forChild', { name: c.name }) : t('buddyUnassigned', { serial: device.serial })),
-      sub: c ? t('forChild', { name: c.name }) : t('noChild'),
-    };
-  };
+// A pack's name in the site's language, or the backend's own name for a pack
+// the dictionaries do not know yet.
+export function packName(pack, t) {
+  const key = `pack_${pack.id}`;
+  const text = t(key);
+  return text === key ? (pack.name ?? pack.id) : text;
 }
 
 export function toyLook(device) {
   if (device.status === 'active') return { emotion: 'neutral', dim: false, tone: 'ok', key: 'awake' };
-  if (device.status === 'disabled' && device.disabled_by === 'admin') return { emotion: 'sad', dim: true, tone: 'bad', key: 'support' };
+  if (device.status === 'disabled' && device.disabled_by === 'staff') return { emotion: 'sad', dim: true, tone: 'bad', key: 'support' };
   if (device.status === 'revoked') return { emotion: 'sad', dim: true, tone: 'bad', key: 'revoked' };
   return { emotion: 'sleepy', dim: true, tone: 'rest', key: 'resting' };
+}
+
+// When the toy was last connected, in words; a toy that never connected
+// says so instead of "seen never".
+export function useSeenText() {
+  const { t } = useI18n();
+  return (device) => {
+    if (device.online) return t('onlineNow');
+    return device.last_seen_at ? t('seen', { t: relativeTime(device.last_seen_at, t) }) : t('neverSeen');
+  };
 }
 
 // An awake toy is never quite still: now and then it winks or looks around,
@@ -96,6 +97,7 @@ export function BalanceCard({ balance, className = '' }) {
   const { t } = useI18n();
   const shown = useCountUp(balance) ?? 0;
   const { openPay } = useLayers();
+  const canBuy = useCanBuy();
   const out = balance === 0;
   const low = balance !== null && balance > 0 && balance <= 5;
   return (
@@ -105,39 +107,43 @@ export function BalanceCard({ balance, className = '' }) {
       <div className="balance-num" aria-live="polite"><Coin size="lg" /><b>{shown}</b><small>{t('balUnit')}</small></div>
       <p className="balance-hint">{t('balHint')}</p>
       {(out || low) && <div className={`banner banner--${out ? 'bad' : 'warn'}`}>{Icon.alert}<span>{t(out ? 'outLong' : 'lowLong')}</span></div>}
-      <button type="button" className="btn btn-gold" onClick={() => openPay(null)}>{Icon.plus}{t('buy')}</button>
+      {canBuy
+        ? <button type="button" className="btn btn-gold" onClick={() => openPay(null)}>{Icon.plus}{t('buy')}</button>
+        : <p className="balance-soon">{Icon.spark}<span>{t('buySoon')}</span></p>}
     </section>
   );
 }
 
-// One toy: its room, its state and the three things a parent does with it.
-export function ToyCard({ device, kids }) {
+// One toy: its room, its state and what a parent can do with it now.
+export function ToyCard({ device }) {
   const { t } = useI18n();
   const d = useFamilyData();
-  const lines = useToyLines()(device, kids);
+  const seen = useSeenText();
+  const view = toyView(device, d.children, d.buddies);
+  const can = toyActions(view, d.me?.web_toy === true);
   const look = toyLook(device);
   const face = useIdleFace(look.emotion, device.status === 'active');
-  const { openToy } = useLayers();
+  const { openToy, openAdd } = useLayers();
   const { busy, pause, wake } = useToyActions();
-  const canTalk = device.status === 'active' && d.me?.web_toy === true;
-  const parentPaused = device.status === 'disabled' && device.disabled_by === 'parent';
   return (
     <article className="toy-card">
       <div className="toy-card-top">
         <Room size="sm" night={look.dim} className="toy-card-room">
-          <span className="room-stage"><BuddyFigure design={designOf(device)} emotion={face} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} /></span>
+          <span className="room-stage"><BuddyFigure design={view.design} emotion={face} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} /></span>
         </Room>
         <div className="toy-card-text">
-          <h3>{lines.name}</h3>
-          <span className="muted">{lines.sub}</span>
-          <Chip tone={look.tone} dot>{t(look.key)}</Chip>
-          <span className="muted small">{t('seen', { t: relativeTime(device.last_seen_at, t) })}</span>
+          <h3>{view.name}</h3>
+          <span className="muted">{view.child ? t('forChild', { name: view.child.name }) : t('noChild')}</span>
+          <span className="chips"><Chip tone={look.tone} dot>{t(look.key)}</Chip>{view.web && <Chip tone="pop">{t('webTag')}</Chip>}</span>
+          <span className="muted small">{seen(device)}</span>
         </div>
       </div>
+      {can.setup && <p className="note">{Icon.spark}<span>{t('needsBuddy')}</span></p>}
       <div className="toy-card-actions">
-        {canTalk && <Link className="btn btn-pop btn-sm" to={`/app/talk?toy=${encodeURIComponent(device.id)}`}>{Icon.mic}{t('nav_talk')}</Link>}
-        {device.status === 'active' && <button type="button" className="btn btn-soft btn-sm" disabled={busy} onClick={() => pause(device)}>{t('pause')}</button>}
-        {parentPaused && <button type="button" className="btn btn-pop btn-sm" disabled={busy} onClick={() => wake(device)}>{t('wake')}</button>}
+        {can.talk && <Link className="btn btn-pop btn-sm" to={`/app/talk?toy=${encodeURIComponent(device.id)}`}>{Icon.mic}{t('nav_talk')}</Link>}
+        {can.setup && <button type="button" className="btn btn-pop btn-sm" onClick={() => openAdd(view.child.id)}>{Icon.spark}{t('finishSetup')}</button>}
+        {can.pause && <button type="button" className="btn btn-soft btn-sm" disabled={busy} onClick={() => pause(device)}>{t('pause')}</button>}
+        {can.wake && <button type="button" className="btn btn-pop btn-sm" disabled={busy} onClick={() => wake(device)}>{t('wake')}</button>}
         <button type="button" className="btn btn-soft btn-sm" onClick={() => openToy(device.id)}>{t('manage')}</button>
       </div>
     </article>
@@ -147,10 +153,11 @@ export function ToyCard({ device, kids }) {
 export function AddTile() {
   const { t } = useI18n();
   const { openAdd } = useLayers();
+  const webToy = useFamilyData().me?.web_toy === true;
   return (
     <button type="button" className="add-tile" onClick={() => openAdd()}>
       <span className="add-tile-plus">{Icon.plus}</span>
-      <span><b>{t('addToy')}</b><span className="muted">{t('codeTitle')}</span></span>
+      <span><b>{t('addToy')}</b><span className="muted">{webToy ? t('addTileWeb') : t('codeTitle')}</span></span>
     </button>
   );
 }
@@ -173,35 +180,28 @@ export function Onboard() {
   );
 }
 
+// The kind of turn names what Buddy did (told a story, comforted...);
+// GET /turns never carries the words.
+const TURN_TYPES = new Set(['answer', 'react', 'comfort', 'encourage', 'follow_up', 'share', 'play', 'story', 'teach', 'wind_down', 'greet', 'clarify']);
+
 export function TurnRow({ turn }) {
   const { t } = useI18n();
-  // Drawn as the toy that answered; a toy since removed falls back to the default.
-  const design = designOf(useFamilyData().devices.find((x) => x.id === turn.device_id));
-  const who = turn.child_name ?? turn.device_serial ?? 'Buddy';
-  const when = relativeTime(turn.started_at, t);
-  if (turn.status === 'completed') {
-    const emotion = normalizeEmotion(turn.emotion);
-    return (
-      <div className="turn">
-        <BuddyAvatar design={design} emotion={emotion} />
-        <div className="turn-body">
-          <div className="turn-head"><b>{t('answered', { name: who })}</b><span className="muted small">{when}</span></div>
-          <span className="muted small">{t(`emo_${emotion}`)}</span>
-          {turn.answer_text && <p className="turn-quote">{turn.answer_text}</p>}
-        </div>
-        <span className="tag">-1</span>
-      </div>
-    );
-  }
-  const reason = turn.status === 'denied' ? t(`r_${turn.denied_reason}`) : t(`r_${turn.status}`);
+  const d = useFamilyData();
+  const child = childOf(d.children, turn.child_id);
+  const buddy = child ? (d.buddies[child.id] ?? null) : null;
+  const emotion = normalizeEmotion(turn.face);
+  const vars = { buddy: buddy?.character_name ?? 'Buddy', name: child?.name ?? t('yourChild') };
+  const what = TURN_TYPES.has(turn.turn_type) ? t(`tt_${turn.turn_type}`, vars) : t('turnTalked', vars);
   return (
     <div className="turn">
-      <BuddyAvatar design={design} emotion={turn.status === 'denied' ? 'sleepy' : 'confused'} dim />
+      <BuddyAvatar design={designFor(buddy?.character_slug)} emotion={emotion} />
       <div className="turn-body">
-        <div className="turn-head"><b>{turn.status === 'accepted' ? t('answering', { name: who }) : t('notAnswered', { name: who })}</b><span className="muted small">{when}</span></div>
-        <span className="muted small">{reason}</span>
+        <div className="turn-head"><b>{what}</b><span className="muted small">{relativeTime(turn.created_at, t)}</span></div>
+        <span className="muted small">{t(`emo_${emotion}`)}</span>
       </div>
-      <span className="tag tag--free">{t('free')}</span>
+      {turn.charged
+        ? <span className="tag"><span aria-hidden="true">-1</span><span className="sr-only">{t('costOne')}</span></span>
+        : <span className="tag tag--free">{t('free')}</span>}
     </div>
   );
 }

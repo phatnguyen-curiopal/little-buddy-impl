@@ -19,8 +19,10 @@ function NotFound() {
   return (
     <Room className="lost" size="full" scene>
       <div className="scene-stage">
-        <span className="lost-code" aria-hidden="true">404</span>
-        <span className="room-stage"><BuddyFigure emotion="confused" /></span>
+        <span className="room-stage">
+          <span className="lost-code" aria-hidden="true">404</span>
+          <BuddyFigure emotion="confused" />
+        </span>
       </div>
       <div className="scene-ground lost-ground">
         <h1>{t('notFoundT')}</h1>

@@ -61,8 +61,10 @@ export default function AuthPage({ mode }) {
           <Link className="wordmark" to="/"><BuddyAvatar design="miu" emotion="happy" size="sm" /><span>Little Buddy</span></Link>
           <LangSwitch />
         </div>
-        <p className="say-bubble auth-quote">{reg ? t('authQuoteReg') : t('authQuoteLogin')}</p>
-        <span className="room-stage auth-stage" ref={faceRef}><BuddyFigure emotion={emotion} look={look} /></span>
+        <div className="room-stage auth-stage" ref={faceRef}>
+          <p className="say-bubble auth-quote">{reg ? t('authQuoteReg') : t('authQuoteLogin')}</p>
+          <BuddyFigure emotion={emotion} look={look} />
+        </div>
       </Room>
       <div className="auth-main">
         <form className="auth-form" onSubmit={submit} noValidate>

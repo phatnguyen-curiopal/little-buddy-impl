@@ -18,19 +18,19 @@
 
 .hero { padding-top: 8px; padding-bottom: 40px; }
 .hero-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-radius: 44px; overflow: hidden; box-shadow: 0 8px 0 var(--lip); }
-.hero-copy { display: grid; gap: 22px; align-content: center; padding: 56px 48px; }
+.hero-copy { display: grid; gap: 22px; align-content: center; padding: clamp(32px, 4vw, 56px) clamp(24px, 3.6vw, 48px); }
 .tag-pill { justify-self: start; border-radius: 999px; padding: 6px 14px; background: var(--surface); color: var(--pop-text); font-weight: 800; font-size: 15px; box-shadow: 0 3px 0 var(--lip); }
-.hero h1 { font-size: clamp(44px, 6.4vw, 80px); line-height: 0.95; }
+.hero h1 { font-size: clamp(44px, 5.4vw, 80px); line-height: 0.95; }
 .hero h1 span { display: block; }
 .hero h1 .accent { color: var(--pop); }
 .hero-sub { font-size: 19px; line-height: 1.55; color: var(--ink-2); max-width: 540px; }
 .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; }
 .trust { font-weight: 800; font-size: 15px; color: var(--ink-2); }
-.hero-room { border-radius: 0; box-shadow: none; min-height: 640px; background: transparent; background-image: none; }
+.hero-room { border-radius: 0; box-shadow: none; min-height: clamp(540px, 74vh, 680px); background: transparent; background-image: none; container-type: inline-size; }
 .hero-room .room-window { display: none; }
 .hero-say { position: absolute; left: 20px; right: 20px; top: 28px; display: grid; gap: 10px; justify-items: center; text-align: center; z-index: 3; }
 .hero-say .say-bubble { margin: 0 auto; }
-.hero-stage { width: min(56%, 300px, 40vh); }
+.hero-stage { width: min(56cqw, 320px, 40vh); }
 .hero-controls { gap: 14px; padding-bottom: 28px; }
 .hero-mic { display: flex; align-items: center; gap: 16px; }
 .wave { display: flex; align-items: center; gap: 4px; height: 44px; }
@@ -73,7 +73,9 @@
   .emo-stage { min-height: 360px; }
 }
 
-.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.features { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 1099px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 599px) { .features { grid-template-columns: minmax(0, 1fr); } }
 .feature { border-radius: 30px; padding: 22px; box-shadow: 0 6px 0 var(--line); }
 .feature h3 { font-size: 23px; }
 .feature p { color: var(--muted); font-size: 15.5px; }

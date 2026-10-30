@@ -132,7 +132,7 @@ img, svg { max-width: 100%; }
 .chip--bad { background: var(--bad-soft); color: var(--bad); }
 .chip--pop { background: var(--pop-soft); color: var(--pop-text); }
 
-.tag { flex: none; align-self: center; border-radius: 999px; padding: 2px 10px; font: 800 14px var(--display); background: var(--surface-2); color: var(--muted); }
+.tag { flex: none; align-self: center; min-width: 52px; text-align: center; border-radius: 999px; padding: 2px 10px; font: 800 14px var(--display); background: var(--surface-2); color: var(--muted); }
 .tag--free { background: var(--gold-soft); color: var(--gold-ink); }
 
 /* A credit: a gold coin. */
@@ -350,8 +350,8 @@ select.input { padding-right: 34px; }
 .splash > .figure { width: min(220px, 56vw); }
 .lost { min-height: 100dvh; }
 .lost .room-window { display: none; }
-.lost-code { position: absolute; left: 0; right: 0; top: 8%; text-align: center; font: 800 clamp(96px, 22vw, 170px)/0.8 var(--display); color: var(--surface); text-shadow: 0 6px 0 var(--glow); }
-.lost .room-stage { width: min(56vw, 250px, 34dvh); }
+.lost-code { position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%); font: 800 clamp(96px, 16vw, 190px)/0.8 var(--display); color: var(--surface); text-shadow: 0 6px 0 var(--glow); }
+.lost .room-stage { width: min(56vw, 360px, 36dvh); }
 .lost-ground { text-align: center; padding-bottom: 56px; gap: 18px; }
 .lost-ground h1 { font-size: clamp(28px, 6vw, 40px); }
 @media (max-width: 899px) {

@@ -283,6 +283,7 @@ describe('password sign-in and the family', () => {
     assert.equal(me.json().family.name, 'Nhà Mai');
     assert.equal(me.json().web_toy, true);
     assert.equal(me.json().payments, 'demo');
+    assert.equal(me.json().speak_first, false, 'the voice service keeps Buddy from speaking first unless SPEAK_FIRST is on');
   });
 
   it('renames the family with PATCH /family', async () => {
@@ -687,6 +688,13 @@ describe("a Buddy's personality type and picked voice", () => {
       [VOICE.elf, 'The Elf', 'en'],
       [VOICE.ziggy, 'Ziggy', 'en'],
     ]);
+  });
+
+  it("lists each character with its own voices, so the site can play them before the child has that Buddy", async () => {
+    const res = await call(app, 'GET', '/characters', { token });
+    assert.equal(res.statusCode, 200, res.body);
+    const voices = Object.fromEntries((res.json().data as { slug: string; voices: unknown }[]).map((c) => [c.slug, c.voices]));
+    assert.deepEqual(voices, Object.fromEntries(SEED_CAST.map((c) => [c.slug, { vi: c.voices.vi.voice_id, en: c.voices.en.voice_id }])));
   });
 
   it("sets the five dials from a personality type, inside the character's ranges", async () => {
@@ -1541,6 +1549,9 @@ describe('claiming cannot be used to probe codes', () => {
     const eleventh = await claimByCode(app, a.access_token, 'ZZZZ-ZZZZ', kid);
     assert.equal(eleventh.statusCode, 429);
     assert.equal(problem(eleventh), 'rate-limited');
+    // Ten an hour: one attempt comes back every six minutes.
+    const wait = Number(eleventh.headers['retry-after']);
+    assert.ok(wait > 300 && wait <= 360, `Retry-After ${eleventh.headers['retry-after']}`);
     const other = await register(app);
     assert.equal((await claimByCode(app, other.access_token, 'ZZZZ-ZZZZ', await addChild(app, other.access_token))).statusCode, 404, 'another parent has a budget of their own');
   });
@@ -1570,6 +1581,8 @@ describe('browser Buddies made and removed in a loop', () => {
     const res = await call(app, 'POST', '/devices/web', { token: a.access_token, body: { child_id: kid } });
     assert.equal(res.statusCode, 429, res.body);
     assert.equal(problem(res), 'rate-limited');
+    const wait = Number(res.headers['retry-after']);
+    assert.ok(wait > 86_000 && wait <= 86_400, `Retry-After ${res.headers['retry-after']}`);
     const none = await db.query("SELECT 1 FROM device WHERE child_id = $1", [kid]);
     assert.equal(none.rowCount, 0);
   });
@@ -1596,6 +1609,8 @@ describe('sign-in limits', () => {
     }
     const sixth = await call(app, 'POST', '/auth/register', { ip, body: { email: 'burst5@example.com', password: 'correct horse', family_name: 'Burst' } });
     assert.equal(sixth.statusCode, 429);
+    const wait = Number(sixth.headers['retry-after']);
+    assert.ok(wait > 600 && wait <= 720, `Retry-After ${sixth.headers['retry-after']}`);
     const login = await call(app, 'POST', '/auth/login', { ip, body: { email: 'burst0@example.com', password: 'correct horse' } });
     assert.equal(login.statusCode, 200, 'signing in has a budget of its own');
   });

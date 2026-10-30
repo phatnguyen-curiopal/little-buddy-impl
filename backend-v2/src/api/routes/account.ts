@@ -15,8 +15,13 @@ export function registerAccount(app: FastifyInstance, deps: ApiDeps) {
     if (!parent) throw notFound('account');
     const family = (await db.query('SELECT id, name, country, created_at FROM family WHERE id = $1', [familyId])).rows[0];
     const children = (await db.query('SELECT id, name, nickname FROM child WHERE family_id = $1 ORDER BY created_at', [familyId])).rows;
-    // What the site may offer: playing a Buddy in the browser, and buying credits.
-    return { parent, family, children, web_toy: deps.config.web.webToy, payments: deps.config.web.paymentProvider };
+    // What the site may offer: playing a Buddy in the browser, buying
+    // credits, and the parent's "Buddy speaks first" switch, which does
+    // nothing while the voice service keeps it off.
+    return {
+      parent, family, children,
+      web_toy: deps.config.web.webToy, payments: deps.config.web.paymentProvider, speak_first: deps.config.voice.speakFirst,
+    };
   });
 
   app.patch('/family', {

@@ -9,12 +9,15 @@ export class HttpError extends Error {
   readonly status: number;
   readonly code: string;
   readonly errors: FieldError[] | undefined;
+  // Seconds, sent as Retry-After on a 429.
+  readonly retryAfter: number | undefined;
 
-  constructor(status: number, code: string, message: string, errors?: FieldError[]) {
+  constructor(status: number, code: string, message: string, errors?: FieldError[], retryAfter?: number) {
     super(message);
     this.status = status;
     this.code = code;
     this.errors = errors;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -22,6 +25,11 @@ export const notFound = (what = 'resource') => new HttpError(404, 'not-found', `
 export const badRequest = (message: string, errors?: FieldError[]) => new HttpError(400, 'invalid-request', message, errors);
 export const conflict = (code: string, message: string) => new HttpError(409, code, message);
 export const unauthorized = (message = 'Sign in again') => new HttpError(401, 'unauthorized', message);
+// The budgets refill at very different speeds (a minute for most calls, an
+// hour for sign-ups, a day for browser Buddies), so the wait goes with the
+// refusal and the site can say how long.
+export const tooMany = (message: string, retryAfter: number) =>
+  new HttpError(429, 'rate-limited', message, undefined, Math.max(1, Math.ceil(retryAfter)));
 export const staleWrite = () =>
   new HttpError(412, 'stale-write', 'This item changed since you loaded it. Reload it and try again.');
 

@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 
 import { verifyAccess } from '../auth/jwt.ts';
-import { HttpError, unauthorized } from '../util/errors.ts';
+import { HttpError, tooMany, unauthorized } from '../util/errors.ts';
 import { createRateLimiter, type ApiDeps, type Authed } from './context.ts';
 import { registerAccount } from './routes/account.ts';
 import { registerAuth } from './routes/auth.ts';
@@ -29,7 +29,10 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
   app.setErrorHandler((err: Error & { validation?: { instancePath: string; keyword: string; params?: Record<string, unknown> }[]; statusCode?: number }, req, reply) => {
     const send = (status: number, code: string, title: string, errors?: unknown) =>
       reply.code(status).type('application/problem+json').send({ type: `/problems/${code}`, title, status, ...(errors ? { errors } : {}) });
-    if (err instanceof HttpError) return send(err.status, err.code, err.message, err.errors);
+    if (err instanceof HttpError) {
+      if (err.retryAfter) reply.header('retry-after', String(err.retryAfter));
+      return send(err.status, err.code, err.message, err.errors);
+    }
     if (err.validation) {
       const errors = err.validation.map((v) => ({
         field: v.instancePath.replace(/^\//, '').replace(/\//g, '.') || String(v.params?.missingProperty ?? ''),
@@ -51,7 +54,7 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
     scope.addHook('onRequest', async (req) => {
       const path = req.url.split('?')[0];
       const limit = path.endsWith('/auth/register') ? signUpLimit : path.endsWith('/auth/refresh') || path.endsWith('/auth/logout') ? refreshLimit : signInLimit;
-      if (!limit(`ip:${req.ip}`)) throw new HttpError(429, 'rate-limited', 'Too many attempts, wait a minute');
+      if (!limit(`ip:${req.ip}`)) throw tooMany('Too many attempts, wait a little', limit.retryAfter(`ip:${req.ip}`));
     });
     registerAuth(scope, deps);
   }, { prefix: '/v1' });
@@ -59,7 +62,7 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
   // Public reads for the marketing page: no token, a looser limit per visitor.
   app.register(async (scope) => {
     scope.addHook('onRequest', async (req) => {
-      if (!publicLimit(`ip:${req.ip}`)) throw new HttpError(429, 'rate-limited', 'Too many requests, wait a minute');
+      if (!publicLimit(`ip:${req.ip}`)) throw tooMany('Too many requests, wait a minute', publicLimit.retryAfter(`ip:${req.ip}`));
     });
     registerPublicBilling(scope, deps);
   }, { prefix: '/v1' });
@@ -72,7 +75,7 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
       const claims = verifyAccess(deps.config.jwtSecret, header.slice(7));
       if (!claims) throw unauthorized();
       (req as Authed).auth = { parentId: claims.sub, familyId: claims.fam };
-      if (!parentLimit(`parent:${claims.sub}`)) throw new HttpError(429, 'rate-limited', 'Too many requests, wait a minute');
+      if (!parentLimit(`parent:${claims.sub}`)) throw tooMany('Too many requests, wait a minute', parentLimit.retryAfter(`parent:${claims.sub}`));
     });
     registerAccount(scope, deps);
     registerChildren(scope, { ...deps, pairLimit });

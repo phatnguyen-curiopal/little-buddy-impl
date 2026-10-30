@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { claimCodeHash, loadDeviceSecret, normalizeClaimCode, parseClaimToken, verifyClaimToken } from '../../devices/credentials.ts';
 import { isActiveToyClash, releaseToys } from '../../devices/lifecycle.ts';
-import { HttpError, badRequest, conflict, notFound } from '../../util/errors.ts';
+import { HttpError, badRequest, conflict, notFound, tooMany } from '../../util/errors.ts';
 import {
   CHILD_COLUMNS, authOf, childFor, idempotent, ifMatch, publicChild, sendWithEtag, uuidParam, type ApiDeps, type ChildRecord,
 } from '../context.ts';
@@ -111,7 +111,7 @@ export function registerChildren(app: FastifyInstance, deps: ApiDeps) {
     if (Boolean(body.claim_token) === Boolean(body.claim_code)) throw badRequest('Send either a claim_token or a claim_code', [{ field: 'claim_code', code: 'required' }]);
     // A printed code is only about 39 bits, so pairing has a small budget per
     // parent (the first backend's 10 an hour) on top of the general limit.
-    if (deps.pairLimit && !deps.pairLimit(`parent:${parentId}`)) throw new HttpError(429, 'rate-limited', 'Too many pairing attempts, wait a little and try again');
+    if (deps.pairLimit && !deps.pairLimit(`parent:${parentId}`)) throw tooMany('Too many pairing attempts, wait a little and try again', deps.pairLimit.retryAfter(`parent:${parentId}`));
     const invalid = new HttpError(404, 'invalid-claim', 'This pairing code is not valid; try pairing again');
     const childHasToy = conflict('child-has-toy', 'This child already has a toy; unpair it first');
 

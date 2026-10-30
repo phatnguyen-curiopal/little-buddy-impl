@@ -252,10 +252,31 @@ export class DeviceSession {
     };
   }
 
+  // The toy waits for turn_done after every tap, so a failure while starting
+  // (the database, the recogniser) still ends the turn. The hold's id is made
+  // here so that failure can give a held credit back.
+  private async onTurnStart(turnId: string): Promise<void> {
+    const hold = randomUUID();
+    try {
+      await this.startTurn(turnId, hold);
+    } catch (err) {
+      this.deps.log.error('turn start failed', { device_id: this.device?.id, error: err });
+      if (this.turn?.id === turnId) {
+        this.stopTurn(this.turn);
+        this.turn = null;
+      }
+      this.send({ type: 'play_clip', turn_id: turnId, clip: 'didnt_catch' });
+      this.send({ type: 'turn_done', turn_id: turnId, result: 'failed' });
+      // After turn_done: with the database down this could wait a long time.
+      // A hold that was never taken deletes nothing.
+      releaseCredit(this.deps.db, hold).catch((e) => this.deps.log.warn('credit release failed', { device_id: this.device?.id, error: e }));
+    }
+  }
+
   // Everything that does not depend on the child's words happens at the tap:
   // the gate, the child and Buddy, the day, and the recognition socket, so
   // the child's first syllable already streams to the recogniser.
-  private async onTurnStart(turnId: string): Promise<void> {
+  private async startTurn(turnId: string, hold: string): Promise<void> {
     // A new tap interrupts whatever Buddy was doing.
     if (this.turn && this.turn.phase !== 'done') this.stopTurn(this.turn);
     this.turn = null;
@@ -277,7 +298,6 @@ export class DeviceSession {
     // The gate read the balance; the credit itself is held here, under the
     // family's lock, so two toys of one family cannot both start a turn on
     // the last one. An empty wallet looks like any other refusal.
-    const hold = randomUUID();
     if (!(await reserveCredit(db, loaded.child.family_id, hold))) {
       this.send({ type: 'play_clip', turn_id: turnId, clip: 'napping' });
       this.send({ type: 'turn_done', turn_id: turnId, result: 'blocked' });

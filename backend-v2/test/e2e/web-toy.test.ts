@@ -120,6 +120,8 @@ describe('a Buddy that lives in the browser, end to end', () => {
   // What each answer was asked with: the brief and the chat so far.
   const asked: string[] = [];
   const toys: ToyClient[] = [];
+  // Taps whose recogniser fails to open, as when the speech service is down.
+  let sttFailures = 0;
 
   let mai: Parent;
   let childId: string;
@@ -141,6 +143,14 @@ describe('a Buddy that lives in the browser, end to end', () => {
     gateway.speak = (input) => {
       spokeWith.push(input.voiceId);
       return speak(input);
+    };
+    const open = gateway.openTranscription.bind(gateway);
+    gateway.openTranscription = (input) => {
+      if (sttFailures > 0) {
+        sttFailures -= 1;
+        throw new Error('recogniser unavailable');
+      }
+      return open(input);
     };
     const reply = gateway.reply.bind(gateway);
     gateway.reply = (input) => {
@@ -394,6 +404,32 @@ describe('a Buddy that lives in the browser, end to end', () => {
       assert.equal((await walletOf(kim)).balance, 1, 'and charged nothing');
       const second = await tabFor(kim, 'Khang');
       assert.equal((await second.turn({ text: 'Hello Buddy' })).result, 'answered', 'so another Buddy can use it');
+    });
+  });
+
+  describe('a tap the voice service cannot start', () => {
+    // The page waits for turn_done after every tap; without it the child
+    // would see Buddy thinking forever.
+    it('still ends with turn_done, gives the held credit back, and the next tap works', async () => {
+      const lam = await register(api, 'lam@example.com', 'Nhà Lam');
+      const id = await webBuddy(lam, await childWithBuddy(lam, 'Lam'));
+      const cred = await lam.call('POST', `/devices/${id}/credential`);
+      assert.equal(cred.statusCode, 200, cred.body);
+      const t = toy(cred.json().device_id, cred.json().secret);
+      assert.equal((await t.connect(url)).claimed, true);
+      const before = (await walletOf(lam)).balance;
+
+      sttFailures = 1;
+      const r = await t.turn({ text: 'Hello?', timeoutMs: 3000 });
+      assert.equal(r.result, 'failed');
+      assert.deepEqual(r.clips, ['didnt_catch']);
+      const held = async () => (await db.query('SELECT 1 FROM credit_hold WHERE family_id = $1', [lam.familyId])).rowCount;
+      const until = Date.now() + 3000;
+      while ((await held()) && Date.now() < until) await new Promise((res) => setTimeout(res, 20));
+      assert.equal(await held(), 0, 'the credit held at the tap went back');
+      assert.equal((await walletOf(lam)).balance, before, 'and nothing was charged');
+
+      assert.equal((await t.turn({ text: 'Hello again' })).result, 'answered');
     });
   });
 

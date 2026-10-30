@@ -21,7 +21,7 @@ export interface ApiDeps {
   onDeviceBlocked?: (deviceId: string) => void;
   // Pairing (claiming a toy, making a Buddy in the browser): a printed code
   // is only about 39 bits, so attempts get a budget of their own.
-  pairLimit?: (key: string) => boolean;
+  pairLimit?: RateLimiter;
 }
 
 export interface AuthCtx {
@@ -144,11 +144,13 @@ export async function idempotent(
   return reply.code(r.status).send(r.body);
 }
 
+export type RateLimiter = ((key: string) => boolean) & { retryAfter: (key: string) => number };
+
 // A per-key token bucket in memory. One API instance at this stage; several
 // instances would share Redis instead.
-export function createRateLimiter(perMinute: number, burst: number) {
+export function createRateLimiter(perMinute: number, burst: number): RateLimiter {
   const buckets = new Map<string, { tokens: number; at: number }>();
-  return (key: string): boolean => {
+  const limit = (key: string): boolean => {
     const now = Date.now();
     const b = buckets.get(key) ?? { tokens: burst, at: now };
     b.tokens = Math.min(burst, b.tokens + ((now - b.at) / 60_000) * perMinute);
@@ -162,4 +164,12 @@ export function createRateLimiter(perMinute: number, burst: number) {
     if (buckets.size > 50_000) buckets.clear();
     return true;
   };
+  // Seconds until the key holds one whole token again.
+  const retryAfter = (key: string): number => {
+    const b = buckets.get(key);
+    if (!b) return 1;
+    const tokens = Math.min(burst, b.tokens + ((Date.now() - b.at) / 60_000) * perMinute);
+    return tokens >= 1 ? 1 : ((1 - tokens) / perMinute) * 60;
+  };
+  return Object.assign(limit, { retryAfter });
 }

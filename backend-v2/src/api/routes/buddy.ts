@@ -67,10 +67,11 @@ export function registerBuddy(app: FastifyInstance, deps: ApiDeps) {
   const { db } = deps;
 
   app.get('/characters', async () => {
-    const r = await db.query<{ slug: string; name: string; who: string; themes: string[] }>(
-      `SELECT c.slug, c.name, v.bible->>'who' AS who, ARRAY(SELECT jsonb_array_elements_text(c.profile->'themes')) AS themes
+    const r = await db.query<{ slug: string; name: string; who: string; themes: string[]; voices: { vi: string | null; en: string | null } }>(
+      `SELECT c.slug, c.name, v.bible->>'who' AS who, ARRAY(SELECT jsonb_array_elements_text(c.profile->'themes')) AS themes,
+         jsonb_build_object('vi', v.voices->'vi'->>'voice_id', 'en', v.voices->'en'->>'voice_id') AS voices
        FROM buddy_character c
-       JOIN LATERAL (SELECT bible FROM character_pack_version WHERE character_id = c.id AND released_at IS NOT NULL ORDER BY version DESC LIMIT 1) v ON true
+       JOIN LATERAL (SELECT bible, voices FROM character_pack_version WHERE character_id = c.id AND released_at IS NOT NULL ORDER BY version DESC LIMIT 1) v ON true
        WHERE c.status = 'released' ORDER BY c.slug`,
     );
     return { data: r.rows };

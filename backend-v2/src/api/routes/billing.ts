@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { wallet } from '../../billing/credits.ts';
 import { createPurchase, listPacks, listPurchases, payDemo } from '../../billing/purchases.ts';
-import { HttpError } from '../../util/errors.ts';
+import { HttpError, tooMany } from '../../util/errors.ts';
 import { authOf, createRateLimiter, uuidParam, type ApiDeps } from '../context.ts';
 
 const limitOf = (query: unknown, fallback = 50, max = 200) => {
@@ -33,7 +33,7 @@ export function registerBilling(app: FastifyInstance, deps: ApiDeps) {
     },
   }, async (req, reply) => {
     const { familyId, parentId } = authOf(req);
-    if (!purchaseLimit(`purchase:${parentId}`)) throw new HttpError(429, 'rate-limited', 'Too many checkouts, wait a minute');
+    if (!purchaseLimit(`purchase:${parentId}`)) throw tooMany('Too many checkouts, wait a minute', purchaseLimit.retryAfter(`purchase:${parentId}`));
     const body = req.body as { pack_id: string; idempotency_key?: string };
     const out = await createPurchase(db, config, { familyId, parentId, packId: body.pack_id, idempotencyKey: body.idempotency_key ?? null });
     return reply.code(out.created ? 201 : 200).send({ purchase: out.purchase });

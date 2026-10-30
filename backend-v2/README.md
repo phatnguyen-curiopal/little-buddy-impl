@@ -76,10 +76,28 @@ Mỗi thẻ được xếp là chắc chắn, chưa chắc, hoặc chỉ là t�
 
 Learner liên kết người theo mã trong danh sách (`p1`, `p2`...) mà model trả về, không gộp theo chính tả. Chỉ khi model không trả mã mới dùng tên: trùng tên, hoặc nghe nhầm một chữ (Mứp thành Mướp) trong cùng loại thẻ, không bao giờ với danh xưng hay từ chỉ người thân (cô Lan khác chị Lan, bà nội khác bà ngoại). Tên trường, lớp và địa chỉ không bao giờ được lưu.
 
+## Lớn lên cùng nhau (giai đoạn 3)
+
+Giai đoạn 3 trong lộ trình của tài liệu sản phẩm, cộng thêm thư viện trò chơi:
+
+- **Trò chơi** (`src/character/play.ts`): hù, ú òa, giả vờ ngủ, nói nhầm cố ý, đoán tiếng con vật, đố vui, đồng dao, oẳn tù tì, đóng vai, kể chuyện nối tiếp, thích cái nào hơn, nói nhanh líu lưỡi, và hai trò song ngữ. Buddy tự rủ chơi thỉnh thoảng (khoảng một lượt trong bốn khi tinh nghịch nhất, không bao giờ hai lần trong bốn lượt), ưu tiên trò bé từng chơi tiếp (`what_works`), không trò sôi nổi lúc buồn ngủ, một trò kéo dài tối đa bốn lượt.
+- **Trò hù dọa vui** chỉ khi bé đang vui và đã đồng ý (lượt đầu chỉ rủ, lượt sau mới hù), giọng nhẹ, cười ngay sau đó; không bao giờ khi bé buồn, sợ, buồn ngủ, giọng nhỏ hơn thường lệ, hay với bé thận trọng hoặc nhạy cảm; phụ huynh tắt được (`surprise_play`).
+- **Tính cách bé** (`src/memory/traits.ts`): mỗi đêm, từ tóm tắt các cuộc trò chuyện; chỉ dùng khi có ít nhất 3 đêm trải trên khoảng hai tuần cùng một hướng. Buddy dùng nó để cư xử ("bé cần thời gian làm quen: đừng hối"), không bao giờ nói ra như một cái nhãn. Phụ huynh xem và xóa được.
+- **Tấm gương trưởng thành**: ở giai đoạn bạn thân, khi bé khoe tin vui gần với một điều bé từng thấy khó hoặc sợ (cũ hơn 3 tuần), Buddy nhắc lại kiểu "nhớ hồi đó không", mỗi điều tối đa một lần một tháng, một lần mỗi phiên. Learner nối điều cũ với điểm mạnh mới; digest tuần ghi lại sự trưởng thành.
+- **Mục tiêu của phụ huynh**: một lần mỗi phiên, chỉ khi hợp lúc (thói quen đi ngủ chỉ khi gần giờ ngủ).
+- **Chơi song ngữ**: kho từ (`word_bank`) ghi từ Buddy dạy và từ bé tự nói, ôn lại sau 1, 3, 7, 14, 30 ngày; bật khi chế độ song ngữ hoặc mục tiêu `english_words`. Digest tuần liệt kê từ mới.
+- **Giọng nói của bé** (`src/voice/tone.ts`): độ to, cao độ, tốc độ, đo ngay khi âm thanh tới, so với giọng thường ngày của chính bé (học dần, cần 5 lượt). Chỉ thêm một gợi ý vào brief; lời bé vẫn quyết định an toàn.
+- **Buddy nói trước**: đã làm nhưng tắt, theo quyết định "tạm thời không". Chỉ chạy khi cả máy chủ (`SPEAK_FIRST=1`) và phụ huynh (`speak_first`) cho phép, khi đồ chơi báo `status` với `event: "wake"`, một lần mỗi ngày, sau ít nhất 3 giờ không nói chuyện; máy chủ gửi `buddy_turn` trước khi có mặt và âm thanh.
+- Migration `005_growing_up.sql`; API mới: `GET /children/:id/traits`, `DELETE /children/:id/traits/:name`, `GET /children/:id/words`, và hai công tắc `surprise_play`, `speak_first` trong `PUT /children/:id/controls` (không bắt buộc, client cũ vẫn chạy).
+
+## Triển khai
+
+backend-v2 chạy trên máy chủ demo, cạnh bản demo chứ không thay nó: Parent API ở `https://little-buddy.curiopal.com/v2/...`, socket đồ chơi ở `wss://little-buddy.curiopal.com/v2/device`. Mỗi lần push lên `main` tự triển khai cả hai; cách vận hành ở `deploy/README.md`. Image chạy thẳng mã TypeScript trên Node 24.
+
 ## Kiểm thử
 
 ```
-npm test                      # 136 test (40 test là "một năm của ba bé"), không cần Docker
+npm test                      # 153 test (40 test là "một năm của ba bé"), không cần Docker
 npm run typecheck
 GATEWAY=live npm run smoke:live   # gọi OpenAI và ElevenLabs thật bằng câu giả lập, in thời gian
 ```
@@ -120,7 +138,7 @@ Kịch bản trượt là một phát hiện, không phải lỗi kịch bản: 
 
 ## Đã kiểm chứng ngày 30/10/2026
 
-- 136 test đều đạt; typecheck sạch.
+- 153 test đều đạt; typecheck sạch.
 - Migration chạy trên PostgreSQL 16.15 + pgvector 0.6.0 của máy demo, trong một database tạm đã xóa sau đó: 39 bảng, 72 index, cột `vector(1536)`, hàm partition, hàng đợi job (chống trùng, `SKIP LOCKED`) đều đúng.
 - Gọi vendor thật: câu trả lời có token đầu sau 1,5 s; giọng nói có âm thanh đầu sau 0,34 s; Scribe batch nhận lại câu tiếng Việt đúng từng chữ trong 1,3 s. Classifier, trung vị của 5 lần khi đã ấm: gpt-5.6-luna 1,1 s, gpt-5.4-nano và gpt-5.4-mini 0,9 s, gpt-4.1-mini 0,7 s; cả bốn gán nhãn đúng ba câu thử, kể cả "anh con đánh con đau lắm" là hurt, urgent.
 - Lượt nói đầy đủ qua voice service: giọng tiếng Việt tổng hợp gửi đúng nhịp micro rồi 1,3 s im lặng (như bộ phát hiện giọng của đồ chơi web), đo từ `turn_end` đến lúc đồ chơi nghe âm thanh đầu tiên của Buddy, mỗi cấu hình 4 lượt sau một lượt khởi động. Buddy nghe đúng từng chữ và đáp đúng vai ("Wowee, tớ vui lây luôn, Bông ơi! Cậu vẽ chú mèo màu gì thế?").
@@ -155,8 +173,9 @@ Tên riêng với Scribe thật (giọng tổng hợp): Scribe giữ đúng mọ
 
 1. **Độ trễ (trung vị 2,6 s, mục tiêu 2,5 s):** một biến riêng cho model của classifier (gpt-4.1-mini đo được 0,7 s) để không đổi model của learner; tier priority cho câu trả lời (nhanh hơn khoảng 0,5 s nhưng đắt hơn); đặt máy chủ gần Việt Nam; nói câu đầu sớm hơn mà vẫn kiểm tra an toàn trên cả câu.
 2. **Truy hồi hai ngôn ngữ:** `text-embedding-3-small` cho "thích xoài" và "loves mangoes" độ giống chỉ 0,20; thử `text-embedding-3-large` cắt còn 1.536 chiều cho gia đình song ngữ.
-3. **Tên riêng:** cho phụ huynh sửa cách gọi và nghĩa thường của một thẻ, gộp và tách thẻ trong app; thêm kịch bản eval cho tên trùng từ thường; đo lại trên giọng trẻ thật, không chỉ giọng tổng hợp.
-4. Adapter Redis và SQS khi chạy nhiều instance.
-5. Opus trên đồ chơi và máy chủ.
-6. Row-level security và một role database cho mỗi dịch vụ.
-7. Thông báo đẩy và dịch vụ gửi mail.
+3. **Giai đoạn 3 trên dữ liệu thật:** chỉnh ngưỡng giọng nói và tính cách bằng giọng trẻ thật; màn hình cho phụ huynh xem tính cách, kho từ và hai công tắc mới.
+4. **Tên riêng:** cho phụ huynh sửa cách gọi và nghĩa thường của một thẻ, gộp và tách thẻ trong app; thêm kịch bản eval cho tên trùng từ thường; đo lại trên giọng trẻ thật, không chỉ giọng tổng hợp.
+5. Adapter Redis và SQS khi chạy nhiều instance.
+6. Opus trên đồ chơi và máy chủ.
+7. Row-level security và một role database cho mỗi dịch vụ.
+8. Thông báo đẩy và dịch vụ gửi mail (production chưa đăng nhập email được).

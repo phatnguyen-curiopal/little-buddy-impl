@@ -108,8 +108,10 @@ From `frontend/`: `npm install`, `npm run dev` (http://localhost:5174, needs the
 - The containers use host networking to reach the host's native Postgres 16 on 127.0.0.1 without touching its `listen_addresses` or `pg_hba`, and bind 127.0.0.1 themselves (the backend through `HOST`) because the host has no firewall. Its pgvector is 0.6: no `halfvec` or other later features in migrations.
 - Production runs with `WEB_TOY=on`, `PAYMENT_PROVIDER=disabled`, `WELCOME_CREDITS=1000` (pinned in `deploy/compose.yml`, overriding `backend.env`) and `TRUST_PROXY=2` (Cloudflare, then nginx). nginx does not proxy `/admin`; it is called on the host.
 - The backend pings every stream socket every 30 s (`KEEPALIVE_MS` in `ws/stream.js`): Cloudflare drops a WebSocket idle for 100 s, and the web toy sends no heartbeat.
+- `backend-v2/` runs beside the demo, never instead of it: its own compose project (`deploy/compose.v2.yml`, `little-buddy-v2`: `api` on 127.0.0.1:3610 behind `/v2/` and `/v2/healthz`, `voice` on 3611 behind `/v2/device`, `worker`), database `littlebuddy_v2`, env `/opt/little-buddy/env/backend-v2.env`. `remote_deploy.sh` deploys it only after the demo is healthy and its failures only warn; its image runs the TypeScript sources on Node 24.
 
 ## Tooling notes
 
 - Bash heredocs for multi-file JS writes failed to parse once in this environment; the Write tool is reliable for source files.
 - Parallel Bash calls share the working directory; use absolute paths or `cd` at the start of each command.
+- This checkout can live in an iCloud-synced folder, where git rewrites leave conflict copies such as `001_schema 2.sql` or empty `src/memory 2` folders. Check they match the original, then delete them before running tests or a manual deploy (backend-v2's `migrate()` ignores misnamed migrations).

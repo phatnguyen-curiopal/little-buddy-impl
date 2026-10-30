@@ -4,7 +4,7 @@
 
 import type { ChatMessage, Classification } from '../domain/types.ts';
 import { nameKey } from '../memory/names.ts';
-import type { DiaryResult, DigestResult, EpisodeResult, LearnResult } from './schemas.ts';
+import type { DiaryResult, DigestResult, EpisodeResult, LearnResult, TraitsResult } from './schemas.ts';
 import { EMBEDDING_DIMS, type ModelGateway, type NameQuestion, type StructuredRequest } from './types.ts';
 
 export interface FakeOptions {
@@ -78,7 +78,23 @@ function fakeLearn(user: string): LearnResult {
   const buddySaid = (/Buddy replied: (.*)/.exec(user)?.[1] ?? '');
   if (/I'll tell you tomorrow|tomorrow I will/i.test(buddySaid)) out.promises.push({ content: 'tell the child more tomorrow', due: null });
   if (/my favourite .+ is/i.test(buddySaid)) out.canon.push({ statement: /my favourite .+? is [^.!?]+/i.exec(buddySaid)![0], topic: 'favourites' });
+  const taught = /tiếng Anh là "([^"]+)"/.exec(buddySaid);
+  const english = /\b(cat|dog|red|blue|apple)\b/i.exec(said);
+  out.words = [
+    ...(taught ? [{ word: taught[1], language: 'en' as const, meaning: null, by: 'buddy' as const }] : []),
+    ...(english ? [{ word: english[1].toLowerCase(), language: 'en' as const, meaning: null, by: 'child' as const }] : []),
+  ];
   return out;
+}
+
+// Temperament from words the summaries tend to use.
+function fakeTraits(text: string): TraitsResult {
+  const t = nameKey(text);
+  const traits: TraitsResult['traits'] = [];
+  if (/\b(shy|quiet at first|nhut nhat|ngai)\b/.test(t)) traits.push({ name: 'outgoing', value: -0.7, evidence: 'quiet at first' });
+  if (/\b(kept trying|tried again|co gang|thu lai)\b/.test(t)) traits.push({ name: 'persistent', value: 0.7, evidence: 'kept trying' });
+  if (/\b(scared|afraid|so hai|so lam)\b/.test(t)) traits.push({ name: 'cautious', value: 0.6, evidence: 'worried by something new' });
+  return { traits };
 }
 
 export function createFakeGateway(opts: FakeOptions = {}): ModelGateway & { calls: Record<string, number> } {
@@ -160,6 +176,7 @@ export function createFakeGateway(opts: FakeOptions = {}): ModelGateway & { call
       count(`structured:${req.name}`);
       if (req.name === 'classify') return fakeClassify(req.user) as T;
       if (req.name === 'learn') return fakeLearn(req.user) as T;
+      if (req.name === 'traits') return fakeTraits(req.user) as T;
       if (req.name === 'episode') {
         const result: EpisodeResult = { points: ['Talked with Buddy'], feelings: ['happy'], open_threads: [], category: 'daily_life', importance: 2 };
         return result as T;

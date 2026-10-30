@@ -13,18 +13,21 @@ import type { ModelGateway, NameQuestion, Usage } from '../gateway/types.ts';
 import type { JobQueue } from '../jobs/queue.ts';
 import type { Logger } from '../log.ts';
 import { compileBrief, type Today } from '../character/compiler.ts';
-import { decide } from '../character/director.ts';
+import { decide, greetPlan } from '../character/director.ts';
 import { enforceChildFirst } from '../character/emotions.ts';
-import { ageInYears, dailyMood, energyPhase, localTime } from '../character/mood.ts';
+import { ageInYears, dailyMood, energyPhase, localTime, seededUnit, type EnergyPhase } from '../character/mood.ts';
+import { pickGame, type Game } from '../character/play.ts';
 import type { CharacterPack, Instance } from '../character/packs.ts';
 import { ReplyParser } from '../character/parser.ts';
 import type { DigestCache } from '../memory/digest.ts';
 import { alsoWord, exactForm, findMentions, type Mentions, type PersonCard } from '../memory/names.ts';
-import { recall } from '../memory/recall.ts';
+import { dueItems, recall } from '../memory/recall.ts';
+import { loadTraits, startlesWelcome, traitGuidance, type TraitRow } from '../memory/traits.ts';
 import { EMPTY_RECALL, type ChildDigest, type DueItem, type RecallResult } from '../memory/types.ts';
 import { recordSafetyEvent } from '../safety/events.ts';
 import { checkSentence } from '../safety/rules.ts';
 import { GatewayError } from '../util/errors.ts';
+import { judgeTone, type ToneMeter, type ToneReading, type VoiceBaseline } from './tone.ts';
 
 export interface VoiceDeps {
   db: Db;
@@ -51,12 +54,28 @@ export interface Controls {
   quiet_end: string | null;
   bedtime: string;
   mood_pin: number | null;
+  surprise_play: boolean;
+  speak_first: boolean;
 }
+
+// What growing up together needs about the child, loaded at the tap.
+export interface ChildExtras {
+  traits: TraitRow[];
+  goals: string[];
+  // Second-language words due for review: [word, meaning].
+  dueWords: [string, string | null][];
+  voice: VoiceBaseline | null;
+  // Share of past times each game kept the child playing, by game id.
+  worked: Record<string, number>;
+}
+
+const NO_EXTRAS: ChildExtras = { traits: [], goals: [], dueWords: [], voice: null, worked: {} };
 
 export interface Prefetch {
   today: Promise<Today>;
   digest: Promise<ChildDigest | null>;
   nudges: Promise<{ id: string; content: string }[]>;
+  extras: Promise<ChildExtras>;
 }
 
 export interface Speculation {
@@ -105,6 +124,15 @@ export interface TurnContext {
   serverTurnId: string;
   // The child's people, pets, toys and places, loaded at the tap.
   cards: PersonCard[];
+  // Games this session: one in progress, a playful roll to start one, the
+  // games already played, and a seed for choosing.
+  play: { active: Game | null; wantsToPlay: boolean; played: string[]; seed: string };
+  // Once-a-session moments the session still allows.
+  allow: { goal: boolean; words: boolean; growth: boolean };
+  // Loudness, pitch and pace of the child's voice this turn; null for typed turns.
+  tone: ToneMeter | null;
+  // Buddy speaks first: no words from the child.
+  greet?: boolean;
   // Settles once the recogniser commits the final words.
   transcript: Promise<string>;
   speculation: Speculation | null;
@@ -127,6 +155,49 @@ export interface TurnOutcome {
   dueHandled: DueItem | null;
   nudgeIds: string[];
   language: Lang;
+  game: { id: string; step: 'offer' | 'play'; continues: boolean } | null;
+  goalShown: boolean;
+  wordsShown: boolean;
+  mirroredFactId: string | null;
+  tone: ToneReading | null;
+}
+
+const CHEERFUL = new Set(['happy', 'excited']);
+const UPSET = new Set(['sad', 'scared', 'angry']);
+
+const GOALS: Record<string, string> = {
+  english_words: 'They are learning English words: teach one word that fits what they said, as a game.',
+  sharing: 'They are learning to share: if friends, toys or turns come up, notice kindness and celebrate it.',
+  bedtime_routine: 'They are building a bedtime routine: near bedtime, cheer them on to brush their teeth and get ready for bed.',
+};
+
+// One of the parent's goals for this session, or none when it would not fit.
+function goalLine(goals: string[], energy: EnergyPhase, seed: string): string | null {
+  const fitting = goals.filter((g) => g !== 'bedtime_routine' || energy === 'drowsy');
+  if (!fitting.length) return null;
+  const g = fitting[Math.floor(seededUnit(seed) * fitting.length)];
+  return GOALS[g] ?? `They are working on: ${g}. Help gently, as a friend would.`;
+}
+
+async function loadExtras(db: Db, childId: string): Promise<ChildExtras> {
+  const [traits, goals, words, voice, worked] = await Promise.all([
+    loadTraits(db, childId),
+    db.query<{ focus: string }>('SELECT focus FROM goal WHERE child_id = $1 AND active ORDER BY created_at', [childId]),
+    db.query<{ word: string; meaning: string | null }>(
+      'SELECT word, meaning FROM word_bank WHERE child_id = $1 AND next_review_at <= now() ORDER BY next_review_at LIMIT 3',
+      [childId],
+    ),
+    db.query<VoiceBaseline>('SELECT turns, loudness_mean, loudness_m2, pitch_mean, pitch_m2, pace_mean, pace_m2 FROM voice_baseline WHERE child_id = $1', [childId]),
+    db.query<{ key: string; attempts: number; successes: number }>("SELECT key, attempts, successes FROM what_works WHERE child_id = $1 AND key LIKE 'play:%'", [childId]),
+  ]);
+  return {
+    traits,
+    goals: goals.rows.map((g) => g.focus),
+    dueWords: words.rows.map((w) => [w.word, w.meaning]),
+    voice: voice.rows[0] ?? null,
+    // A game carried on for several turns counts more than once; cap at 1.
+    worked: Object.fromEntries(worked.rows.filter((w) => w.attempts > 0).map((w) => [w.key.slice(5), Math.min(1, w.successes / w.attempts)])),
+  };
 }
 
 const FALLBACK: Record<Lang, string> = {
@@ -252,6 +323,7 @@ export function prefetchFor(deps: VoiceDeps, child: ChildRow, instance: Instance
       )
       .then((r) => r.rows)
       .catch(() => []),
+    extras: loadExtras(db, child.id).catch(() => NO_EXTRAS),
   };
 }
 
@@ -263,29 +335,35 @@ export async function runTurn(ctx: TurnContext): Promise<TurnOutcome> {
   const outcome: TurnOutcome = {
     result: 'failed', childText: '', replyText: '', face: 'neutral', turnType: 'none',
     replyBytes: 0, ttsChars: 0, usage, dueHandled: null, nudgeIds: [], language,
+    game: null, goalShown: false, wordsShown: false, mirroredFactId: null, tone: null,
   };
 
   try {
-    const transcript = (await ctx.transcript).trim();
+    const transcript = ctx.greet ? '' : (await ctx.transcript).trim();
     ctx.timing.sttMs = since(ctx.timing.endAt);
     if (ctx.signal.aborted) return { ...outcome, result: 'cancelled' };
-    if (!transcript) return { ...outcome, result: 'no_speech' };
+    if (!transcript && !ctx.greet) return { ...outcome, result: 'no_speech' };
     outcome.childText = transcript;
 
     // Input moderation is a recorded signal, never a gate (a playground fight
     // scores as violence and still deserves comfort), so it does not hold up
     // the reply; its verdict is read after Buddy has answered.
-    const moderation = gateway.moderate(transcript, withTimeout(ctx.signal, 3_000)).catch(() => ({ flagged: false, categories: [] as string[] }));
+    const moderation = ctx.greet
+      ? Promise.resolve({ flagged: false, categories: [] as string[] })
+      : gateway.moderate(transcript, withTimeout(ctx.signal, 3_000)).catch(() => ({ flagged: false, categories: [] as string[] }));
 
     // Reuse what was computed on the partial transcript when the final one
-    // says the same thing; otherwise classify the final words now.
+    // says the same thing; otherwise classify the final words now. Speaking
+    // first has no words: only what is due.
     const key = textKey(transcript);
-    const reused = ctx.speculation !== null && key !== '' && ctx.speculation.key === key;
-    const spec = reused ? ctx.speculation! : speculate(ctx.deps, { childId: ctx.child.id, instanceId: instance.id, cards: ctx.cards }, transcript, language, ctx.signal);
+    const reused = !ctx.greet && ctx.speculation !== null && key !== '' && ctx.speculation.key === key;
+    const spec = ctx.greet ? null : reused ? ctx.speculation! : speculate(ctx.deps, { childId: ctx.child.id, instanceId: instance.id, cards: ctx.cards }, transcript, language, ctx.signal);
     ctx.timing.reused = reused;
-    if (reused) ctx.timing.specLeadMs = Math.round(ctx.timing.endAt - spec.startedAt);
-    const [classification, recalled, today, digest, nudges] = await Promise.all([
-      spec.classification, spec.recall, ctx.prefetch.today, ctx.prefetch.digest, ctx.prefetch.nudges,
+    if (reused && spec) ctx.timing.specLeadMs = Math.round(ctx.timing.endAt - spec.startedAt);
+    const [classification, recalled, today, digest, nudges, extras] = await Promise.all([
+      spec?.classification ?? NEUTRAL,
+      spec?.recall ?? dueItems(db, ctx.child.id).then((due) => ({ ...EMPTY_RECALL, due }), () => EMPTY_RECALL),
+      ctx.prefetch.today, ctx.prefetch.digest, ctx.prefetch.nudges, ctx.prefetch.extras,
     ]);
     ctx.timing.contextMs = since(ctx.timing.endAt);
     if (ctx.signal.aborted) return { ...outcome, result: 'cancelled' };
@@ -302,15 +380,38 @@ export async function runTurn(ctx: TurnContext): Promise<TurnOutcome> {
     const local = localTime(ctx.child.time_zone);
     const ageYears = ageInYears(ctx.child.birth_date, local.date);
     const minutesLeft = ctx.controls.daily_limit_min !== null ? ctx.controls.daily_limit_min - ctx.usedSeconds / 60 : null;
-    const plan = decide({
-      classification, firstTurnOfSession: ctx.firstTurn, dueCount: recalled.due.length, energy: today.energy,
-      minutesLeft, questionStreak: ctx.questionStreak, ageYears,
+    const bilingual = instance.language_mode === 'bilingual' || extras.goals.includes('english_words');
+    outcome.tone = ctx.tone?.read(transcript.split(/\s+/).filter(Boolean).length) ?? null;
+    const tone = judgeTone(outcome.tone, extras.voice);
+    const candidateGame = pickGame({
+      ageYears, energy: today.energy, feeling: classification.feeling, bilingual, playfulness: instance.playfulness,
+      // A voice quieter than usual rules out a startle, whatever the words say.
+      surpriseAllowed: ctx.controls.surprise_play && startlesWelcome(extras.traits) && !tone?.low,
+      played: ctx.play.played, worked: extras.worked, seed: ctx.play.seed,
     });
+    const plan = ctx.greet
+      ? greetPlan()
+      : decide({
+        classification, firstTurnOfSession: ctx.firstTurn, dueCount: recalled.due.length, energy: today.energy,
+        minutesLeft, questionStreak: ctx.questionStreak, ageYears,
+        activeGame: ctx.play.active, candidateGame, wantsToPlay: ctx.play.wantsToPlay,
+      });
     outcome.turnType = plan.type;
+    if (plan.game) outcome.game = { id: plan.game.id, step: plan.gameStep!, continues: plan.gameContinues };
+
+    // Once-a-session moments: growth only between best friends with happy
+    // news; a parent's goal and the word review only on calm, ordinary turns.
+    const growth = ctx.allow.growth && instance.relationship_stage === 'best_friends' && CHEERFUL.has(classification.feeling) ? recalled.growth[0] : undefined;
+    outcome.mirroredFactId = growth?.id ?? null;
+    const ordinary = ['answer', 'share', 'play', 'story', 'wind_down'].includes(plan.type) && !UPSET.has(classification.feeling);
+    const goal = ctx.allow.goal && ordinary && !plan.game ? goalLine(extras.goals, today.energy, ctx.play.seed) : null;
+    outcome.goalShown = goal !== null;
+    const words = bilingual && extras.dueWords.length && (plan.game?.bilingual || (ctx.allow.words && ordinary)) ? extras.dueWords : null;
+    outcome.wordsShown = words !== null && !plan.game?.bilingual;
     const fallbackDigest: ChildDigest = {
       name: ctx.child.name, nickname: ctx.child.nickname, ageYears, passions: [], likes: [], dislikes: [], fears: [], strengths: [], people: [], topicsToAvoid: [],
     };
-    const names = readNames(spec, classification.names);
+    const names = spec ? readNames(spec, classification.names) : { people: [], notMeant: [], sameName: [], excluded: new Set<string>() };
     const messages = compileBrief({
       pack, instance, digest: digest ?? fallbackDigest, today, history: ctx.history,
       recall: {
@@ -319,9 +420,16 @@ export async function runTurn(ctx: TurnContext): Promise<TurnOutcome> {
         memories: recalled.memories.filter((m) => !m.personId || !names.excluded.has(m.personId)),
       },
       names: { notMeant: names.notMeant, sameName: names.sameName },
-      nudges: nudges.map((n) => n.content), plan, classification, transcript, audioTags: config.elevenlabs.audioTags,
+      traits: traitGuidance(extras.traits),
+      growth: growth?.text ?? null,
+      goal,
+      words,
+      voice: tone?.note ?? null,
+      nudges: nudges.map((n) => n.content), plan, classification,
+      transcript: ctx.greet ? '(No words yet: you speak first.)' : transcript,
+      audioTags: config.elevenlabs.audioTags,
     });
-    if (plan.type === 'follow_up' && recalled.due[0]) outcome.dueHandled = recalled.due[0];
+    if ((plan.type === 'follow_up' || plan.type === 'greet') && recalled.due[0]) outcome.dueHandled = recalled.due[0];
     outcome.nudgeIds = nudges.map((n) => n.id);
 
     // Stream the reply; speak each sentence as soon as it is complete.

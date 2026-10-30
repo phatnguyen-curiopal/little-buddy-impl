@@ -159,6 +159,97 @@ describe('voice service end to end', () => {
     assert.ok(briefs[2].includes('- Mít: best friend'), 'the classifier said the friend was meant');
   });
 
+  // Lively games wait for daytime, so the child lives where it is day now.
+  const daytimeZone = () =>
+    ['Asia/Ho_Chi_Minh', 'Europe/London', 'America/New_York', 'Asia/Tokyo', 'America/Los_Angeles', 'Pacific/Honolulu', 'Asia/Kolkata']
+      .find((tz) => {
+        const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+        return hour >= 10 && hour <= 18;
+      })!;
+
+  it('offers a startle game, plays it after the yes, and leaves it out when the parent says no', async () => {
+    const briefs: string[] = [];
+    const g = createFakeGateway({
+      replyFor: (messages) => {
+        briefs.push(messages.map((m) => m.content).join('\n'));
+        return '[face:happy][tone:playful] Hihi!';
+      },
+    });
+    // "Chơi với tớ đi!" asks to play; "Ừ!" is a cheerful yes.
+    g.classify = async ({ text }) => ({ intent: /chơi/i.test(text) ? 'play' : 'other', feeling: 'happy', danger: 'none', severity: 'none' });
+    const { url: u } = await timedVoice(g);
+    const play = async (surprise: boolean) => {
+      const f = await createFamily(db, config);
+      await db.query('UPDATE child SET time_zone = $2 WHERE id = $1', [f.childId, daytimeZone()]);
+      await db.query("UPDATE child_controls SET bedtime = '23:30', surprise_play = $2 WHERE child_id = $1", [f.childId, surprise]);
+      // "Hù" kept this child playing before, so it is the game to pick.
+      await db.query("INSERT INTO what_works (child_id, key, attempts, successes) VALUES ($1, 'play:hu', 1, 1)", [f.childId]);
+      const t = toyFor(f);
+      await t.connect(u);
+      await t.turn({ text: 'Chơi với tớ đi!' });
+      await t.turn({ text: 'Ừ!' });
+      return briefs.splice(0);
+    };
+
+    const [offer, played] = await play(true);
+    assert.ok(offer.includes('Offer to play "Hù!"') && offer.includes('do not do the surprise yet'));
+    assert.ok(played.includes('You are playing "Hù!"'), 'the yes carries the game on');
+    const [noStartle] = await play(false);
+    assert.ok(noStartle.includes('Start a quick game of'), 'another game instead');
+    assert.ok(!noStartle.includes('"Hù!"') && !noStartle.includes('"Ú òa"'));
+  });
+
+  it('speaks first only when the service and the parent both allow it, once a day', async () => {
+    const g = createFakeGateway();
+    const make = async (speakFirst: string) => {
+      const v = createVoiceServer({ db, gateway: g, config: testConfig({ SPEAK_FIRST: speakFirst }), log: silentLogger, queue: createJobQueue(db), digests: createDigestCache() });
+      servers.push(v);
+      return `ws://127.0.0.1:${await v.listen(0, '127.0.0.1')}/v1/device`;
+    };
+    const family = async (parentAllows: boolean) => {
+      const f = await createFamily(db, config);
+      await db.query('UPDATE child SET time_zone = $2 WHERE id = $1', [f.childId, daytimeZone()]);
+      await db.query("UPDATE child_controls SET bedtime = '23:30', speak_first = $2 WHERE child_id = $1", [f.childId, parentAllows]);
+      return f;
+    };
+
+    const offService = toyFor(await family(true));
+    await offService.connect(await make('0'));
+    offService.sendStatus('wake');
+    assert.equal(await offService.buddyTurn(400), null, 'the service has not allowed it');
+
+    const on = await make('1');
+    const parentSaysNo = toyFor(await family(false));
+    await parentSaysNo.connect(on);
+    parentSaysNo.sendStatus('wake');
+    assert.equal(await parentSaysNo.buddyTurn(400), null, 'the parent has not opted in');
+
+    const f = await family(true);
+    const t = toyFor(f);
+    await t.connect(on);
+    t.sendStatus('wake');
+    const hello = await t.buddyTurn();
+    assert.equal(hello?.result, 'answered');
+    assert.ok(hello!.audio.length > 0);
+    const stored = await db.query<{ child_text: string; turn_type: string }>('SELECT child_text, turn_type FROM turn WHERE child_id = $1', [f.childId]);
+    assert.deepEqual(stored.rows, [{ child_text: '', turn_type: 'greet' }]);
+    t.sendStatus('wake');
+    assert.equal(await t.buddyTurn(400), null, 'not twice in a day');
+  });
+
+  it('learns the child\'s usual voice from the audio, with learning on', async () => {
+    const f = await createFamily(db, config);
+    const t = toyFor(f);
+    await t.connect(url);
+    // One second of a 300 Hz voice, loud enough to count as speech.
+    const pcm = Buffer.alloc(32_000);
+    for (let i = 0; i < 16_000; i += 1) pcm.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 300 * i) / 16_000) * 0.3 * 32767), i * 2);
+    assert.equal((await t.turn({ pcm })).result, 'answered');
+    const b = await db.query<{ turns: number; pitch_mean: number }>('SELECT turns, pitch_mean FROM voice_baseline WHERE child_id = $1', [f.childId]);
+    assert.equal(b.rows[0]?.turns, 1);
+    assert.ok(Math.abs(b.rows[0].pitch_mean - 300) < 10);
+  });
+
   it('treats a too-short clip as no speech, without a model call', async () => {
     const before = gateway.calls.reply ?? 0;
     const r = await toys[0].turn({ pcm: Buffer.alloc(1000) });

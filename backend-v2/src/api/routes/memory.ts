@@ -8,6 +8,7 @@ import { FACT_CATEGORIES, PERSON_KINDS } from '../../gateway/schemas.ts';
 import { buildDigest } from '../../memory/digest.ts';
 import { forgetEverything } from '../../memory/forget.ts';
 import { nameKey } from '../../memory/names.ts';
+import { isUsable, loadTraits, traitGuidance, TRAITS } from '../../memory/traits.ts';
 import { notFound } from '../../util/errors.ts';
 import { childFor, ifMatch, missingOrStale, page, paging, sendWithEtag, uuidParam, type ApiDeps } from '../context.ts';
 
@@ -31,6 +32,39 @@ export function registerMemory(app: FastifyInstance, deps: ApiDeps) {
       [child.id],
     );
     return { ...digest, counts: counts.rows[0], learning_enabled: child.learning_enabled };
+  });
+
+  // Temperament Buddy has seen, with what it changes in how Buddy talks.
+  // Only usable traits shape conversation; parents see the rest as forming.
+  app.get('/children/:childId/traits', async (req) => {
+    const child = await childFor(deps, req);
+    const rows = await loadTraits(db, child.id);
+    return {
+      data: rows.map((t) => ({
+        name: t.name, value: Math.round(t.value * 100) / 100, confidence: t.confidence, observations: t.observations,
+        first_observed_at: t.first_observed_at, last_observed_at: t.last_observed_at,
+        in_use: isUsable(t), guidance: traitGuidance([t])[0] ?? null,
+      })),
+    };
+  });
+
+  app.delete('/children/:childId/traits/:name', async (req, reply) => {
+    const child = await childFor(deps, req);
+    const name = (req.params as { name: string }).name;
+    if (!(TRAITS as readonly string[]).includes(name)) throw notFound('trait');
+    const r = await db.query('DELETE FROM trait WHERE child_id = $1 AND name = $2', [child.id, name]);
+    if (!r.rowCount) throw notFound('trait');
+    return reply.code(204).send();
+  });
+
+  app.get('/children/:childId/words', async (req) => {
+    const child = await childFor(deps, req);
+    const r = await db.query(
+      `SELECT word, language, meaning, taught, used, first_seen_at, last_seen_at, next_review_at
+       FROM word_bank WHERE child_id = $1 ORDER BY last_seen_at DESC LIMIT 200`,
+      [child.id],
+    );
+    return { data: r.rows };
   });
 
   app.get('/children/:childId/people', {

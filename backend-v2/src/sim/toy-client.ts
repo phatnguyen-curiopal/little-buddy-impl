@@ -139,6 +139,46 @@ export class ToyClient {
     });
   }
 
+  // What a toy sends now and then; event 'wake' when it is picked up.
+  sendStatus(event: 'wake' | null = null): void {
+    this.ws?.send(JSON.stringify({ type: 'status', battery: 80, wifi_rssi: -55, charging: false, ...(event && { event }) }));
+  }
+
+  // A turn Buddy starts by itself (buddy_turn, faces and audio, turn_done),
+  // or null when none comes in time.
+  buddyTurn(timeoutMs = 3000): Promise<TurnResult | null> {
+    return new Promise((resolve) => {
+      let out: TurnResult | null = null;
+      const chunks: Buffer[] = [];
+      const finish = (r: TurnResult | null) => {
+        clearTimeout(timer);
+        this.listeners = this.listeners.filter((l) => l !== listener);
+        resolve(r);
+      };
+      const timer = setTimeout(() => finish(null), timeoutMs);
+      const listener = (m: Record<string, unknown> | Buffer) => {
+        if (Buffer.isBuffer(m)) {
+          const f = decodeFrame(m);
+          if (out && f && f.direction === DOWNLINK) chunks.push(f.payload);
+          return;
+        }
+        if (m.type === 'buddy_turn' && !out) {
+          out = { turnId: String(m.turn_id), result: '', faces: [], clips: [], audio: Buffer.alloc(0), messages: [], firstAudioMs: null };
+          return;
+        }
+        if (!out || m.turn_id !== out.turnId) return;
+        out.messages.push(m);
+        if (m.type === 'face') out.faces.push(String(m.emotion));
+        if (m.type === 'turn_done') {
+          out.result = String(m.result);
+          out.audio = Buffer.concat(chunks);
+          finish(out);
+        }
+      };
+      this.listeners.push(listener);
+    });
+  }
+
   waitForClose(timeoutMs = 5000): Promise<number> {
     return new Promise((resolve, reject) => {
       if (this.closeCode !== null) return resolve(this.closeCode);

@@ -1,6 +1,6 @@
 # little-buddy.curiopal.com: the parent website as static files, plus the
-# backend's /api and /v1 on 127.0.0.1:3600. /admin is deliberately not
-# proxied: operators call it on the host itself.
+# backend's /api and /v1 on 127.0.0.1:3600, and backend-v2 under /v2.
+# /admin is deliberately not proxied: operators call it on the host itself.
 #
 # Cloudflare proxies in front with Full (strict) SSL, so this serves its own
 # Let's Encrypt certificate. The ACME path is answered on both ports because
@@ -48,6 +48,36 @@ server {
     # only cover a turn whose answer is slow to come back.
     location = /v1/stream {
         proxy_pass http://127.0.0.1:3600;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+    }
+
+    # backend-v2, the new backend, beside the demo (deploy/compose.v2.yml):
+    # its Parent API under /v2/ (its own /v1 routes, renamed so they cannot
+    # meet the demo's) on 127.0.0.1:3610, and its toy socket at /v2/device on
+    # 3611, which pings every 30 s like the demo's.
+    location /v2/ {
+        proxy_pass http://127.0.0.1:3610/v1/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /v2/healthz {
+        proxy_pass http://127.0.0.1:3610/healthz;
+    }
+
+    location = /v2/device {
+        proxy_pass http://127.0.0.1:3611/v1/device;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

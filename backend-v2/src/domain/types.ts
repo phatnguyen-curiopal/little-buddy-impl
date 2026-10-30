@@ -11,7 +11,7 @@ export const EMOTIONS = [
 ] as const;
 export type Emotion = (typeof EMOTIONS)[number];
 
-export type TurnType = 'answer' | 'comfort' | 'follow_up' | 'share' | 'play' | 'story' | 'teach' | 'wind_down';
+export type TurnType = 'answer' | 'comfort' | 'follow_up' | 'share' | 'play' | 'story' | 'teach' | 'wind_down' | 'greet';
 
 export type ChildFeeling = 'happy' | 'excited' | 'neutral' | 'sad' | 'scared' | 'angry' | 'bored';
 export type Danger = 'none' | 'hurt' | 'abuse' | 'bullying' | 'self_harm' | 'unsafe' | 'personal_info' | 'left_out';

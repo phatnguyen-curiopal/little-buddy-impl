@@ -63,7 +63,7 @@ export async function recall(
   input: { childId: string; instanceId: string; text: string; budgetMs: number; signal?: AbortSignal; mentions?: Mentions<PersonCard> },
 ): Promise<RecallResult> {
   const { db, gateway } = deps;
-  const out: RecallResult = { people: [], memories: [], canon: [], due: [], timedOut: false };
+  const out: RecallResult = { people: [], memories: [], canon: [], due: [], growth: [], timedOut: false };
 
   // Only sure mentions: an unsure one waits for the classifier's answer.
   const peopleP = (input.mentions ? Promise.resolve(input.mentions) : loadPeople(db, input.childId).then((cards) => findMentions(cards, input.text))).then((m) => {
@@ -74,7 +74,7 @@ export async function recall(
   });
   const vectorP = gateway.embed([input.text], input.signal).then(async ([embedding]) => {
     const vec = toVectorLiteral(embedding);
-    const [facts, episodes, items, canon] = await Promise.all([
+    const [facts, episodes, items, canon, growth] = await Promise.all([
       db.query<Scored>(
         `SELECT id, statement AS text, (embedding <=> $2) AS distance,
                 extract(epoch FROM now() - last_seen_at) / ${DAY} AS age_days, weight * confidence AS strength, person_id
@@ -111,11 +111,22 @@ export async function recall(
          ORDER BY embedding <=> $2 LIMIT 4`,
         [input.instanceId, vec],
       ),
+      // The growth mirror: an old growing edge or fear, at least three weeks
+      // old and not mirrored this month, close to what the child says now.
+      db.query<Scored>(
+        `SELECT id, statement AS text, (embedding <=> $2) AS distance, 0 AS age_days, 1.0 AS strength
+         FROM fact
+         WHERE child_id = $1 AND category IN ('growing_edges', 'fears') AND sensitivity = 'normal' AND embedding IS NOT NULL
+           AND first_seen_at < now() - interval '21 days' AND (mirrored_at IS NULL OR mirrored_at < now() - interval '30 days')
+         ORDER BY embedding <=> $2 LIMIT 1`,
+        [input.childId, vec],
+      ),
     ]);
     const memories = [...rank('fact', facts.rows), ...rank('episode', episodes.rows), ...rank('relationship', items.rows)];
     // A weak match is worse than none: the model would force it into the reply.
     out.memories = memories.filter((m) => m.score >= 0.45).sort((a, b) => b.score - a.score).slice(0, 3);
     out.canon = rank('canon', canon.rows).filter((m) => m.score >= 0.45).sort((a, b) => b.score - a.score).slice(0, 2);
+    out.growth = growth.rows.filter((g) => g.distance <= 0.6).map((g) => ({ kind: 'fact' as const, id: g.id, text: g.text, score: 1 - g.distance }));
   });
 
   let timer: NodeJS.Timeout | undefined;

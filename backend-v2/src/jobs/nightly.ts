@@ -9,6 +9,7 @@ import { DIARY_SCHEMA, DIGEST_SCHEMA, EPISODE_CATEGORIES, EPISODE_SCHEMA, type D
 import type { Logger } from '../log.ts';
 import { dailyMood, localTime } from '../character/mood.ts';
 import { activeBuddy } from '../character/packs.ts';
+import { updateTraits } from '../memory/traits.ts';
 import { toVectorLiteral } from '../memory/vec.ts';
 import type { Queue } from './queue.ts';
 
@@ -107,7 +108,7 @@ async function backfillEmbeddings(deps: WorkerDeps, childId: string): Promise<vo
 
 export async function nightlySleep(deps: WorkerDeps, childId: string, day: string): Promise<void> {
   const { db, gateway, queue, log } = deps;
-  const child = (await db.query<{ time_zone: string }>('SELECT time_zone FROM child WHERE id = $1', [childId])).rows[0];
+  const child = (await db.query<{ time_zone: string; learning_enabled: boolean }>('SELECT time_zone, learning_enabled FROM child WHERE id = $1', [childId])).rows[0];
   if (!child) return;
   await db.query(
     "INSERT INTO nightly_run (child_id, day, status) VALUES ($1, $2::date, 'queued') ON CONFLICT (child_id, day) DO UPDATE SET status = 'queued', started_at = now()",
@@ -116,6 +117,10 @@ export async function nightlySleep(deps: WorkerDeps, childId: string, day: strin
 
   const episodes = await summariseEpisodes(deps, childId);
   await backfillEmbeddings(deps, childId);
+  // Temperament from today's summaries, by consent only, like every memory.
+  if (child.learning_enabled) {
+    await updateTraits({ db, gateway }, childId).catch((err) => log.warn('trait update failed', { child_id: childId, error: (err as Error).message }));
+  }
 
   // Facts fade in recall but are never deleted for age; promises and events
   // that slipped past are closed so Buddy does not ask about them forever.
@@ -203,7 +208,20 @@ export async function buildWeeklyDigest(deps: WorkerDeps, childId: string, weekS
       `People mentioned: ${people.rows.map((p) => p.display_name).join(', ') || 'none'}`,
     ].join('\n'),
   });
-  const body = { ...content, turns: usage.rows[0].turns, minutes: usage.rows[0].minutes };
+  // Growth (an old difficulty replaced by a strength) and the week's new
+  // words come straight from memory, not from the model.
+  const [growth, words] = await Promise.all([
+    db.query<{ before: string; after: string }>(
+      `SELECT o.statement AS before, n.statement AS after FROM fact o JOIN fact n ON n.id = o.superseded_by
+       WHERE o.child_id = $1 AND o.category IN ('growing_edges', 'fears') AND n.first_seen_at >= $2::date AND n.first_seen_at < $3::date`,
+      [childId, weekStart, end],
+    ),
+    db.query<{ word: string; meaning: string | null; used: number }>(
+      'SELECT word, meaning, used FROM word_bank WHERE child_id = $1 AND first_seen_at >= $2::date AND first_seen_at < $3::date ORDER BY first_seen_at',
+      [childId, weekStart, end],
+    ),
+  ]);
+  const body = { ...content, growth: growth.rows, words: words.rows, turns: usage.rows[0].turns, minutes: usage.rows[0].minutes };
   const r = await db.query<{ id: string }>(
     'INSERT INTO digest (child_id, week_start, content) VALUES ($1, $2::date, $3) ON CONFLICT DO NOTHING RETURNING id',
     [childId, weekStart, JSON.stringify(body)],

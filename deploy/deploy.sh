@@ -4,8 +4,8 @@
 #
 #   bash deploy/deploy.sh
 #
-# What is shipped is every file git would track under backend/, brain/ and
-# deploy/ (gitignored files such as .env and manifests never leave this
+# What is shipped is every file git would track under backend/, backend-v2/,
+# brain/ and deploy/ (gitignored files such as .env and manifests never leave this
 # machine), plus the frontend built here. The SSH login comes from the root
 # .env (SSH_HOST, SSH_USER, SSH_PASSWORD) and reaches ssh through
 # SSH_ASKPASS, so it never shows up in a command line or in this output.
@@ -22,7 +22,7 @@ envf="$root/.env"
 val() { grep -m1 "^$1=" "$envf" | cut -d= -f2- | sed -e 's/\r$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"; }
 
 rev="$(git rev-parse --short HEAD)"
-if [ -n "$(git status --porcelain -- backend brain deploy frontend)" ]; then
+if [ -n "$(git status --porcelain -- backend backend-v2 brain deploy frontend)" ]; then
   rev="$rev-dirty"
   echo "deploy: shipping uncommitted changes too ($rev)"
 fi
@@ -43,7 +43,7 @@ fi
 echo "deploy: building the frontend"
 npm --prefix frontend run build >/dev/null
 tar -czf "$work/site.tgz" -C frontend/dist .
-git ls-files -co --exclude-standard -- backend brain deploy | tar -czf "$work/src.tgz" -T -
+git ls-files -co --exclude-standard -- backend backend-v2 brain deploy | tar -czf "$work/src.tgz" -T -
 
 echo "deploy: uploading $rev"
 # Its own upload folder: a push deploying at the same time uses upload/auto.

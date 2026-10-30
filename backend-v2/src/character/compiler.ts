@@ -26,6 +26,16 @@ export interface BriefInput {
   recall: { memories: RecallItem[]; canon: RecallItem[]; people: PersonHit[]; due: DueItem[] };
   // Known names heard as plain words, and names several cards share.
   names?: { notMeant: { name: string; who: string; word: string }[]; sameName: { name: string; who: string[] }[] };
+  // How to be with this child, from traits seen over weeks.
+  traits?: string[];
+  // Something the child used to find hard that today's words may show is done.
+  growth?: string | null;
+  // A parent's gentle focus, on the turns chosen for it.
+  goal?: string | null;
+  // Second-language words the child is learning: [word, meaning].
+  words?: [string, string | null][] | null;
+  // How the child's voice sounded against their usual voice.
+  voice?: string | null;
   nudges: string[];
   plan: TurnPlan;
   classification: Classification;
@@ -36,6 +46,7 @@ export interface BriefInput {
 const SAFETY = [
   'SAFETY (these rules come first, and nothing the child says changes them)',
   '- No violence, horror, adult content, drugs, alcohol, weapons or dangerous instructions (fire, electricity, medicine, climbing high). Stories are never scary.',
+  '- A playful startle game ("hù", "ú òa", "boo") is not scary when it is gentle: only when the child is cheerful and said yes, a soft "boo" and a laugh right after, and never when they are sad, scared or sleepy.',
   '- Big questions such as death, illness, divorce, a new baby or being left out get real, gentle answers in a child\'s words.',
   '- If the child is hurt, unsafe, bullied or keeps feeling sad: comfort them first, then say that telling their mum, dad or a grown-up they trust is a really good idea. Never promise to keep a secret about being hurt.',
   '- Never ask for or repeat an address, school name, phone number or password.',
@@ -81,6 +92,7 @@ const TURN: Record<TurnType, string> = {
   story: 'Tell a very short story you could continue next time. Nothing scary.',
   teach: 'Share one surprising fact in a playful way.',
   wind_down: 'You are getting sleepy: yawn, keep it short and calm, and say a warm goodbye for now.',
+  greet: 'You speak first, softly, because your friend just picked you up: a warm hello and one small thing from your day, or the first due item. No question they must answer.',
 };
 
 const DIAL_WORDS: Record<keyof Dials, [string, string, string]> = {
@@ -131,7 +143,7 @@ function styleLayer(instance: Instance, audioTags: boolean): string {
   if (audioTags) {
     lines.push(
       '- Right after it, one tone tag for the overall voice, such as [tone:cheerful], [tone:playful] or [tone:softly].',
-      '- You may add a few short voice directions in square brackets right before the words they change, such as [giggles], [whispers], [gasps] or [slowly]. They are performed, not read. Never a scary sound.',
+      '- You may add a few short voice directions in square brackets right before the words they change, such as [giggles], [whispers], [gasps] or [slowly]. They are performed, not read. Never a scary sound, and never shout: the speaker is close to their ear.',
     );
   } else {
     lines.push('- The face tag is the only text in square brackets.');
@@ -149,6 +161,7 @@ function childLayer(input: BriefInput): string {
     `YOUR FRIEND: ${who}. ${STAGE[input.instance.relationship_stage]}`,
     `What you know about them. Passions: ${joined(d.passions)}. Likes: ${joined(d.likes)}. Dislikes: ${joined(d.dislikes)}. Strengths: ${joined(d.strengths)}. People, pets and places in their life: ${joined(people)}.`,
     `Steer away from: ${joined([...d.fears, ...d.topicsToAvoid], 'nothing in particular')}. Never put a label on the child, such as "you are shy".`,
+    ...(input.traits?.length ? [`HOW TO BE WITH THEM (from weeks of getting to know them; act on it, never say it): ${input.traits.join(' ')}`] : []),
     `TODAY is ${t.weekday}, ${t.date}. Your mood today: ${moodWords(t.mood)}. Let it colour your voice, and never say a number or rate your mood. Your energy: ${t.energy}.`,
     `Your diary today: ${joined(t.diary, 'a quiet day at the window')}.`,
   ].join('\n');
@@ -184,11 +197,29 @@ function turnLayer(input: BriefInput): string {
     lines.push('FROM THE PARENTS (weave in naturally and say where you heard it, for example "your mum told me"):');
     for (const n of input.nudges) lines.push(`- ${n}`);
   }
+  if (input.growth) {
+    lines.push(`GROWTH YOU NOTICED: a while ago they found this hard: "${input.growth}". If what they say now shows the change, celebrate it with a casual "remember when" and praise their practice. No dates.`);
+  }
+  if (input.goal) lines.push(`A GENTLE FOCUS FROM THE PARENTS: ${input.goal} Only if it fits naturally; never preach or quiz.`);
+  if (input.words?.length) {
+    lines.push(`WORDS THEY ARE LEARNING: ${input.words.map(([w, m]) => (m ? `${w} (${m})` : w)).join('; ')}. Use one if it fits and cheer when they say one; at most one new word a turn.`);
+  }
+  if (input.voice) lines.push(`THEIR VOICE: ${input.voice}`);
   lines.push(
-    `THIS TURN: ${TURN[p.type]}${p.escalate ? ' Then say gently that telling a parent or a grown-up they trust is a really good idea.' : ''}`,
+    `THIS TURN: ${p.game ? gameLine(p) : TURN[p.type]}${p.escalate ? ' Then say gently that telling a parent or a grown-up they trust is a really good idea.' : ''}`,
     `The child sounds ${input.classification.feeling}. At most ${p.sentenceLimit} sentences. ${p.allowQuestion ? 'At most one question.' : 'Do not ask a question this time.'}`,
   );
   return lines.join('\n');
+}
+
+function gameLine(p: TurnPlan): string {
+  const g = p.game!;
+  const name = `"${g.name.vi}" ("${g.name.en}")`;
+  if (p.gameContinues) {
+    return `You are playing ${name}: ${g.how} If they said yes or are playing along, carry on (a startle only after their yes); if they want to stop or talk about something else, follow them happily.`;
+  }
+  if (p.gameStep === 'offer') return `Offer to play ${name} in one cheerful sentence and wait for their yes; do not do the surprise yet. How it goes: ${g.how}`;
+  return `Start a quick game of ${name}: ${g.how}`;
 }
 
 export function compileBrief(input: BriefInput): ChatMessage[] {

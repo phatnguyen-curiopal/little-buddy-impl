@@ -47,7 +47,9 @@ export interface RecallResult {
   memories: RecallItem[];
   canon: RecallItem[];
   due: DueItem[];
+  // Things the child used to find hard or scary that today's words touch.
+  growth: RecallItem[];
   timedOut: boolean;
 }
 
-export const EMPTY_RECALL: RecallResult = { people: [], memories: [], canon: [], due: [], timedOut: false };
+export const EMPTY_RECALL: RecallResult = { people: [], memories: [], canon: [], due: [], growth: [], timedOut: false };

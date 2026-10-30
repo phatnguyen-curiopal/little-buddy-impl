@@ -11,6 +11,9 @@ export interface Config {
   host: string;
   apiPort: number;
   voicePort: number;
+  // Proxy hops to trust for the client address (2 behind Cloudflare and
+  // nginx), so rate limits see each visitor, not the proxy; 0 trusts none.
+  trustProxy: number;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
   databaseUrl: string;
   jwtSecret: string;
@@ -45,6 +48,9 @@ export interface Config {
     helloTimeoutMs: number;
     recallBudgetMs: number;
     sessionIdleMs: number;
+    // Buddy may speak first when a parent opts in; off until the product
+    // decision changes (it was "temporarily no").
+    speakFirst: boolean;
   };
   auth: {
     emailDevEcho: boolean;
@@ -88,6 +94,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     host: env.HOST || '127.0.0.1',
     apiPort: int(env.API_PORT, 3100, 'API_PORT'),
     voicePort: int(env.VOICE_PORT, 3101, 'VOICE_PORT'),
+    trustProxy: int(env.TRUST_PROXY, 0, 'TRUST_PROXY'),
     logLevel: (env.LOG_LEVEL as Config['logLevel']) || (mode === 'test' ? 'error' : 'info'),
     databaseUrl: env.DATABASE_URL || 'postgres://littlebuddy:littlebuddy@localhost:5432/littlebuddy_v2',
     jwtSecret: env.JWT_SECRET || DEV_JWT,
@@ -124,6 +131,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       helloTimeoutMs: int(env.HELLO_TIMEOUT_MS, 10_000, 'HELLO_TIMEOUT_MS'),
       recallBudgetMs: int(env.RECALL_BUDGET_MS, 300, 'RECALL_BUDGET_MS'),
       sessionIdleMs: int(env.SESSION_IDLE_MS, 30 * 60_000, 'SESSION_IDLE_MS'),
+      speakFirst: flag(env.SPEAK_FIRST, false),
     },
     auth: {
       emailDevEcho: flag(env.EMAIL_DEV_ECHO, !prod),

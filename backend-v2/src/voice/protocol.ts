@@ -18,7 +18,9 @@ export type ToyMessage =
   | { type: 'turn_end'; turn_id: string; reason: 'tap' | 'silence' | 'cap'; text: string | null }
   | { type: 'cancel'; turn_id: string }
   | { type: 'playback_done'; turn_id: string }
-  | { type: 'status'; battery: number | null; wifi_rssi: number | null; charging: boolean | null };
+  // event 'wake': the toy woke from sleep or was picked up, the one moment
+  // Buddy may speak first (answered with buddy_turn, when allowed).
+  | { type: 'status'; battery: number | null; wifi_rssi: number | null; charging: boolean | null; event: 'wake' | null };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TURN_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -54,7 +56,10 @@ export function parseToyMessage(raw: string): ToyMessage | null {
     case 'playback_done':
       return turnId && TURN_ID_RE.test(turnId) ? { type: 'playback_done', turn_id: turnId } : null;
     case 'status':
-      return { type: 'status', battery: num(m.battery), wifi_rssi: num(m.wifi_rssi), charging: typeof m.charging === 'boolean' ? m.charging : null };
+      return {
+        type: 'status', battery: num(m.battery), wifi_rssi: num(m.wifi_rssi), charging: typeof m.charging === 'boolean' ? m.charging : null,
+        event: m.event === 'wake' ? 'wake' : null,
+      };
     default:
       return null;
   }

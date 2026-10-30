@@ -1,0 +1,36 @@
+# backend-v2, the new backend, beside the demo on the same host (see
+# deploy/README.md). Its own compose project, so a demo deploy's
+# --remove-orphans never touches it and its build can never fail the demo's.
+# Host networking like the demo, to reach the native Postgres on 127.0.0.1;
+# each process binds 127.0.0.1 through HOST in backend-v2.env.
+name: little-buddy-v2
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+x-v2: &v2
+  build: ../backend-v2
+  image: little-buddy-v2:latest
+  network_mode: host
+  env_file: /opt/little-buddy/env/backend-v2.env
+  restart: unless-stopped
+  logging: *logging
+
+services:
+  # The Parent API on API_PORT (3610), proxied at /v2/.
+  api:
+    <<: *v2
+    command: ['node', 'src/bin/api.ts']
+
+  # The toy's WebSocket on VOICE_PORT (3611), proxied at /v2/device.
+  voice:
+    <<: *v2
+    command: ['node', 'src/bin/voice.ts']
+
+  # Learning after each turn, nightly sleep, alerts and upkeep.
+  worker:
+    <<: *v2
+    command: ['node', 'src/bin/worker.ts']

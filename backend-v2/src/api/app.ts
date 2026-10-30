@@ -11,7 +11,8 @@ import { registerMemory } from './routes/memory.ts';
 import { registerParent } from './routes/parent.ts';
 
 export function buildApi(deps: ApiDeps): FastifyInstance {
-  const app = Fastify({ logger: false, bodyLimit: 64 * 1024 });
+  const hops = deps.config.trustProxy;
+  const app = Fastify({ logger: false, bodyLimit: 64 * 1024, trustProxy: hops > 0 ? (_address: string, hop: number) => hop < hops : false });
   const parentLimit = createRateLimiter(60, 120);
   const signInLimit = createRateLimiter(10, 20);
 

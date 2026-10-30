@@ -184,16 +184,16 @@ export default {
 
   // talk (the web toy)
   talkTo: 'Talk to {name}', talkPick: 'Choose a Buddy', talkLog: 'Conversation',
-  talkConnecting: 'Connecting to {name}…', talkIdle: 'Tap the glowing button to talk to {name}, or type a message',
-  talkStarting: '{name} is getting ready to listen…', talkSpeakNow: 'Go ahead, {name} is listening', talkListening: "{name} is listening… Tap again when you're done",
+  talkConnecting: 'Connecting to {name}…', talkMicOpening: 'Opening the microphone…', talkMuted: 'The microphone is off. Tap the button so {name} can hear you.',
+  talkStarting: '{name} hears you…', talkSpeakNow: 'Go ahead, {name} is listening', talkListening: "{name} is listening. When you're done, just pause and {name} will answer.",
   talkThinking: '{name} is thinking…', talkAnswered: '{name} answered', talkSpeaking: '{name} is talking…',
   talkDenied: "{name} can't answer right now. The reason is on the Activity page.",
   talkAsleep: '{name} is resting. Wake {name} on the Toys page to talk.', talkOffline: "Couldn't connect to {name}.",
-  talkReconnect: 'Reconnect', talkGoToys: 'Go to Toys', talkTapStart: 'Tap to talk to {name}',
-  talkHeard: '{name} heard', talkTyped: 'Message', talkEmpty: 'Nothing here yet. Tap the button to talk, or type something to {name}.',
+  talkReconnect: 'Reconnect', talkGoToys: 'Go to Toys',
+  talkHeard: '{name} heard', talkTyped: 'Message', talkEmpty: 'Nothing here yet. Just talk to {name}, or type something.',
   talkNewConv: 'New conversation', talkNewConvStarted: 'A new conversation started',
   talkInputLabel: 'Message to Buddy', talkInputPh: 'Message {name}…', talkSend: 'Send',
-  talkDemoNote: 'This page plays the toy: each answer costs 1 credit, like the real Buddy.',
+  talkMute: 'Mute the microphone', talkUnmute: 'Turn the microphone on', talkSendNow: "I'm done talking", talkInterrupt: 'Interrupt {name}', talkPet: 'Pet {name}',
   talkMicNote: "This browser can't use the microphone here. You can still type.",
   talkInsecure: 'Talking to {name} on the web needs https or localhost. Open this page at one of those addresses.',
   talkCancelling: 'One moment…',
@@ -201,7 +201,7 @@ export default {
   talkOffT: 'Talking on the web is off', talkOffB: "This server hasn't turned on talking to Buddy on the web.",
   talkErr_mic_denied: "The browser hasn't allowed the microphone. Allow it from the address bar, or type instead.",
   talkErr_mic_unavailable: "Couldn't open the microphone. Check your computer's mic, or type instead.",
-  talkErr_no_speech: "{name} didn't hear anything, so nothing was charged. Tap and talk.",
+  talkErr_no_speech: "{name} didn't hear anything, so nothing was charged. Try saying it again.",
   talkErr_turn_in_flight: 'Wait for {name} to finish first.',
 
   // conversation settings (drawer)

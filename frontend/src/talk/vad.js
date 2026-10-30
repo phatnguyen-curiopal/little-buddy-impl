@@ -1,9 +1,10 @@
-// End-of-speech detection for the web toy, fed one 20 ms frame's loudness
-// at a time. Pure, so the timing rules are tested without a microphone.
+// Speech detection for the web toy, fed one 20 ms frame's loudness at a
+// time. Pure, so the timing rules are tested without a microphone.
 //
-// The toy's rule is the toggle: one tap opens the mic, and the turn ends on
-// its own once the child has spoken and then gone quiet (or on a second
-// tap, handled by the caller).
+// The Talk screen is hands-free: the mic stays open, a turn starts when the
+// child starts talking and ends once they have gone quiet for a while. One
+// detector serves the whole session: reset() forgets the last utterance
+// but keeps what it learned about the room.
 //
 // Loud is judged against a noise floor: the quietest frame of the last few
 // seconds. Speech always has gaps between syllables, so the floor stays at
@@ -16,7 +17,7 @@ export const VAD_DEFAULTS = Object.freeze({
   silenceMs: 1300,
   // A cough or a click is not speech.
   minSpeechMs: 200,
-  // Nobody spoke after the tap: give the turn back instead of sending silence.
+  // Nobody spoke: give up (Infinity keeps listening, as the Talk screen does).
   noSpeechMs: 8000,
   // Loud means this many times the floor, and never below minLevel.
   ratio: 3,
@@ -24,7 +25,7 @@ export const VAD_DEFAULTS = Object.freeze({
   // The floor is the minimum over this window.
   floorWindowMs: 3000,
   // For the first moments, before the window has seen a gap, assume a quiet
-  // room so a child who talks right on the tap is heard. Kept shorter than
+  // room so a child who talks right away is heard. Kept shorter than
   // minSpeechMs so a loud room cannot pass for speech during it.
   priorMs: 160,
   priorFloor: 0.005,
@@ -32,12 +33,13 @@ export const VAD_DEFAULTS = Object.freeze({
 
 // push(rms) returns null, or once each: 'speech' when speech is first
 // confirmed, then 'end' after the trailing silence; or 'no_speech' if the
-// time runs out before any speech.
+// time runs out before any speech. After that it stays quiet until reset().
 export function createVad(options = {}) {
   const o = { ...VAD_DEFAULTS, ...options };
   const size = Math.max(1, Math.round(o.floorWindowMs / o.frameMs));
   const window = [];
-  let elapsed = 0;
+  let total = 0;
+  let since = 0;
   let speech = 0;
   let silence = 0;
   let heard = false;
@@ -49,11 +51,12 @@ export function createVad(options = {}) {
     },
     push(rms) {
       if (done) return null;
-      elapsed += o.frameMs;
+      total += o.frameMs;
+      since += o.frameMs;
       window.push(rms);
       if (window.length > size) window.shift();
       const seen = Math.min(...window);
-      const floor = elapsed <= o.priorMs ? Math.min(seen, o.priorFloor) : seen;
+      const floor = total <= o.priorMs ? Math.min(seen, o.priorFloor) : seen;
       const loud = rms > Math.max(o.minLevel, floor * o.ratio);
       if (loud) {
         speech += o.frameMs;
@@ -72,11 +75,20 @@ export function createVad(options = {}) {
         done = true;
         return 'end';
       }
-      if (!heard && elapsed >= o.noSpeechMs) {
+      if (!heard && since >= o.noSpeechMs) {
         done = true;
         return 'no_speech';
       }
       return null;
+    },
+    // Ready for the next utterance. The noise floor is kept: the room has
+    // not changed, and a fresh guess would mishear the first words.
+    reset() {
+      since = 0;
+      speech = 0;
+      silence = 0;
+      heard = false;
+      done = false;
     },
   };
 }

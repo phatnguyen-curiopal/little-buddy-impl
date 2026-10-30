@@ -2,7 +2,8 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { api, hasSession, onSessionChange } from '../lib/api.js';
 import { signRequest } from './signing.js';
 import { canSend, initialState, reconnectPlan, reduce, streamUrl, tapAction } from './machine.js';
-import { TURN_CAP_MS, startCapture } from './mic.js';
+import { TURN_CAP_MS, micSupported, startCapture } from './mic.js';
+import { createVad } from './vad.js';
 import { createPlayer } from './player.js';
 
 // The browser playing the toy. It speaks the device protocol exactly as
@@ -14,7 +15,13 @@ import { createPlayer } from './player.js';
 //   dashboard stay the physical toy's own;
 // - the secret comes from the owner-only reveal endpoint, is kept in memory
 //   for this page session only, and is forgotten on sign-out;
-// - /v1/time is asked before every connect instead of trusting the clock.
+// - /v1/time is asked before every connect instead of trusting the clock;
+// - hands-free: the mic opens as soon as the stream is ready and stays
+//   open. A turn starts when the child starts talking (turn_start, with the
+//   frames just before so the first syllable is kept) and ends once they
+//   have been quiet for SILENCE_MS. While Buddy thinks and talks the mic is
+//   ignored, and for a moment after, so its own voice never starts a turn.
+//   The big button mutes, sends now, or interrupts.
 //
 // Socket, mic, player and timers live in a ref (they must survive renders
 // and be torn down exactly once); what the screen shows comes from the
@@ -25,13 +32,30 @@ onSessionChange(() => {
   if (!hasSession()) secrets.clear();
 });
 
-// The child often starts talking on the tap, before turn_accepted arrives;
-// frames are held (up to one second) and sent once the turn is accepted,
-// since the server drops audio that arrives earlier.
-const PRE_ACCEPT_FRAMES = 50;
+// The turn ends after this much quiet following the child's words: about
+// five seconds, since a child pauses a lot mid-thought and Buddy must not
+// jump in.
+export const SILENCE_MS = 5000;
+// Frames kept from just before speech was confirmed (300 ms), so the first
+// syllable is not lost.
+const PRE_ROLL_FRAMES = 15;
+// The server drops audio that arrives before turn_accepted; frames are held
+// until then, up to 1.5 s with the pre-roll included.
+const PRE_ACCEPT_FRAMES = 75;
+// After Buddy's voice, or an interruption, this much is ignored before
+// listening again, so the tail of the playback is never taken for speech.
+const COOLDOWN_MS = 500;
 const MAX_TEXT = 2000;
 
 const nowSec = () => Math.floor(Date.now() / 1000);
+
+// Listening again after a turn: forget the utterance, keep what the
+// detector knows about the room, and skip a moment.
+function rearm(r) {
+  r.vad?.reset();
+  r.roll = [];
+  r.quietUntil = performance.now() + COOLDOWN_MS;
+}
 
 // The signer needs SubtleCrypto, which browsers expose only in a secure
 // context (https or localhost). On a plain-http LAN address nothing can be
@@ -52,12 +76,21 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
 
   const ref = useRef(null);
   if (!ref.current) {
-    ref.current = {
+    const r = {
       gen: 0, ws: null, timer: null, capTimer: null, attempts: 0, rerevealed: false, offset: 0,
-      capture: null, captureToken: 0, accepted: false, pre: [], endOnAccept: false, cancelOnAccept: false,
-      pendingText: null, turnId: null, audioOn: false, levelFns: new Set(), player: null,
+      // The mic: wanted unless the child muted it or it could not open.
+      capture: null, micToken: 0, micState: 'off', wantMic: micSupported(), vad: null, roll: [], quietUntil: 0,
+      // The open turn, if any.
+      turnPending: false, accepted: false, ended: false, pre: [], endOnAccept: false, cancelOnAccept: false, pendingText: null, turnId: null,
+      audioOn: false, levelFns: new Set(), player: null,
     };
-    ref.current.player = createPlayer({ onEnded: () => dispatch({ type: 'playback_end' }) });
+    r.player = createPlayer({
+      onEnded: () => {
+        dispatch({ type: 'playback_end' });
+        rearm(r);
+      },
+    });
+    ref.current = r;
   }
   const r = ref.current;
 
@@ -71,49 +104,134 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
     return true;
   }, [r]);
 
-  const stopCapture = useCallback(() => {
-    clearTimeout(r.capTimer);
-    r.capTimer = null;
-    r.captureToken += 1;
+  // ---- the mic ----------------------------------------------------------
+
+  const closeMic = useCallback((error) => {
+    r.micToken += 1;
+    r.micState = 'off';
     r.capture?.stop();
     r.capture = null;
+    r.vad = null;
+    r.roll = [];
     emitLevel(0);
+    dispatch({ type: 'mic_off', error });
   }, [r, emitLevel]);
 
-  // Everything about the child's side of a turn, but not the playback:
-  // turn_done can arrive while Buddy's last words are still playing.
+  // Everything about the child's side of a turn, but not the mic and not
+  // the playback: turn_done can arrive while Buddy's last words still play.
   const clearTurn = useCallback(() => {
-    stopCapture();
+    clearTimeout(r.capTimer);
+    r.capTimer = null;
+    r.turnPending = false;
     r.accepted = false;
+    r.ended = false;
     r.pre = [];
     r.endOnAccept = false;
     r.cancelOnAccept = false;
     r.pendingText = null;
     r.turnId = null;
-  }, [r, stopCapture]);
+  }, [r]);
 
   const resetTurn = useCallback(() => {
     clearTurn();
     r.audioOn = false;
   }, [r, clearTurn]);
 
+  const endVoice = useCallback(() => {
+    if (!r.turnPending || r.ended) return;
+    r.ended = true;
+    if (!r.accepted) {
+      r.endOnAccept = true;
+      return;
+    }
+    send({ type: 'turn_end' });
+    dispatch({ type: 'end' });
+  }, [r, send]);
+
+  // Speech confirmed between turns: the turn opens with the pre-roll.
+  const beginTurn = useCallback(() => {
+    if (r.turnPending) return;
+    if (!send({ type: 'turn_start' })) {
+      r.vad?.reset();
+      return;
+    }
+    clearTurn();
+    r.turnPending = true;
+    r.pre = r.roll;
+    r.roll = [];
+    dispatch({ type: 'start', mode: 'voice', heard: true });
+  }, [r, send, clearTurn]);
+
+  const onFrame = useCallback((frame, rms) => {
+    if (r.turnPending) {
+      if (r.ended) return;
+      if (r.accepted) send(frame);
+      else {
+        r.pre.push(frame);
+        if (r.pre.length > PRE_ACCEPT_FRAMES) r.pre.shift();
+      }
+      if (r.vad?.push(rms) === 'end') endVoice();
+      return;
+    }
+    // Between turns: only while the toy is free, and never in the moment
+    // after its own voice.
+    const { status } = stateRef.current;
+    if ((status !== 'idle' && status !== 'denied') || performance.now() < r.quietUntil) return;
+    r.roll.push(frame);
+    if (r.roll.length > PRE_ROLL_FRAMES) r.roll.shift();
+    const verdict = r.vad?.push(rms);
+    if (verdict === 'speech') beginTurn();
+    else if (verdict) r.vad.reset();
+  }, [r, send, endVoice, beginTurn]);
+
+  const openMic = useCallback(() => {
+    if (r.micState !== 'off') return;
+    r.micState = 'opening';
+    r.micToken += 1;
+    const token = r.micToken;
+    dispatch({ type: 'mic_opening' });
+    startCapture({
+      onFrame: (frame, rms) => {
+        if (token === r.micToken) onFrame(frame, rms);
+      },
+      onLevel: (level) => {
+        if (token === r.micToken) emitLevel(level);
+      },
+    }).then((capture) => {
+      if (token !== r.micToken) {
+        capture.stop();
+        return;
+      }
+      r.capture = capture;
+      r.micState = 'on';
+      r.vad = createVad({ silenceMs: SILENCE_MS, noSpeechMs: Infinity });
+      r.roll = [];
+      r.quietUntil = 0;
+      // Permission was just granted on a gesture: the best moment to make
+      // sure Buddy's voice can play.
+      r.player.unlock();
+      dispatch({ type: 'mic_on' });
+    }).catch((err) => {
+      if (token !== r.micToken) return;
+      r.micState = 'off';
+      r.wantMic = false;
+      dispatch({ type: 'mic_off', error: err.code || 'mic_unavailable' });
+    });
+  }, [r, onFrame, emitLevel]);
+
   // ---- connection -------------------------------------------------------
 
   const connectRef = useRef(null);
 
-  // The server's turn clock starts at turn_accepted, while the mic's own
-  // cap counts audio frames, which start late if the browser is still
-  // asking for permission. This timer ends the turn on the server's clock.
+  // The server's turn clock starts at turn_accepted; this timer ends the
+  // turn on that clock before the server abandons it.
   const armCap = useCallback((turnId) => {
     clearTimeout(r.capTimer);
     r.capTimer = setTimeout(() => {
       r.capTimer = null;
-      if (r.turnId !== turnId || stateRef.current.status !== 'listening') return;
-      stopCapture();
-      send({ type: 'turn_end' });
-      dispatch({ type: 'end' });
+      if (r.turnId === turnId) endVoice();
     }, TURN_CAP_MS);
-  }, [r, send, stopCapture]);
+  }, [r, endVoice]);
 
   const recover = useCallback((gen) => {
     const plan = reconnectPlan({ attempts: r.attempts, rerevealed: r.rerevealed });
@@ -152,6 +270,8 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
         r.attempts = 0;
         r.rerevealed = false;
         dispatch({ type: 'ready' });
+        rearm(r);
+        if (r.wantMic) openMic();
         break;
       case 'turn_accepted':
         r.turnId = msg.turn_id;
@@ -172,11 +292,12 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
         break;
       case 'turn_denied':
         resetTurn();
+        r.wantMic = false;
+        closeMic();
         dispatch({ type: 'denied', emotion: msg.emotion, say: msg.say });
         callbacks.current.onSettled?.(msg);
         break;
       case 'answer':
-        stopCapture();
         dispatch({ type: 'answer', turn_id: msg.turn_id, emotion: msg.emotion, say: msg.say, heard: msg.heard });
         break;
       case 'audio':
@@ -192,10 +313,11 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
         break;
       case 'turn_done':
         // The server can close a turn on its own (its TURN_MAX_SEC timer
-        // runs from turn_accepted); the mic must close with it, or frames
+        // runs from turn_accepted); the turn must close with it, or frames
         // and a late turn_end would go to a turn that no longer exists.
         if (msg.turn_id === r.turnId) clearTurn();
         dispatch({ type: 'turn_done', turn_id: msg.turn_id, status: msg.status });
+        if (!r.player.playing) rearm(r);
         callbacks.current.onSettled?.(msg);
         break;
       case 'conversation_started':
@@ -207,7 +329,7 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
       default:
         break;
     }
-  }, [r, send, resetTurn, clearTurn, stopCapture, armCap]);
+  }, [r, send, resetTurn, clearTurn, armCap, closeMic, openMic]);
 
   const connect = useCallback(async (gen) => {
     if (gen !== r.gen) return;
@@ -275,6 +397,9 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
       r.ws = null;
       resetTurn();
       r.player.stop();
+      // The mic is released with the socket and reopened on the next ready,
+      // so the browser's recording light only shows while words can go out.
+      closeMic();
       if (ev.code === 4003) {
         // Paused or revoked while connected: the sleepy face, and no retry
         // loop; the toy comes back when the dashboard says it is awake.
@@ -284,7 +409,7 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
       }
       recover(gen);
     };
-  }, [r, deviceId, onMessage, recover, resetTurn]);
+  }, [r, deviceId, onMessage, recover, resetTurn, closeMic]);
   connectRef.current = connect;
 
   useEffect(() => {
@@ -301,107 +426,80 @@ export function useWebToy(deviceId, { enabled, onSettled, onBlocked } = {}) {
       r.gen += 1;
       clearTimeout(r.timer);
       resetTurn();
+      closeMic();
       r.player.stop();
       const ws = r.ws;
       r.ws = null;
       ws?.close(1000, 'leaving');
     };
-  }, [deviceId, enabled, r, connect, resetTurn]);
+  }, [deviceId, enabled, r, connect, resetTurn, closeMic]);
+
+  // Browsers only let a page play sound after a gesture. Hands-free there
+  // may be none before Buddy's first words, so the first tap or key
+  // anywhere on the page unlocks the player.
+  useEffect(() => {
+    const unlock = () => r.player.unlock();
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, [r]);
 
   useEffect(() => () => r.player.close(), [r]);
 
   // ---- what the child does ---------------------------------------------
 
-  const endVoice = useCallback(() => {
-    stopCapture();
-    if (!r.accepted) {
-      r.endOnAccept = true;
-      return;
-    }
-    send({ type: 'turn_end' });
-    dispatch({ type: 'end' });
-  }, [r, send, stopCapture]);
-
-  const cancelVoice = useCallback((error) => {
-    stopCapture();
-    r.pre = [];
-    if (r.accepted) send({ type: 'turn_cancel' });
-    else r.cancelOnAccept = true;
-    dispatch({ type: 'cancel', error });
-  }, [r, send, stopCapture]);
-
-  const startVoice = useCallback(() => {
-    if (!send({ type: 'turn_start' })) return;
-    resetTurn();
-    dispatch({ type: 'start', mode: 'voice' });
-    const token = r.captureToken;
-    startCapture({
-      onFrame: (frame) => {
-        if (token !== r.captureToken) return;
-        if (r.accepted) send(frame);
-        else {
-          r.pre.push(frame);
-          if (r.pre.length > PRE_ACCEPT_FRAMES) r.pre.shift();
-        }
-      },
-      onLevel: (level) => {
-        if (token === r.captureToken) emitLevel(level);
-      },
-      onEvent: (what) => {
-        if (token !== r.captureToken) return;
-        if (what === 'speech') dispatch({ type: 'speech' });
-        else if (what === 'no_speech') cancelVoice('no_speech');
-        else endVoice();
-      },
-    }).then((capture) => {
-      if (token === r.captureToken) r.capture = capture;
-      else capture.stop();
-    }).catch((err) => {
-      if (token === r.captureToken) cancelVoice(err.code || 'mic_unavailable');
-    });
-  }, [r, send, resetTurn, emitLevel, endVoice, cancelVoice]);
-
   const tap = useCallback(() => {
     const action = tapAction(stateRef.current);
-    if (!action) return;
     r.player.unlock();
-    if (action === 'end') {
+    if (action === 'mute') {
+      r.wantMic = false;
+      closeMic();
+    } else if (action === 'listen') {
+      r.wantMic = true;
+      openMic();
+    } else if (action === 'end') {
       endVoice();
-      return;
-    }
-    if (action === 'interrupt') {
+    } else if (action === 'interrupt') {
       r.player.stop();
       dispatch({ type: 'playback_end' });
+      rearm(r);
     }
-    startVoice();
-  }, [r, endVoice, startVoice]);
+  }, [r, closeMic, openMic, endVoice]);
 
   const sendText = useCallback((text) => {
     const clean = String(text ?? '').trim().slice(0, MAX_TEXT);
     const current = stateRef.current;
-    if (!clean || !canSend(current)) return false;
+    if (!clean || !canSend(current) || r.turnPending) return false;
     r.player.unlock();
     if (current.playing) {
       r.player.stop();
       dispatch({ type: 'playback_end' });
+      rearm(r);
     }
     if (!send({ type: 'turn_start' })) return false;
-    resetTurn();
+    clearTurn();
+    r.turnPending = true;
+    // No audio goes with a typed turn: the mic's frames are dropped.
+    r.ended = true;
     r.pendingText = clean;
     dispatch({ type: 'start', mode: 'text', text: clean });
     return true;
-  }, [r, send, resetTurn]);
+  }, [r, send, clearTurn]);
 
   const newConversation = useCallback(() => {
-    if (!canSend(stateRef.current)) return false;
+    if (!canSend(stateRef.current) || r.turnPending) return false;
     return send({ type: 'conversation_new' });
-  }, [send]);
+  }, [r, send]);
 
   const reconnect = useCallback(() => {
     if (!enabled) return;
     r.gen += 1;
     r.attempts = 0;
     r.rerevealed = false;
+    r.wantMic = micSupported();
     clearTimeout(r.timer);
     r.ws?.close(1000, 'reconnect');
     r.ws = null;

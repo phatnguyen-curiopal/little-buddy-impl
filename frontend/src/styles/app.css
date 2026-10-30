@@ -338,17 +338,26 @@ button.shop-item:active { transform: translateY(3px); }
 .coin-mini.is-low b { color: var(--gold-deep); }
 .coin-mini.is-out b { color: var(--bad); }
 .talk-side { position: absolute; right: 14px; top: 84px; display: grid; gap: 12px; z-index: 2; }
-.talk-say { position: absolute; left: 16px; right: 80px; top: 92px; display: grid; gap: 8px; justify-items: start; z-index: 3; }
-.talk-say .say-bubble { max-width: min(100%, 420px); }
-.talk-say .say-bubble::after { left: 60%; }
 .talk-stage { width: min(58cqw, 40cqh, 460px); }
 .talk-ground { gap: 14px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
 .talk-status { display: grid; justify-items: center; gap: 8px; text-align: center; }
 .talk-hint { max-width: 460px; background: var(--surface); color: var(--ink-2); border-radius: 16px; padding: 8px 12px; font-size: 14px; font-weight: 700; box-shadow: 0 3px 0 var(--lip); }
 .talk-controls { display: flex; align-items: center; justify-content: center; gap: 28px; }
-.talk-note { text-align: center; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
-.room--night .talk-note { color: var(--on-ocean-muted); }
 .talk-scene--listening .figure .miu { filter: drop-shadow(0 0 calc(var(--level, 0) * 24px) rgba(157, 187, 255, 0.9)); }
+/* The whole figure swells a little with the sound in the room, and Miu can be
+   stroked: the stage takes the pointer, so no scrolling while petting. */
+.talk-scene--idle .figure, .talk-scene--listening .figure { transform: scale(calc(1 + var(--level, 0) * 0.05)); transform-origin: 50% 100%; transition: transform 0.08s linear; }
+.talk-stage { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.talk-stage:active { cursor: grabbing; }
+/* Hands-free: the big button shows the mic. Open and waiting, a soft ring
+   that breathes with the room; the child talking, the full pulse; muted, a
+   bar across it. */
+.talk-controls .mic-btn.is-on { background: var(--pop); box-shadow: 0 7px 0 var(--pop-deep), 0 0 0 calc(10px + var(--level, 0) * 24px) rgba(157, 187, 255, 0.45); }
+.talk-controls .mic-btn.is-on .mic-ring { border: 0; animation: none; }
+.talk-controls .mic-btn.is-live { background: var(--pop-deep); box-shadow: 0 7px 0 #0F3E94, 0 0 0 calc(12px + var(--level, 0) * 26px) rgba(157, 187, 255, 0.55); }
+.talk-controls .mic-btn.is-live .mic-ring { border: 4px solid rgba(255, 255, 255, 0.85); animation: mic-pulse 1.4s ease-out infinite; }
+.talk-controls .mic-btn.is-muted { background: var(--sky); color: var(--pop-text); }
+.talk-controls .mic-btn.is-muted::after { content: ""; position: absolute; width: 5px; height: 50px; border-radius: 3px; background: currentColor; transform: rotate(45deg); }
 
 .talk-log { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-height: 78dvh; border-radius: 30px 30px 0 0; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); box-shadow: 0 -6px 0 var(--lip), var(--shadow-lg); transform: translateY(105%); transition: transform 0.3s var(--ease-out); grid-template-rows: auto minmax(0, 1fr) auto; }
 .talk--log .talk-log { transform: translateY(0); }
@@ -365,11 +374,10 @@ button.shop-item:active { transform: translateY(3px); }
 
 @media (min-width: 900px) {
   .app--talk .app-main { padding: 16px; }
-  .talk { display: grid; grid-template-columns: minmax(0, 1fr) clamp(290px, 28vw, 420px); gap: 16px; height: calc(100dvh - 32px); min-height: 560px; }
+  .talk { height: calc(100dvh - 32px); min-height: 560px; }
   .talk-scene { height: 100%; min-height: 0; border-radius: 32px; box-shadow: 0 6px 0 var(--lip); }
   .talk-top .round:first-child { visibility: hidden; }
-  .talk-log { position: static; max-height: none; height: 100%; transform: none; border-radius: 30px; padding-bottom: 18px; box-shadow: 0 5px 0 var(--line); }
-  .talk-log-close, .talk-log-btn, .talk-type { display: none; }
+  .talk-log { left: auto; right: 24px; width: min(440px, calc(100vw - 48px)); max-height: min(78dvh, 720px); }
   .talk-stage { width: min(30vw, 300px, 38dvh); }
 }
 @media (max-height: 700px) and (max-width: 899px) {

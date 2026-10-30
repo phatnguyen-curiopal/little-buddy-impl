@@ -73,6 +73,7 @@ export default function Miu({ emotion, look = null, phase = 'idle', crop = 'body
 
       {crop === 'body' && <ellipse className="miu-shadow" cx="200" cy="420" rx="124" ry="14" fill="#0B1220" opacity="0.12" />}
 
+      <g className="miu-act">
       <g className="miu-breath">
         {crop === 'body' && (<>
           <g className="miu-tail">
@@ -135,9 +136,11 @@ export default function Miu({ emotion, look = null, phase = 'idle', crop = 'body
 
         <path d="M146 226 L 104 220 M146 236 L 102 241 M254 226 L 296 220 M254 236 L 298 241" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
         <path d="M200 219 L 200 226" fill="none" stroke="#0B1220" strokeWidth="4.5" strokeLinecap="round" />
+        <g className="miu-mouth">
         {p.line && <path d={MOUTH_LINES[p.line]} fill="none" stroke="#0B1220" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />}
         {fill && <path d={fill[0]} fill="#0B1220" />}
         {fill && fill[1] > 0 && <ellipse cx="200" cy={fill[1]} rx="12" ry="6" fill="#F7A8B4" />}
+        </g>
         <path d="M188 207 C 188 201 212 201 212 207 C 212 213 205 219 200 219 C 195 219 188 213 188 207 Z" fill="#0B1220" />
         <ellipse cx="195" cy="206" rx="4" ry="2" fill="#FFFFFF" opacity="0.7" />
 
@@ -153,6 +156,7 @@ export default function Miu({ emotion, look = null, phase = 'idle', crop = 'body
             <circle cx="268" cy="347" r="15" fill={`url(#${cream})`} />
           </g>
         </>)}
+      </g>
       </g>
 
       {crop === 'body' && (

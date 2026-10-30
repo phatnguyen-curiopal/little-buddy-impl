@@ -1,22 +1,22 @@
 import { FRAME_BYTES, levelFromRms, workletSource } from './dsp.js';
-import { createVad } from './vad.js';
 
-// The web toy's microphone. One capture per turn: the mic opens on the tap
-// and is released as soon as the turn ends, so the browser's recording
-// indicator means exactly what the toy's button means.
+// The web toy's microphone. The Talk screen is hands-free, so one capture
+// lasts the whole visit: it opens once the stream is ready and is released
+// when the page is left, muted, or the toy stops answering. Which frames
+// become a turn is decided by the caller (useWebToy.js) with vad.js.
 //
 // The audio thread does the heavy part (low-pass, resample to 16 kHz Int16,
 // 640-byte frames; see dsp.js). This thread only measures loudness for the
-// ring and the end-of-speech rule, and hands frames to the caller.
+// ring and hands frames to the caller.
 
 // The backend's default TURN_MAX_SEC; the server does not announce its
 // value, so a backend configured lower still ends the turn first, and
-// useWebToy then closes the mic on that turn_done.
+// useWebToy then closes the turn on that turn_done.
 export const TURN_MAX_SEC = 120;
 // The server abandons a turn that is still open at TURN_MAX_SEC; ending a
 // little earlier leaves room for the last frames and turn_end to arrive.
 export const TURN_CAP_MS = (TURN_MAX_SEC - 3) * 1000;
-const FRAME_MS = 20;
+export const FRAME_MS = 20;
 
 // getUserMedia exists only in a secure context (https or localhost).
 export function micSupported() {
@@ -33,10 +33,10 @@ function workletUrl() {
   return moduleUrl;
 }
 
-// onFrame(ArrayBuffer of FRAME_BYTES), onLevel(0..1), onEvent('speech' |
-// 'end' | 'no_speech' | 'cap'). Resolves once audio is flowing; rejects with
-// err.code 'mic_denied' or 'mic_unavailable'.
-export async function startCapture({ onFrame, onLevel, onEvent }) {
+// onFrame(ArrayBuffer of FRAME_BYTES, rms) for every 20 ms of audio,
+// onLevel(0..1). Resolves once audio is flowing; rejects with err.code
+// 'mic_denied' or 'mic_unavailable'.
+export async function startCapture({ onFrame, onLevel }) {
   if (!micSupported()) throw Object.assign(new Error('microphone needs a secure context'), { code: 'mic_unavailable' });
   let stream;
   try {
@@ -70,26 +70,12 @@ export async function startCapture({ onFrame, onLevel, onEvent }) {
     node.connect(mute);
     mute.connect(ctx.destination);
 
-    const vad = createVad({ frameMs: FRAME_MS });
-    let elapsed = 0;
-    let finished = false;
     node.port.onmessage = (e) => {
       if (closed) return;
       const { frame, rms } = e.data;
       if (frame.byteLength !== FRAME_BYTES) return;
-      onFrame(frame);
+      onFrame(frame, rms);
       onLevel?.(levelFromRms(rms));
-      if (finished) return;
-      elapsed += FRAME_MS;
-      const verdict = vad.push(rms);
-      if (verdict === 'speech') onEvent('speech');
-      else if (verdict) {
-        finished = true;
-        onEvent(verdict);
-      } else if (elapsed >= TURN_CAP_MS) {
-        finished = true;
-        onEvent('cap');
-      }
     };
   } catch (err) {
     close();

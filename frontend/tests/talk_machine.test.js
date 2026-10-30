@@ -5,11 +5,37 @@ import { MAX_MESSAGES, MAX_RECONNECTS, canSend, initialState, reconnectPlan, red
 const run = (events, from = initialState) => events.reduce(reduce, from);
 const ready = run([{ type: 'ready' }]);
 
-test('connects, then waits for a tap', () => {
+test('connects, then the mic opens on its own and the button mutes it', () => {
   assert.equal(initialState.status, 'connecting');
+  assert.equal(initialState.mic, 'off');
   assert.equal(ready.status, 'idle');
   assert.equal(tapAction(initialState), null, 'no taps before the socket is ready');
-  assert.equal(tapAction(ready), 'start');
+  assert.equal(tapAction(ready), 'listen', 'with the mic closed, a tap opens it');
+  const opening = reduce(ready, { type: 'mic_opening' });
+  assert.equal(opening.mic, 'opening');
+  assert.equal(tapAction(opening), null, 'nothing to do while the browser asks for permission');
+  const on = reduce(opening, { type: 'mic_on' });
+  assert.equal(on.mic, 'on');
+  assert.equal(tapAction(on), 'mute');
+  assert.equal(canSend(on), true, 'typing is allowed whatever the mic does');
+  const denied = reduce(opening, { type: 'mic_off', error: 'mic_denied' });
+  assert.equal(denied.mic, 'off');
+  assert.equal(denied.error, 'mic_denied');
+  assert.equal(tapAction(denied), 'listen', 'a tap tries the mic again');
+});
+
+test('hands-free: speech opens the turn, quiet ends it, and the mic stays on for the next', () => {
+  let s = run([{ type: 'mic_opening' }, { type: 'mic_on' }, { type: 'start', mode: 'voice', heard: true }], ready);
+  assert.equal(s.status, 'starting');
+  assert.equal(s.heardSpeech, true, 'the turn exists because speech was heard');
+  s = run([{ type: 'accepted', turn_id: 'h1' }, { type: 'end' }, { type: 'answer', turn_id: 'h1', emotion: 'happy', say: 'Hi', heard: 'hello' },
+    { type: 'audio', turn_id: 'h1' }, { type: 'turn_done', turn_id: 'h1', status: 'completed' }, { type: 'playback_end' }], s);
+  assert.equal(s.status, 'idle');
+  assert.equal(s.mic, 'on', 'the mic was never closed');
+  assert.equal(tapAction(s), 'mute');
+  const refused = run([{ type: 'start', mode: 'voice', heard: true }, { type: 'denied', say: 'rest' }], s);
+  assert.equal(refused.mic, 'off', 'a refusal closes the mic');
+  assert.equal(tapAction(refused), 'listen');
 });
 
 test('a voice turn: listen, think, answer with the transcript, speak, done', () => {
@@ -75,7 +101,7 @@ test('a denial shows the face and line, and a new tap may try again', () => {
   assert.equal(s.status, 'denied');
   assert.equal(s.emotion, 'sleepy');
   assert.equal(s.messages.at(-1).denied, true);
-  assert.equal(tapAction(s), 'start');
+  assert.equal(tapAction(s), 'listen');
   assert.equal(reduce(reduce(ready, { type: 'start', mode: 'voice' }), { type: 'denied' }).emotion, 'sleepy', 'sleepy when no face is named');
 });
 

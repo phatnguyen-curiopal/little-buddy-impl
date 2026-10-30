@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { DOZE_MS, PET_LINGER_MS, nextIdleAct, petFeeling } from './catplay.js';
 
 export function reducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -92,4 +93,100 @@ export function usePointerVars(ref, { tilt = false } = {}) {
       el.removeEventListener('pointerleave', onLeave);
     };
   }, [ref, tilt]);
+}
+
+// Miu with nothing to do: every few seconds a small move of its own (an ear
+// flick, a head tilt, a tail swish, a hop, a stretch; lib/catplay.js picks
+// them, styles/miu.css draws them), and after a long quiet spell a doze.
+// Both stop the moment `active` turns false, which is how a word or a touch
+// wakes it.
+export function useIdleActs(active, { random = Math.random } = {}) {
+  const [act, setAct] = useState(null);
+  const [drowsy, setDrowsy] = useState(false);
+  const last = useRef(null);
+  useEffect(() => {
+    if (!active || reducedMotion()) return undefined;
+    let stopped = false;
+    let timer;
+    const schedule = () => {
+      const next = nextIdleAct(random, last.current);
+      timer = setTimeout(() => {
+        if (stopped) return;
+        last.current = next.act;
+        setAct(next.act);
+        timer = setTimeout(() => {
+          if (stopped) return;
+          setAct(null);
+          schedule();
+        }, next.durationMs);
+      }, next.afterMs);
+    };
+    schedule();
+    const doze = setTimeout(() => {
+      if (!stopped) setDrowsy(true);
+    }, DOZE_MS);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      clearTimeout(doze);
+      setAct(null);
+      setDrowsy(false);
+    };
+  }, [active, random]);
+  return { act, drowsy };
+}
+
+// Petting Miu with the pointer or a finger: a press is a pat, a stroke
+// across the fur is a cuddle. Returns the feeling while the hand is on it
+// and for a moment after it lifts, or null.
+export function usePetting(ref) {
+  const [feeling, setFeeling] = useState(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    let down = false;
+    let travelled = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let linger;
+    const onDown = (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      down = true;
+      travelled = 0;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      clearTimeout(linger);
+      setFeeling(petFeeling(0));
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        // not every target can capture; the stroke just ends at its edge
+      }
+    };
+    const onMove = (e) => {
+      if (!down) return;
+      travelled += Math.hypot(e.clientX - lastX, e.clientY - lastY);
+      lastX = e.clientX;
+      lastY = e.clientY;
+      setFeeling(petFeeling(travelled));
+    };
+    const onUp = () => {
+      if (!down) return;
+      down = false;
+      clearTimeout(linger);
+      linger = setTimeout(() => setFeeling(null), PET_LINGER_MS);
+    };
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    return () => {
+      clearTimeout(linger);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    };
+  }, [ref]);
+  return feeling;
 }

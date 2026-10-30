@@ -4,19 +4,23 @@
 //
 // status:
 //   connecting  revealing the secret, syncing the clock, opening the socket
-//   idle        ready for a tap or a typed message
+//   idle        ready: with the mic on, waiting for the child to speak
 //   starting    turn_start sent, waiting for turn_accepted or turn_denied
-//   cancelling  the child gave up before turn_accepted arrived; nothing new
-//               may start until the server answers that turn_start, or
+//   cancelling  the turn was given up before turn_accepted arrived; nothing
+//               new may start until the server answers that turn_start, or
 //               the next message would be taken as the old turn's words
-//   listening   the mic is open (voice turns only)
+//   listening   the child is talking and the frames are streaming
 //   thinking    turn_end sent, waiting for the answer
-//   answered    the answer is on screen, turn_done has not arrived yet
+//   answered    the answer has arrived, turn_done has not yet
 //   speaking    Buddy's voice is playing
 //   denied      the press was refused (a break, or no credits: the toy
 //               cannot tell which, on purpose)
 //   asleep      the toy is paused or revoked (close 4003, or not active)
 //   offline     could not connect after the retries
+//
+// mic: off | opening | on. The Talk screen is hands-free: the mic opens
+// when the stream is ready and stays open, a turn starts on its own when
+// the child speaks, and the big button mutes it.
 
 export const MAX_MESSAGES = 200;
 export const MAX_RECONNECTS = 3;
@@ -24,6 +28,7 @@ export const MAX_RECONNECTS = 3;
 export const initialState = Object.freeze({
   status: 'connecting',
   emotion: 'neutral',
+  mic: 'off',
   turnId: null,
   mode: null,
   heardSpeech: false,
@@ -45,15 +50,29 @@ const mine = (state, event) => Boolean(state.turnId) && event.turn_id === state.
 export function reduce(state, event) {
   switch (event.type) {
     case 'connecting':
-      return { ...state, status: 'connecting', turnId: null, playing: false, error: null };
+      return { ...state, status: 'connecting', mic: 'off', turnId: null, playing: false, error: null };
 
     case 'ready': {
       const busyFace = state.emotion === 'listening' || state.emotion === 'thinking';
       return { ...state, status: 'idle', turnId: null, error: null, emotion: busyFace ? 'neutral' : state.emotion };
     }
 
+    case 'mic_opening':
+      return { ...state, mic: 'opening', error: null };
+
+    case 'mic_on':
+      return { ...state, mic: 'on', error: null };
+
+    case 'mic_off':
+      return { ...state, mic: 'off', error: event.error ?? state.error };
+
     case 'start': {
-      const next = { ...state, status: 'starting', mode: event.mode, turnId: null, heardSpeech: false, answered: false, playing: false, error: null, emotion: event.mode === 'text' ? 'thinking' : 'listening' };
+      // Hands-free, the turn starts because speech was heard, so the
+      // listening screen knows it at once (heard: true).
+      const next = {
+        ...state, status: 'starting', mode: event.mode, turnId: null, heardSpeech: Boolean(event.heard), answered: false, playing: false, error: null,
+        emotion: event.mode === 'text' ? 'thinking' : 'listening',
+      };
       return event.mode === 'text' ? push(next, { from: 'child', text: event.text }) : next;
     }
 
@@ -70,14 +89,16 @@ export function reduce(state, event) {
     case 'end':
       return state.status === 'listening' ? { ...state, status: 'thinking', emotion: 'thinking' } : state;
 
-    // No speech after the tap, or the mic could not open: the turn is given
-    // back (turn_cancel), so nothing is charged and nothing is shown.
+    // The turn is given back (turn_cancel), so nothing is charged and
+    // nothing is shown.
     case 'cancel':
       if (state.status !== 'listening' && state.status !== 'starting') return state;
       return { ...state, status: state.status === 'starting' ? 'cancelling' : 'idle', turnId: null, emotion: 'neutral', error: event.error ?? null };
 
     case 'denied': {
-      const next = { ...state, status: 'denied', turnId: null, emotion: event.emotion || 'sleepy' };
+      // The mic closes with a refusal: every further word would only knock
+      // on a closed door. A tap opens it again.
+      const next = { ...state, status: 'denied', mic: 'off', turnId: null, emotion: event.emotion || 'sleepy' };
       return event.say ? push(next, { from: 'buddy', text: event.say, emotion: next.emotion, denied: true }) : next;
     }
 
@@ -115,14 +136,14 @@ export function reduce(state, event) {
       return push({ ...state, messages: [], error: null }, { from: 'system', kind: 'new' });
 
     case 'closed':
-      if (event.code === 4003) return { ...state, status: 'asleep', emotion: 'sleepy', turnId: null, playing: false };
-      return { ...state, status: 'connecting', turnId: null, playing: false };
+      if (event.code === 4003) return { ...state, status: 'asleep', mic: 'off', emotion: 'sleepy', turnId: null, playing: false };
+      return { ...state, status: 'connecting', mic: 'off', turnId: null, playing: false };
 
     case 'asleep':
-      return { ...state, status: 'asleep', emotion: 'sleepy', turnId: null, playing: false };
+      return { ...state, status: 'asleep', mic: 'off', emotion: 'sleepy', turnId: null, playing: false };
 
     case 'offline':
-      return { ...state, status: 'offline', emotion: 'confused', turnId: null, playing: false, error: event.error ?? 'offline' };
+      return { ...state, status: 'offline', mic: 'off', emotion: 'confused', turnId: null, playing: false, error: event.error ?? 'offline' };
 
     case 'clear_error':
       return state.error ? { ...state, error: null } : state;
@@ -139,7 +160,8 @@ export function tapAction(state) {
   switch (state.status) {
     case 'idle':
     case 'denied':
-      return 'start';
+      if (state.mic === 'on') return 'mute';
+      return state.mic === 'opening' ? null : 'listen';
     case 'listening':
       return 'end';
     case 'speaking':
@@ -149,7 +171,8 @@ export function tapAction(state) {
   }
 }
 
-export const canSend = (state) => tapAction(state) === 'start' || tapAction(state) === 'interrupt';
+// A typed message may go whenever the toy is free, mic or no mic.
+export const canSend = (state) => state.status === 'idle' || state.status === 'denied' || tapAction(state) === 'interrupt';
 
 // After an unexpected close: a few quick retries, then one fresh reveal of
 // the secret (it may have been rotated), then give up and show the error.

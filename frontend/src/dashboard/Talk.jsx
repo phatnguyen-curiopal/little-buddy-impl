@@ -5,7 +5,8 @@ import { Icon, useErrorText, useToast } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { api } from '../lib/api.js';
 import { Link, navigate, useLocation } from '../lib/router.js';
-import { usePointerLook } from '../lib/motion.js';
+import { useIdleActs, usePetting, usePointerLook } from '../lib/motion.js';
+import { STARTLE_MS } from '../lib/catplay.js';
 import { normalizeEmotion } from '../lib/emotions.js';
 import { designOf } from '../lib/designs.js';
 import { useWebToy, webToySupported } from '../talk/useWebToy.js';
@@ -14,12 +15,13 @@ import { micSupported } from '../talk/mic.js';
 import { useFamilyData, useLayers } from './data.jsx';
 import { Onboard, useToyName } from './parts.jsx';
 
-// The Talk screen: the browser plays the chosen toy. Buddy fills its room,
-// as in a talking-pet game, with round buttons around it and one big button
-// to talk (tap, talk, the toy notices the end of speech). The conversation
-// as text sits beside the room on a wide screen and slides up over it on a
-// phone, with a box to type instead of talking. Every answer goes through
-// the same gate and credits as the real toy.
+// The Talk screen: the browser plays the chosen toy, hands-free. Buddy
+// fills its room as in a talking-pet game; the mic opens on arrival, the
+// child just talks, and after a pause Buddy answers aloud. Nothing of the
+// conversation is written on the screen: the log, and a box to type, wait
+// behind the chat button. Buddy can be petted and has small moves of its
+// own while it waits (lib/catplay.js). Every answer goes through the same
+// gate and credits as the real toy.
 
 const TOY_PHASE = {
   idle: 'idle', denied: 'idle',
@@ -35,8 +37,8 @@ function faceFor(state) {
   if (state.status === 'connecting') return 'neutral';
   if (state.status === 'asleep') return 'sleepy';
   if (state.status === 'offline') return 'confused';
-  if (state.status === 'listening') return 'listening';
-  if (state.status === 'thinking' || state.status === 'starting') return 'thinking';
+  if (state.status === 'listening' || state.status === 'starting') return 'listening';
+  if (state.status === 'thinking') return 'thinking';
   return state.emotion;
 }
 
@@ -44,16 +46,29 @@ function useStatusText(state, name) {
   const { t } = useI18n();
   switch (state.status) {
     case 'connecting': return t('talkConnecting', { name });
-    case 'idle': return t('talkIdle', { name });
+    case 'idle':
+      if (state.mic === 'on') return t('talkSpeakNow', { name });
+      return state.mic === 'opening' ? t('talkMicOpening') : t('talkMuted', { name });
     case 'starting': return t('talkStarting', { name });
     case 'cancelling': return t('talkCancelling');
-    case 'listening': return state.heardSpeech ? t('talkListening', { name }) : t('talkSpeakNow', { name });
+    case 'listening': return t('talkListening', { name });
     case 'thinking': return t('talkThinking', { name });
     case 'answered': return t('talkAnswered', { name });
     case 'speaking': return t('talkSpeaking', { name });
     case 'denied': return t('talkDenied', { name });
     case 'asleep': return t('talkAsleep', { name });
     default: return t('talkOffline', { name });
+  }
+}
+
+// What the big button would do, as its label.
+function useTapLabel(action, name) {
+  const { t } = useI18n();
+  switch (action) {
+    case 'listen': return t('talkUnmute');
+    case 'end': return t('talkSendNow');
+    case 'interrupt': return t('talkInterrupt', { name });
+    default: return t('talkMute');
   }
 }
 
@@ -120,6 +135,21 @@ function Bubble({ m, buddyName }) {
   );
 }
 
+// Miu wakes with a start when something happens while it dozes.
+function useStartle(drowsy) {
+  const [startled, setStartled] = useState(false);
+  const wasDrowsy = useRef(false);
+  useEffect(() => {
+    const was = wasDrowsy.current;
+    wasDrowsy.current = drowsy;
+    if (!was || drowsy) return undefined;
+    setStartled(true);
+    const timer = setTimeout(() => setStartled(false), STARTLE_MS);
+    return () => clearTimeout(timer);
+  }, [drowsy]);
+  return startled;
+}
+
 function TalkRoom({ device, toys }) {
   const { t } = useI18n();
   const d = useFamilyData();
@@ -144,7 +174,7 @@ function TalkRoom({ device, toys }) {
   });
   const { state, onLevel } = toy;
 
-  // The mic ring and Buddy's tummy glow follow the level without
+  // The mic ring, Buddy's tummy glow and its body follow the level without
   // re-rendering 50 times a second: it goes straight into a CSS variable.
   useEffect(() => onLevel((level) => {
     sceneRef.current?.style.setProperty('--level', level.toFixed(3));
@@ -155,18 +185,27 @@ function TalkRoom({ device, toys }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [state.messages.length, state.status, logOpen]);
 
+  // Cat life: petting wins over everything, then a doze or its wake, then
+  // whatever the conversation says.
+  const petting = usePetting(stageRef);
+  const free = state.status === 'idle' || state.status === 'denied';
+  const { act, drowsy } = useIdleActs(free && !petting);
+  const startled = useStartle(drowsy);
+
   const status = useStatusText(state, buddyName);
   const hint = useErrorHint(state.error, buddyName);
   const action = tapAction(state);
+  const tapLabel = useTapLabel(action, buddyName);
   const sendable = canSend(state);
-  const face = faceFor(state);
+  const face = petting ?? (startled ? 'surprised' : drowsy ? 'sleepy' : faceFor(state));
   const phase = TOY_PHASE[state.status] ?? 'rest';
   const typing = state.status === 'thinking' || (state.status === 'starting' && state.mode === 'text');
   const resting = state.status === 'asleep' || state.status === 'offline';
   const listening = state.status === 'listening';
-
-  const lastBuddy = [...state.messages].reverse().find((m) => m.from === 'buddy');
-  const lastChild = [...state.messages].reverse().find((m) => m.from === 'child');
+  const talking = state.status === 'speaking';
+  const micOn = state.mic === 'on';
+  const figureClass = [act && `miu-act-${act}`, petting && 'miu-petting', talking && 'is-talking'].filter(Boolean).join(' ');
+  const follows = (phase === 'idle' || phase === 'listening') && !petting && !drowsy;
 
   const openTyping = () => {
     setLogOpen(true);
@@ -174,7 +213,8 @@ function TalkRoom({ device, toys }) {
   };
 
   const tap = () => {
-    if (!mic && action !== 'end') {
+    // No microphone in this browser: the button opens the keyboard instead.
+    if (!mic && action !== 'end' && action !== 'interrupt') {
       openTyping();
       return;
     }
@@ -187,6 +227,7 @@ function TalkRoom({ device, toys }) {
   };
 
   const balance = d.wallet?.balance ?? null;
+  const micClass = listening ? 'is-live' : micOn ? 'is-on' : action === 'listen' ? 'is-muted' : '';
 
   return (
     <div className={`talk ${logOpen ? 'talk--log' : ''}`}>
@@ -215,15 +256,9 @@ function TalkRoom({ device, toys }) {
           <button type="button" className="round" onClick={() => openToy(device.id)} aria-label={t('profileTitle')}>{Icon.sliders}</button>
         </div>
 
-        <div className="talk-say" aria-hidden="true">
-          {lastChild && !listening && <span className="heard-chip">{lastChild.voice ? t('talkHeard', { name: buddyName }) : t('talkTyped')}: {lastChild.text}</span>}
-          {typing && <span className="say-bubble say-bubble--dots"><span className="dots"><i /><i /><i /></span></span>}
-          {!typing && lastBuddy && !listening && <span key={lastBuddy.id} className={`say-bubble pop-in ${lastBuddy.denied ? 'say-bubble--rest' : ''}`}>{lastBuddy.text}</span>}
-        </div>
-
         <div className="scene-stage">
-          <span className="room-stage talk-stage" ref={stageRef}>
-            <BuddyFigure design={design} emotion={face} phase={phase} look={phase === 'idle' ? look : null} dim={resting} />
+          <span className="room-stage talk-stage" ref={stageRef} aria-label={t('talkPet', { name: buddyName })} title={t('talkPet', { name: buddyName })}>
+            <BuddyFigure design={design} emotion={face} phase={phase} look={follows ? look : null} dim={resting} className={figureClass} />
           </span>
         </div>
 
@@ -244,22 +279,22 @@ function TalkRoom({ device, toys }) {
             <button type="button" className="round round--lg talk-type" onClick={openTyping} aria-label={t('talkKeyboard')}>{Icon.keyboard}</button>
             <button
               type="button"
-              className={`mic-btn ${listening ? 'is-on' : ''}`}
+              className={`mic-btn ${micClass}`}
               onClick={tap}
-              aria-pressed={listening}
-              aria-label={listening ? t('toyTapStop') : t('talkTapStart', { name: buddyName })}
+              aria-pressed={micOn || listening}
+              aria-label={tapLabel}
+              title={tapLabel}
               aria-disabled={!action || undefined}
             >
               <span className="mic-ring" aria-hidden="true" />
-              {listening ? Icon.stop : Icon.mic}
+              {listening || action === 'interrupt' ? Icon.stop : Icon.mic}
             </button>
             <button type="button" className="round round--lg talk-log-btn" onClick={() => setLogOpen(true)} aria-label={t('talkLog')}>{Icon.chat}</button>
           </div>
-          <p className="talk-note">{t('talkDemoNote')}</p>
         </div>
       </Room>
 
-      <section className="talk-log card" aria-label={t('talkLog')}>
+      <section className="talk-log card" aria-label={t('talkLog')} aria-hidden={!logOpen}>
         <div className="card-head">
           <h2>{t('talkLog')}</h2>
           <button type="button" className="round round--sm talk-log-close" onClick={() => setLogOpen(false)} aria-label={t('talkHideLog')}>{Icon.x}</button>

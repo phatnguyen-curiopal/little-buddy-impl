@@ -184,16 +184,16 @@ export default {
 
   // talk (the web toy)
   talkTo: 'Trò chuyện với {name}', talkPick: 'Chọn Buddy', talkLog: 'Cuộc trò chuyện',
-  talkConnecting: 'Đang kết nối với {name}…', talkIdle: 'Chạm nút sáng để nói với {name}, hoặc nhắn tin bên cạnh',
-  talkStarting: '{name} chuẩn bị nghe…', talkSpeakNow: 'Nói đi, {name} đang nghe', talkListening: '{name} đang nghe… Chạm lần nữa khi nói xong',
+  talkConnecting: 'Đang kết nối với {name}…', talkMicOpening: 'Đang mở micro…', talkMuted: 'Micro đang tắt. Chạm nút để {name} nghe bạn.',
+  talkStarting: '{name} nghe thấy rồi…', talkSpeakNow: 'Nói đi, {name} đang nghe', talkListening: '{name} đang nghe. Nói xong cứ im lặng một chút, {name} sẽ trả lời.',
   talkThinking: '{name} đang nghĩ…', talkAnswered: '{name} đã trả lời', talkSpeaking: '{name} đang nói…',
   talkDenied: '{name} chưa trả lời được lúc này. Lý do có trong trang Hoạt động.',
   talkAsleep: '{name} đang nghỉ. Đánh thức {name} trong trang Đồ chơi để trò chuyện.', talkOffline: 'Chưa kết nối được với {name}.',
-  talkReconnect: 'Kết nối lại', talkGoToys: 'Đến trang Đồ chơi', talkTapStart: 'Chạm để nói với {name}',
-  talkHeard: '{name} nghe được', talkTyped: 'Tin nhắn', talkEmpty: 'Chưa có gì ở đây. Chạm nút để nói, hoặc nhắn một câu cho {name}.',
+  talkReconnect: 'Kết nối lại', talkGoToys: 'Đến trang Đồ chơi',
+  talkHeard: '{name} nghe được', talkTyped: 'Tin nhắn', talkEmpty: 'Chưa có gì ở đây. Cứ nói chuyện với {name}, hoặc nhắn một câu.',
   talkNewConv: 'Cuộc trò chuyện mới', talkNewConvStarted: 'Bắt đầu cuộc trò chuyện mới',
   talkInputLabel: 'Tin nhắn cho Buddy', talkInputPh: 'Nhắn cho {name}…', talkSend: 'Gửi',
-  talkDemoNote: 'Trang này đóng vai đồ chơi: mỗi câu trả lời trừ 1 lượt như Buddy thật.',
+  talkMute: 'Tắt micro', talkUnmute: 'Bật micro', talkSendNow: 'Nói xong rồi', talkInterrupt: 'Ngắt lời {name}', talkPet: 'Vuốt ve {name}',
   talkMicNote: 'Trình duyệt này không dùng được micro ở đây. Bạn vẫn nhắn tin được.',
   talkInsecure: 'Trò chuyện với {name} trên web cần https hoặc localhost. Hãy mở trang này bằng một trong hai địa chỉ đó.',
   talkCancelling: 'Chờ một chút…',
@@ -201,7 +201,7 @@ export default {
   talkOffT: 'Trò chuyện trên web đang tắt', talkOffB: 'Máy chủ này chưa bật tính năng trò chuyện với Buddy trên web.',
   talkErr_mic_denied: 'Trình duyệt chưa cho dùng micro. Cho phép micro ở thanh địa chỉ, hoặc nhắn tin bên cạnh.',
   talkErr_mic_unavailable: 'Không mở được micro. Kiểm tra micro của máy, hoặc nhắn tin bên cạnh.',
-  talkErr_no_speech: '{name} chưa nghe thấy gì nên không trừ lượt. Chạm nút rồi nói nhé.',
+  talkErr_no_speech: '{name} chưa nghe thấy gì nên không trừ lượt. Nói lại nhé.',
   talkErr_turn_in_flight: 'Chờ {name} trả lời xong đã nhé.',
 
   // conversation settings (drawer)

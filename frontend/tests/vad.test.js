@@ -79,3 +79,20 @@ test('options override the defaults', () => {
   feed(vad, clock, steady(0.12), 100);
   assert.equal(feed(vad, clock, steady(QUIET), 200)[0][0], 'end');
 });
+
+test('hands-free: reset forgets the utterance but keeps the floor, and Infinity never gives up', () => {
+  const vad = createVad({ noSpeechMs: Infinity, silenceMs: 5000 });
+  const clock = { t: 0 };
+  const hum = steady(0.04);
+  assert.deepEqual(feed(vad, clock, hum, 30_000), [], 'half a minute of hum: nothing, and no no_speech');
+  assert.equal(feed(vad, clock, syllables(0.3, 0.06), 1200)[0]?.[0], 'speech');
+  assert.equal(feed(vad, clock, hum, 5200)[0]?.[0], 'end', 'five seconds of quiet end the turn');
+  assert.deepEqual(feed(vad, clock, syllables(0.3, 0.06), 1200), [], 'done until reset');
+
+  vad.reset();
+  assert.equal(vad.heard, false);
+  // The floor is still the hum: a quiet frame after the reset is not speech
+  // against a fresh "quiet room" guess.
+  assert.deepEqual(feed(vad, clock, steady(0.03), 400), []);
+  assert.equal(feed(vad, clock, syllables(0.3, 0.06), 1200)[0]?.[0], 'speech', 'heard again after the reset');
+});

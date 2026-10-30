@@ -139,7 +139,7 @@ export function loadConfig(env = process.env) {
     brainTimeoutMs,
     webToy: webToy === 'on',
     paymentProvider,
-    welcomeCredits: readInt(env, 'WELCOME_CREDITS', 10, 0, 100000),
+    welcomeCredits: readInt(env, 'WELCOME_CREDITS', 1000, 0, 100000),
     turnMaxSec,
     turnStaleSec,
     conversationIdleSec: readInt(env, 'CONVERSATION_IDLE_SEC', 300, 10, 86400),

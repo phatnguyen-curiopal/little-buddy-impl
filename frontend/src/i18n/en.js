@@ -14,7 +14,7 @@ export default {
   heroA: 'Tap the button.', heroB: 'Ask anything.',
   heroSub: 'Your child taps the button once and asks. Buddy notices when they have finished talking, then answers in Vietnamese or English, whichever they just used. The microphone turns off when the turn ends.',
   ctaStart: 'Start for free', ctaHow: 'See how it works',
-  trust: '10 free answers when you sign up · No monthly fee',
+  trust: '1,000 free answers when you sign up · No monthly fee',
 
   // hero toy
   toyIdle: 'Tap the glowing button to try Buddy', toyListening: 'Buddy is listening…', toySilence: 'Your child stopped talking, Buddy waits a moment…',
@@ -63,7 +63,7 @@ export default {
 
   // pricing
   priceEyebrow: 'Pricing', priceTitle: 'Pay per answer. No monthly fee.', priceSub: '1 credit = 1 answer. Every Buddy at home shares one credit wallet.',
-  freeA: '10 credits', freeB: 'free when you create an account, so your child can get to know Buddy.',
+  freeA: '1,000 credits', freeB: 'free when you create an account, so your child can get to know Buddy.',
   credits: '{n} credits', perAnswer: '≈ {p} per answer', best: 'Best value', choose: 'Choose this pack',
   pack_starter: 'Starter', pack_family: 'Family', pack_big: 'Big box',
   note1: 'Never renews automatically', note2: 'Shared by every Buddy', note3: 'Unfinished questions are free',
@@ -77,12 +77,12 @@ export default {
   q5: 'Which languages does Buddy speak?', a5: 'Vietnamese and English. Buddy answers in the language your child just used.',
   q6: 'Can we give Buddy to someone else?', a6: 'Yes. Remove Buddy from your family in the app, and the code on the card works again for the new family.',
 
-  closeTitle: "Ready for your child's first question?", closeSub: 'Create an account in a minute and get 10 free answers.', closeCta: 'Create an account',
+  closeTitle: "Ready for your child's first question?", closeSub: 'Create an account in a minute and get 1,000 free answers.', closeCta: 'Create an account',
   footerMade: 'Made for curious minds aged 4 to 8',
 
   // auth
   welcomeBack: 'Welcome back', createTitle: 'Create a family account', loginSub: 'Sign in to see your Buddies and children.',
-  registerNote: 'New families get 10 free credits to start.', familyName: 'Family name', familyPh: 'For example: The Nguyen family',
+  registerNote: 'New families get 1,000 free credits to start.', familyName: 'Family name', familyPh: 'For example: The Nguyen family',
   yourName: 'Your name', email: 'Email', password: 'Password', pwHint: 'At least 8 characters', register: 'Create account',
   haveAccount: 'Already have an account?', noAccount: 'New to Little Buddy?',
   authQuoteLogin: "Buddy is waiting for your child's next question.", authQuoteReg: 'One tap, one little friend who listens.',

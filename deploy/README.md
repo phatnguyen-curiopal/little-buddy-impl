@@ -120,6 +120,9 @@ cut -d, -f2,4 manifests/WEBDEMO2611.csv     # serial và mã ghép, không in b�
 - `PAYMENT_PROVIDER=disabled`: production không cho thanh toán demo (nó tặng
   credit miễn phí), nên mua gói credit trên web bị tắt. Gia đình mới nhận
   `WELCOME_CREDITS`; muốn thêm thì cấp bằng API vận hành ở trên.
+- `WELCOME_CREDITS=1000` (giai đoạn demo): gia đình mới được tặng 1000 lượt.
+  Giá trị này nằm trong `deploy/compose.yml` (mục `environment` của backend,
+  ghi đè `backend.env`), nên đổi số thì sửa file đó rồi push là xong.
 - `HOST=127.0.0.1`, `TRUST_PROXY=2` (Cloudflare rồi nginx, để giới hạn tần
   suất theo IP thật của người dùng).
 - `brain.env` giữ nguyên các khóa API và tham số của bản dev; `LLM_LOG_FILE`

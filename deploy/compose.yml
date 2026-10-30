@@ -33,6 +33,10 @@ services:
     build: ../backend
     network_mode: host
     env_file: /opt/little-buddy/env/backend.env
+    environment:
+      # Demo stage: every new family starts with 1000 credits. Pinned here
+      # rather than in backend.env so a push to main is enough to change it.
+      WELCOME_CREDITS: '1000'
     volumes:
       # Factory manifests hold device secrets and claim codes: on the host
       # only, never in the image.

@@ -34,7 +34,7 @@ prompt; hợp đồng nằm ở `brain/docs/contract.md`.
 | `DEVICE_HEARTBEAT_UNCLAIMED_SEC` | `5` | Chu kỳ heartbeat khi chưa ghép |
 | `DEVICE_AUTH_FAIL_LIMIT` | `30` | Số lần xác thực hỏng mỗi phút trước khi khóa tạm |
 | `TRUST_PROXY` | `0` | Số proxy đứng trước: `1` sau nginx, `2` sau Cloudflare + nginx |
-| `WELCOME_CREDITS` | `10` | Credit tặng cho gia đình mới |
+| `WELCOME_CREDITS` | `1000` | Credit tặng cho gia đình mới |
 | `TURN_MAX_SEC` | `120` | Một lượt nói dài tối đa bao nhiêu giây; audio quá mức này bị bỏ. Với `PROVIDER_MODE=brain` tối đa 196 (brain nhận thân tối đa 6 MB) |
 | `CONVERSATION_IDLE_SEC` | `300` | Các lượt cách nhau ít hơn chừng này thuộc cùng một cuộc trò chuyện |
 | `PROVIDER_MODE` | `mock` | `mock` (câu trả lời mẫu, không cần gì thêm) hoặc `brain` (gọi dịch vụ `brain/`) |
@@ -123,7 +123,7 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
    (`turn_end` → `answer` → `turn_done`) trừ đúng một credit của gia đình,
    ghi vào sổ `credit_ledger` (append-only, số dư = tổng). Hủy, quá hạn, rớt
    kết nối hay công tắc tắt (`4003`) đều không trừ. Gia đình mới được tặng
-   `WELCOME_CREDITS` (mặc định 10); vận hành cấp thêm qua
+   `WELCOME_CREDITS` (mặc định 1000); vận hành cấp thêm qua
    `POST /admin/families/:id/credits`. Chi tiết giao thức: `docs/device_auth.md`
    mục 7.
 

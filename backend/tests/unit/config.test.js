@@ -62,7 +62,7 @@ test('rejects unknown NODE_ENV and out-of-range integers', () => {
 test('turn and credit knobs have defaults and only known providers are accepted', () => {
   const cfg = loadConfig({});
   assert.equal(cfg.providerMode, 'mock');
-  assert.equal(cfg.welcomeCredits, 10);
+  assert.equal(cfg.welcomeCredits, 1000);
   assert.equal(cfg.turnMaxSec, 120);
   assert.equal(cfg.conversationIdleSec, 300);
   assert.equal(loadConfig({ WELCOME_CREDITS: '0' }).welcomeCredits, 0);

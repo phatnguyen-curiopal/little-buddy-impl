@@ -14,7 +14,7 @@ export default {
   heroA: 'Chạm nút.', heroB: 'Hỏi bất cứ điều gì.',
   heroSub: 'Bé chạm nút một lần rồi hỏi. Buddy tự nhận ra khi bé nói xong, rồi trả lời bằng tiếng Việt hoặc tiếng Anh, đúng ngôn ngữ bé vừa dùng. Micro tự tắt khi lượt hỏi kết thúc.',
   ctaStart: 'Bắt đầu miễn phí', ctaHow: 'Xem cách hoạt động',
-  trust: 'Tặng 10 câu trả lời khi tạo tài khoản · Không thu phí hằng tháng',
+  trust: 'Tặng 1.000 câu trả lời khi tạo tài khoản · Không thu phí hằng tháng',
 
   // hero toy
   toyIdle: 'Chạm nút sáng để hỏi thử Buddy', toyListening: 'Buddy đang nghe…', toySilence: 'Bé đã ngừng nói, Buddy đang chờ thêm một chút…',
@@ -63,7 +63,7 @@ export default {
 
   // pricing
   priceEyebrow: 'Bảng giá', priceTitle: 'Trả theo câu trả lời. Không thu phí hằng tháng.', priceSub: '1 lượt = 1 câu trả lời. Mọi Buddy trong nhà dùng chung một ví lượt hỏi.',
-  freeA: '10 lượt', freeB: 'tặng ngay khi tạo tài khoản để bé làm quen với Buddy.',
+  freeA: '1.000 lượt', freeB: 'tặng ngay khi tạo tài khoản để bé làm quen với Buddy.',
   credits: '{n} lượt', perAnswer: '≈ {p} mỗi câu trả lời', best: 'Tiết kiệm nhất', choose: 'Chọn gói này',
   pack_starter: 'Khởi đầu', pack_family: 'Gia đình', pack_big: 'Hộp lớn',
   note1: 'Không tự động gia hạn', note2: 'Dùng chung cho mọi Buddy', note3: 'Chưa trả lời xong thì không trừ lượt',
@@ -77,12 +77,12 @@ export default {
   q5: 'Buddy nói những ngôn ngữ nào?', a5: 'Tiếng Việt và tiếng Anh. Buddy trả lời bằng ngôn ngữ bé vừa dùng.',
   q6: 'Tặng lại Buddy cho người khác được không?', a6: 'Được. Gỡ Buddy khỏi gia đình trong ứng dụng, mã trên thẻ sẽ dùng lại được cho gia đình mới.',
 
-  closeTitle: 'Sẵn sàng cho câu hỏi đầu tiên của bé?', closeSub: 'Tạo tài khoản trong một phút, nhận ngay 10 lượt hỏi.', closeCta: 'Tạo tài khoản',
+  closeTitle: 'Sẵn sàng cho câu hỏi đầu tiên của bé?', closeSub: 'Tạo tài khoản trong một phút, nhận ngay 1.000 lượt hỏi.', closeCta: 'Tạo tài khoản',
   footerMade: 'Làm cho những bộ óc tò mò 4 đến 8 tuổi',
 
   // auth
   welcomeBack: 'Chào mừng trở lại', createTitle: 'Tạo tài khoản gia đình', loginSub: 'Đăng nhập để xem Buddy và các bé.',
-  registerNote: 'Gia đình mới được tặng 10 lượt hỏi để bắt đầu.', familyName: 'Tên gia đình', familyPh: 'Ví dụ: Nhà Minh An',
+  registerNote: 'Gia đình mới được tặng 1.000 lượt hỏi để bắt đầu.', familyName: 'Tên gia đình', familyPh: 'Ví dụ: Nhà Minh An',
   yourName: 'Tên của bạn', email: 'Email', password: 'Mật khẩu', pwHint: 'Ít nhất 8 ký tự', register: 'Tạo tài khoản',
   haveAccount: 'Đã có tài khoản?', noAccount: 'Chưa có tài khoản?',
   authQuoteLogin: 'Buddy đang chờ nghe câu hỏi tiếp theo của bé.', authQuoteReg: 'Một lần chạm, một người bạn nhỏ biết lắng nghe.',

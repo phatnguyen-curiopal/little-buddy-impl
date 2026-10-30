@@ -15,6 +15,9 @@ const defaults = {
   // The brain service is never needed by the suite: brain-mode files set
   // PROVIDER_MODE and BRAIN_URL (a stub) before their first config import.
   PROVIDER_MODE: 'mock',
+  // The suite's balance arithmetic counts from a welcome grant of 10, the
+  // value before the demo stage raised the product default to 1000.
+  WELCOME_CREDITS: '10',
 };
 
 for (const [key, value] of Object.entries(defaults)) {

@@ -1,30 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
-import { CHARACTER_DESIGNS, LANGUAGE_MODES, ROLES, designFor, speechLanguage, spokenLanguages, toyActions, toyView, voicesForBuddy } from '../src/lib/buddy.js';
-import { DEFAULT_DESIGN, ROBOTS } from '../src/lib/designs.js';
+import { LANGUAGE_MODES, ROLES, speechLanguage, spokenLanguages, toyActions, toyView, voicesForBuddy } from '../src/lib/buddy.js';
 
 const backendV2 = (path) => readFile(new URL(`../../backend-v2/${path}`, import.meta.url), 'utf8');
-
-test('each character is drawn as one robot: Bo Orbit, Pip Volt, Luna Glim', () => {
-  assert.deepEqual(CHARACTER_DESIGNS, { bo: 'orbit', pip: 'volt', luna: 'glim' });
-  assert.ok(Object.isFrozen(CHARACTER_DESIGNS));
-  for (const design of Object.values(CHARACTER_DESIGNS)) assert.ok(ROBOTS.has(design), design);
-});
-
-test("every character backend-v2 seeds has a design", async () => {
-  const packs = await backendV2('src/character/packs.ts');
-  const slugs = [...packs.matchAll(/^\s+slug: '([a-z0-9_-]+)',$/gm)].map((m) => m[1]);
-  assert.ok(slugs.length >= 3, `found ${slugs.length} characters, the scan is probably broken`);
-  for (const slug of slugs) assert.ok(slug in CHARACTER_DESIGNS, `${slug} has no design`);
-});
-
-test('a character the site does not know yet, or no character, is drawn as Miu', () => {
-  assert.equal(designFor('pip'), 'volt');
-  assert.equal(designFor('kiwi'), DEFAULT_DESIGN);
-  assert.equal(designFor(undefined), DEFAULT_DESIGN);
-  assert.equal(designFor('constructor'), DEFAULT_DESIGN, 'no inherited property passes for a character');
-});
 
 test("roles and language modes are backend-v2's", () => {
   assert.deepEqual(ROLES, ['friend', 'sibling', 'parent_figure', 'teacher']);
@@ -36,21 +15,19 @@ const luna = { id: 'b1', character_slug: 'luna', character_name: 'Luna', role: '
 const buddies = { c1: luna, c2: null };
 const toy = (over = {}) => ({ id: 'd1', serial: 'LB-1', hardware_rev: 'web', status: 'active', disabled_by: null, child_id: 'c1', ...over });
 
-test("a toy shows its child's Buddy: the character's name and design", () => {
+test("a toy shows its child's Buddy: the character's name", () => {
   const v = toyView(toy(), children, buddies);
   assert.equal(v.child.name, 'An');
   assert.equal(v.buddy, luna);
   assert.equal(v.name, 'Luna');
-  assert.equal(v.design, 'glim');
   assert.equal(v.web, true);
 });
 
-test('a toy whose child has no Buddy yet is a plain Buddy drawn as Miu', () => {
+test('a toy whose child has no Buddy yet is a plain Buddy', () => {
   const v = toyView(toy({ child_id: 'c2', hardware_rev: 'rev-b' }), children, buddies);
   assert.equal(v.child.name, 'Bin');
   assert.equal(v.buddy, null);
   assert.equal(v.name, 'Buddy');
-  assert.equal(v.design, DEFAULT_DESIGN);
   assert.equal(v.web, false);
   assert.equal(toyView(toy({ child_id: 'c2' }), children, {}).buddy, null, 'Buddies not loaded yet');
 });

@@ -16,11 +16,11 @@ import { DeleteButton, Loadable, Section, useLoad } from './common.jsx';
 // quiet hours, bedtime, topics to steer away from, Buddy's mood, surprise
 // games and greeting first. Saved together with one PUT guarded by the
 // etag. Beside them: things to bring up (nudges) and goals.
-export default function RulesTab({ child, design, buddyName }) {
+export default function RulesTab({ child, buddyName }) {
   const props = { child, buddyName };
   return (
     <div className="care-cols">
-      <div className="care-col"><ControlsCard {...props} design={design} /></div>
+      <div className="care-col"><ControlsCard {...props} /></div>
       <div className="care-col">
         <NudgesCard {...props} />
         <GoalsCard {...props} />
@@ -32,7 +32,7 @@ export default function RulesTab({ child, design, buddyName }) {
 const focusSoon = (id) => requestAnimationFrame(() => document.getElementById(id)?.focus());
 const FIELD_OF = { limit: 'care-limit', quiet: 'care-quiet-start', bedtime: 'care-bedtime' };
 
-function ControlsCard({ child, design, buddyName }) {
+function ControlsCard({ child, buddyName }) {
   const { t } = useI18n();
   const d = useFamilyData();
   const toast = useToast();
@@ -178,7 +178,7 @@ function ControlsCard({ child, design, buddyName }) {
         </div>
         {mood !== null && (
           <div className="care-mood">
-            <BuddyAvatar design={design} emotion={moodFace(mood)} size="lg" />
+            <BuddyAvatar emotion={moodFace(mood)} size="lg" />
             <div className="care-mood-slider">
               <input id="care-mood" type="range" className="range" min="0" max="100" step="1" value={mood}
                 aria-label={t('careMoodSlider', vars)} aria-valuetext={moodText} onChange={(e) => set({ moodPin: clampMood(e.target.value) })} />

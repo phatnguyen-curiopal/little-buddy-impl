@@ -14,7 +14,7 @@ const focusSoon = (id) => requestAnimationFrame(() => document.getElementById(id
 // urgent only). The excerpt is the one place the site ever shows a child's
 // own words; React escapes it like any other text, and once an alert is
 // seen the parent can delete it, words and all.
-export default function SafetyTab({ child, design, buddyName }) {
+export default function SafetyTab({ child, buddyName }) {
   const { t } = useI18n();
   const d = useFamilyData();
   const toast = useToast();
@@ -90,7 +90,7 @@ export default function SafetyTab({ child, design, buddyName }) {
       <Loadable state={alerts} rows={2}>
         {sorted.length === 0 ? (
           <section className="card care-empty" aria-labelledby="care-safety-title">
-            <span className="care-empty-figure"><BuddyFigure design={design} emotion="happy" /></span>
+            <span className="care-empty-figure"><BuddyFigure emotion="happy" /></span>
             <h3 id="care-safety-title" tabIndex={-1}>{t('careSafeEmptyT')}</h3>
             <p className="muted">{t('careSafeEmptyB', vars)}</p>
           </section>

@@ -115,7 +115,7 @@ function Shell({ screen }) {
     <LayerContext.Provider value={layers}>
       <div className={`app app--${screen}`}>
         <aside className="rail">
-          <Link className="wordmark" to="/app"><BuddyAvatar design="miu" emotion="happy" size="sm" /><span>Little Buddy</span></Link>
+          <Link className="wordmark" to="/app"><BuddyAvatar emotion="happy" size="sm" /><span>Little Buddy</span></Link>
           <nav className="rail-nav" aria-label={t('appNav')}>
             {screens.map((r) => (
               <Link key={r.name} to={r.path} className="rail-item" aria-current={screen === r.name ? 'page' : undefined} aria-label={navLabel(r.name)}>

@@ -33,7 +33,7 @@ function Nav() {
   return (
     <header className={`nav ${scrolled ? 'nav--solid' : ''} ${open ? 'nav--open' : ''}`}>
       <div className="wrap nav-inner">
-        <a className="wordmark" href="#top"><BuddyAvatar design="miu" emotion="happy" size="sm" /><span>Little Buddy</span></a>
+        <a className="wordmark" href="#top"><BuddyAvatar emotion="happy" size="sm" /><span>Little Buddy</span></a>
         <nav className="nav-links" aria-label={t('navSections')}>
           {links.map(([href, key]) => <a key={href} href={href}>{t(key)}</a>)}
         </nav>
@@ -130,7 +130,7 @@ function Emotions() {
               {EMOTIONS.map((e) => (
                 <button key={e} type="button" className="emo-tile" aria-pressed={picked === e}
                   onClick={() => choose(e)} onPointerEnter={() => choose(e)} onFocus={() => choose(e)}>
-                  <BuddyAvatar design="miu" emotion={e} />
+                  <BuddyAvatar emotion={e} />
                   <span>{t(`emo_${e}`)}</span>
                 </button>
               ))}
@@ -168,7 +168,7 @@ function Features() {
               <span className="scene scene--a">{Icon.moon}</span>
               <span className="scene scene--b">{Icon.sun}</span>
               <span className="scene scene--c">{Icon.spark}</span>
-              <span className="scene scene--d"><BuddyAvatar design="miu" emotion="wink" size="sm" /></span>
+              <span className="scene scene--d"><BuddyAvatar emotion="wink" size="sm" /></span>
             </div>
             <h3>{t('f3t')}</h3><p>{t('f3b')}</p>
           </article>
@@ -281,7 +281,7 @@ function Closing() {
           </div>
           <span className="closing-figure"><BuddyFigure emotion="love" /></span>
         </div>
-        <footer className="footer"><span className="wordmark"><BuddyAvatar design="miu" emotion="neutral" size="sm" />Little Buddy</span><span>{t('footerMade')}</span><span>© 2026 Little Buddy</span></footer>
+        <footer className="footer"><span className="wordmark"><BuddyAvatar emotion="neutral" size="sm" />Little Buddy</span><span>{t('footerMade')}</span><span>© 2026 Little Buddy</span></footer>
       </div>
     </section>
   );

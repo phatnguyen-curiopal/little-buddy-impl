@@ -59,8 +59,8 @@ Access tokens last 15 minutes and live in memory; the refresh token is in localS
 
 ## How the site maps backend-v2's model
 
-- A toy belongs to a child, and a child has one Buddy, so a toy's face and name are its child's Buddy (`toyView` in `lib/buddy.js`). A child has at most one awake toy.
-- The Buddy's name is its character's name. Each character has a design (`CHARACTER_DESIGNS`: Bo is Orbit, Pip is Volt, Luna is Glim); anything drawn without a particular toy uses Miu.
+- A toy belongs to a child, and a child has one Buddy, so a toy's name is its child's Buddy's (`toyView` in `lib/buddy.js`). A child has at most one awake toy.
+- The Buddy's name is its character's name. Every Buddy is drawn as Miu, the talking kitten: the characters differ in name, personality and voice, not in look.
 - Roles are `friend`, `sibling`, `parent_figure`, `teacher` (Vietnamese pronouns tớ/cậu, anh/em, cô/con, cô/con).
 - Language is `vi`, `en` or `bilingual` (answers in the language the child used).
 - Personality is one of the 16 types (`lib/personality.js`, the 12-question quiz or the grid); it sets the dials.

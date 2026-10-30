@@ -3,17 +3,8 @@
 // A child has one Buddy: a character (Bo, Pip or Luna) with a role, a
 // language, one of the 16 personality types and optionally a voice a parent
 // picked. Toys (a physical one, or a Buddy that lives in the browser) belong
-// to a child, so a toy's face and name come from its child's Buddy.
-import { DEFAULT_DESIGN, normalizeDesign } from './designs.js';
-
-// Each character is drawn in the design that fits it: Bo floated down from
-// the sky (Orbit, the space explorer), Pip builds things (Volt, the mecha
-// cub), Luna glows like the moon (Glim, the light in a glass jar).
-export const CHARACTER_DESIGNS = Object.freeze({ bo: 'orbit', pip: 'volt', luna: 'glim' });
-
-export function designFor(slug) {
-  return normalizeDesign(CHARACTER_DESIGNS[slug] ?? DEFAULT_DESIGN);
-}
+// to a child, so a toy's name comes from its child's Buddy. Every Buddy is
+// drawn as Miu (components/Buddy.jsx), whatever its character.
 
 // How Buddy talks to the child; the Vietnamese pronouns follow the role.
 export const ROLES = ['friend', 'sibling', 'parent_figure', 'teacher'];
@@ -28,7 +19,6 @@ export function toyView(device, children, buddies) {
     child,
     buddy,
     name: buddy?.character_name ?? 'Buddy',
-    design: designFor(buddy?.character_slug),
     web: device.hardware_rev === 'web',
   };
 }

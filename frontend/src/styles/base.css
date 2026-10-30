@@ -274,15 +274,12 @@ select.input { padding-right: 34px; }
 .room-corner { position: absolute; left: 14px; top: 14px; }
 .room-card { position: absolute; left: 16px; right: 16px; top: 16px; display: grid; gap: 8px; justify-items: center; text-align: center; background: var(--surface); border-radius: 24px; padding: 18px; box-shadow: 0 5px 0 var(--lip); }
 
-/* Buddy in any design, filling the width it is given. */
+/* Buddy (Miu), filling the width it is given. */
 .figure { display: block; width: 100%; line-height: 0; }
 .figure .miu { display: block; width: 100%; height: auto; }
-.figure .bd { width: 100%; }
 .figure--md { width: min(220px, 60vw); }
 .buddy-avatar { flex: none; display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; overflow: hidden; background: var(--pop-soft); line-height: 0; }
 .buddy-avatar .miu { width: 112%; height: auto; margin-top: 8%; }
-.buddy-avatar--screen { background: var(--screen); color: var(--glow); }
-.buddy-avatar--screen .bd-screen { width: 84%; }
 .buddy-avatar--sm { width: 38px; height: 38px; border-radius: 13px; }
 .buddy-avatar--lg { width: 72px; height: 72px; border-radius: 22px; }
 .buddy-avatar.is-dim { opacity: 0.75; }

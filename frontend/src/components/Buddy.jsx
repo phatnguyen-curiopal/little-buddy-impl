@@ -1,34 +1,26 @@
 import Miu from './Miu.jsx';
-import ToyShell from './ToyShell.jsx';
-import BuddyScreen from './buddy/BuddyScreen.jsx';
-import { normalizeDesign } from '../lib/designs.js';
 import { normalizeEmotion } from '../lib/emotions.js';
 
-// Every place that draws a Buddy goes through these two, so a toy shows up
-// in its own design everywhere: Miu as the kitten, the robots as before.
+// Every place that draws Buddy goes through these two, and Buddy is always
+// Miu, the talking kitten: backend-v2's characters (Bo, Pip, Luna) differ in
+// name, personality and voice, not in how the site draws them.
 //
-// BuddyFigure is the whole toy (rooms, the wizard, the Talk screen). phase is
-// idle | listening | heard | thinking | answer | rest, the ToyShell phases;
-// Miu only uses listening (its tummy button glows with the mic level).
-export function BuddyFigure({ design, emotion, look = null, phase = 'idle', dim = false, label, className = '' }) {
-  const d = normalizeDesign(design);
-  const e = normalizeEmotion(emotion);
+// BuddyFigure is the whole toy (rooms, the wizard, the Talk screen). Of the
+// phases (idle | listening | heard | thinking | answer | rest) Miu only uses
+// listening: its tummy button glows with the mic level.
+export function BuddyFigure({ emotion, look = null, phase = 'idle', dim = false, label, className = '' }) {
   return (
-    <span className={['figure', `figure--${d}`, className].filter(Boolean).join(' ')} role={label ? 'img' : undefined} aria-label={label}>
-      {d === 'miu'
-        ? <Miu emotion={e} look={look} phase={phase} dim={dim} />
-        : <ToyShell design={d} phase={phase} emotion={e} look={look} dim={dim} />}
+    <span className={['figure', className].filter(Boolean).join(' ')} role={label ? 'img' : undefined} aria-label={label}>
+      <Miu emotion={normalizeEmotion(emotion)} look={look} phase={phase} dim={dim} />
     </span>
   );
 }
 
-// A small face for lists and chips: Miu's head, or a robot's screen.
-export function BuddyAvatar({ design, emotion, dim = false, size = 'md', className = '' }) {
-  const d = normalizeDesign(design);
-  const e = normalizeEmotion(emotion);
+// A small face for lists and chips: Miu's head.
+export function BuddyAvatar({ emotion, dim = false, size = 'md', className = '' }) {
   return (
-    <span className={['buddy-avatar', `buddy-avatar--${size}`, d === 'miu' ? 'buddy-avatar--miu' : 'buddy-avatar--screen', dim && 'is-dim', className].filter(Boolean).join(' ')} aria-hidden="true">
-      {d === 'miu' ? <Miu crop="head" emotion={e} dim={dim} /> : <BuddyScreen design={d} emotion={e} dim={dim} />}
+    <span className={['buddy-avatar', `buddy-avatar--${size}`, 'buddy-avatar--miu', dim && 'is-dim', className].filter(Boolean).join(' ')} aria-hidden="true">
+      <Miu crop="head" emotion={normalizeEmotion(emotion)} dim={dim} />
     </span>
   );
 }

@@ -300,7 +300,7 @@ function TalkRoom({ device, toys }) {
   const { t } = useI18n();
   const d = useFamilyData();
   const { openToy } = useLayers();
-  const { child, buddy, name, design } = toyView(device, d.children, d.buddies);
+  const { child, buddy, name } = toyView(device, d.children, d.buddies);
   const balance = d.wallet?.balance ?? null;
   const gate = gateFor({ device, child, buddy, balance });
   const stageRef = useRef(null);
@@ -436,7 +436,7 @@ function TalkRoom({ device, toys }) {
 
         <div className="scene-stage">
           <span className="room-stage talk-stage" ref={stageRef} aria-label={t('talkPet', { name })} title={t('talkPet', { name })}>
-            <BuddyFigure design={design} emotion={face} phase={phase} look={follows ? look : null} dim={resting} className={figureClass} />
+            <BuddyFigure emotion={face} phase={phase} look={follows ? look : null} dim={resting} className={figureClass} />
           </span>
         </div>
 

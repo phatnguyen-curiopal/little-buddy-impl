@@ -81,12 +81,12 @@ chấp nhận đường dẫn trong `/app`.
 
 Mô hình của backend-v2 (`src/lib/buddy.js`, thuần, có test):
 
-- Đồ chơi thuộc về một bé, mỗi bé có **một** Buddy, nên mặt và tên của một đồ
-  chơi là Buddy của bé đó (`toyView`). Mỗi bé có tối đa một đồ chơi đang thức.
-- Buddy là một trong ba nhân vật, chọn qua bảng hỏi: **Bo** (vẽ bằng Orbit),
-  **Pip** (Volt), **Luna** (Glim). Tên của Buddy là tên nhân vật, ngoại hình là
-  của nhân vật (`CHARACTER_DESIGNS`); không còn đặt tên riêng hay chọn ngoại
-  hình. Chỗ nào vẽ Buddy mà không gắn với đồ chơi cụ thể thì dùng Miu.
+- Đồ chơi thuộc về một bé, mỗi bé có **một** Buddy, nên tên của một đồ chơi là
+  tên Buddy của bé đó (`toyView`). Mỗi bé có tối đa một đồ chơi đang thức.
+- Buddy là một trong ba nhân vật, chọn qua bảng hỏi: **Bo**, **Pip**, **Luna**.
+  Tên của Buddy là tên nhân vật; không còn đặt tên riêng. Buddy nào cũng được
+  vẽ là Miu, chú mèo con biết nói: các nhân vật khác nhau ở tên, tính cách và
+  giọng nói, không ở ngoại hình.
 - Cách xưng hô: bạn thân (tớ, cậu), anh chị (anh, em), như cô chú trong nhà
   (cô, con; không bao giờ nhận là bố mẹ), cô giáo (cô, con).
 - Ngôn ngữ: tiếng Việt, tiếng Anh hoặc song ngữ (trả lời bằng ngôn ngữ bé vừa
@@ -167,10 +167,9 @@ Nút to dùng để tắt micro, gửi ngay, hoặc ngắt lời Buddy.
 
 ## Cảm xúc của Buddy
 
-Bốn ngoại hình (`src/lib/designs.js`): **Miu** (mèo con biết nói, mặc định),
-**Orbit** (nhà thám hiểm không gian), **Volt** (chú mèo robot), **Glim** (đốm
-sáng trong lọ thủy tinh). Mọi nơi vẽ Buddy qua `src/components/Buddy.jsx`:
-`BuddyFigure` (cả thân) và `BuddyAvatar` (mặt nhỏ trong danh sách).
+Buddy luôn là **Miu**, chú mèo con biết nói. Mọi nơi vẽ Buddy qua
+`src/components/Buddy.jsx`: `BuddyFigure` (cả thân) và `BuddyAvatar` (mặt nhỏ
+trong danh sách).
 
 **Miu** là một hình SVG (`src/components/Miu.jsx`):
 
@@ -179,12 +178,10 @@ sáng trong lọ thủy tinh). Mọi nơi vẽ Buddy qua `src/components/Buddy.j
   nước mắt.
 - Chuyển động bằng CSS trong `src/styles/miu.css`: đổi tư thế mượt, thở, vẫy
   đuôi, chớp mắt, nút trên bụng sáng theo micro khi đang nghe.
-
-**Ba robot** vẽ bằng `src/components/ToyShell.jsx` (thân) và
-`src/components/buddy/BuddyScreen.jsx` (mặt), chuyển động toàn bộ bằng CSS
-trong `src/styles/buddy.css`. Mắt và miệng là đa giác `clip-path` cùng số điểm
-(`src/styles/buddy-shapes.css`, sinh bởi `node scripts/buddy_shapes.js`) nên
-mặt chuyển mượt từ cảm xúc này sang cảm xúc khác.
+- Ở trang Trò chuyện, Miu cư xử như một chú mèo: thỉnh thoảng vẫy tai, nghiêng
+  đầu, vẫy đuôi, nhảy, vươn vai; ngủ gật sau 90 giây rồi giật mình thức dậy;
+  vuốt ve bằng con trỏ (vỗ nhẹ là `happy`, vuốt là `love`, có tiếng gừ gừ);
+  miệng mấp máy khi nói. Luật ở `src/lib/catplay.js` (thuần, có test).
 
 14 cảm xúc: `neutral`, `listening`, `thinking`, `happy`, `excited`, `laughing`,
 `love`, `curious`, `surprised`, `wink`, `shy`, `confused`, `sad`, `sleepy`.
@@ -262,7 +259,7 @@ hỏi và các quy tắc trò chuyện là thật.
   thức), bé chưa có Buddy (hoàn tất thiết lập), hết lượt (mua thêm, trừ khi
   chưa mở bán). Giờ yên lặng hay hết giới hạn trong ngày thì micro chờ một lần
   chạm thay vì tự mở.
-- **Căn phòng**: Buddy vẽ theo nhân vật của bé, có thể vuốt ve. Ở trên là bảng
+- **Căn phòng**: Miu, có thể vuốt ve. Ở trên là bảng
   tên (chọn trong các Buddy trên web) và số lượt; bên phải là nút ngôn ngữ (đổi
   vòng VI, EN, VI+EN cho Buddy của bé), cuộc trò chuyện mới (một socket mới) và
   hồ sơ. Bàn phím và nhật ký trò chuyện chỉ có khi phát triển, vì backend-v2
@@ -285,15 +282,14 @@ gộp khung và lịch phát). Phần gắn với trình duyệt: `src/talk/useW
 ## Cấu trúc
 
 ```
-src/lib/        api (lớp duy nhất gọi backend), buddy (mô hình Buddy), wizard, care, routes (thuần), router, auth, i18n, translate, format, stats, emotions, designs, personality, miu, motion, catplay
+src/lib/        api (lớp duy nhất gọi backend), buddy (mô hình Buddy), wizard, care, routes (thuần), router, auth, i18n, translate, format, stats, emotions, personality, miu, motion, catplay
 src/i18n/       vi.js, en.js và parts/<khu vực>.{vi,en}.js (mọi câu chữ)
-src/components/ Buddy (BuddyFigure, BuddyAvatar), Miu, Room (căn phòng), Toy (hero), ToyShell (thân ba robot), buddy/ (BuddyFace, BuddyScreen), Confetti, ui (Layer, Toast, Chip, Coin, LangSwitch...)
+src/components/ Buddy (BuddyFigure, BuddyAvatar), Miu, Room (căn phòng), Toy (hero), Confetti, ui (Layer, Toast, Chip, Coin, LangSwitch...)
 src/talk/       Buddy trên web: signing, dsp, vad, machine (thuần), useWebToy, mic, player
 src/marketing/  MarketingPage
 src/auth/       AuthPage
 src/dashboard/  AppShell, data (dữ liệu gia đình), screens, parts, layers (bảng chi tiết, thêm Buddy, mua lượt), profile (các phần của Buddy, trắc nghiệm), Talk, WeekChart, care/ (Chăm sóc)
-src/styles/     tokens, base, motion, buddy-shapes, buddy (robot), miu, marketing, app, wizard, care, talk-v2
-scripts/        buddy_shapes.js (sinh buddy-shapes.css)
+src/styles/     tokens, base, motion, miu, marketing, app, wizard, care, talk-v2
 docs/           backend-v2.md (hợp đồng với backend-v2)
 tests/          node --test cho các module thuần
 ```

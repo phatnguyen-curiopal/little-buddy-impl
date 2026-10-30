@@ -9,7 +9,7 @@ import { Link, navigate } from '../lib/router.js';
 import { age, isoDay, relativeTime, vnd, pricePerAnswer } from '../lib/format.js';
 import { CHILD_LANGUAGES, MAX_CHILD_AGE, birthDateProblem, childBody } from '../lib/wizard.js';
 import { groupLedger } from '../lib/stats.js';
-import { ROLES, designFor, toyActions, toyView } from '../lib/buddy.js';
+import { ROLES, toyActions, toyView } from '../lib/buddy.js';
 import { useFamilyData, useLayers } from './data.jsx';
 import { AddTile, BalanceCard, Onboard, ToyCard, TurnRow, childOf, packName, toyLook, useCanBuy, useIdleFace, useToyActions } from './parts.jsx';
 import WeekChart from './WeekChart.jsx';
@@ -28,7 +28,7 @@ function HomeRoom({ device }) {
   return (
     <Room size="lg" scene night={look.dim} className="home-room">
       <div className="scene-stage">
-        <span className="room-stage"><BuddyFigure design={view.design} emotion={face} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} label={view.name} /></span>
+        <span className="room-stage"><BuddyFigure emotion={face} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} label={view.name} /></span>
       </div>
       <div className="room-side">
         <button type="button" className="round" onClick={() => openToy(device.id)} aria-label={t('profileTitle')}>{Icon.sliders}</button>
@@ -93,7 +93,7 @@ export function Overview() {
             const look = toyLook(dev);
             return (
               <button key={dev.id} type="button" className="toy-chip" aria-pressed={dev.id === main?.id} onClick={() => setPicked(dev.id)}>
-                <BuddyAvatar design={view.design} emotion={look.emotion === 'neutral' ? 'happy' : look.emotion} dim={look.dim} size="sm" />
+                <BuddyAvatar emotion={look.emotion === 'neutral' ? 'happy' : look.emotion} dim={look.dim} size="sm" />
                 <span>{view.child ? t('buddyOf', { name: view.name, child: view.child.name }) : view.name}</span>
               </button>
             );
@@ -325,7 +325,7 @@ function KidCard({ child, index }) {
       </div>
       <div className="kid-row">
         {buddy ? (<>
-          <BuddyAvatar design={designFor(buddy.character_slug)} emotion="happy" size="sm" />
+          <BuddyAvatar emotion="happy" size="sm" />
           <span className="kid-row-text"><b>{buddy.character_name}</b>{ROLES.includes(buddy.role) && <span className="muted small">{t(`role_${buddy.role}`)}</span>}</span>
         </>) : (<>
           <span className="kid-row-icon">{Icon.spark}</span>

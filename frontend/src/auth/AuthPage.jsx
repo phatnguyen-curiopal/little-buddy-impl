@@ -58,7 +58,7 @@ export default function AuthPage({ mode }) {
       <Room size="full" className="auth-room">
         <div className="auth-top">
           <Link className="round" to="/" aria-label={t('backHome')}>{Icon.back}</Link>
-          <Link className="wordmark" to="/"><BuddyAvatar design="miu" emotion="happy" size="sm" /><span>Little Buddy</span></Link>
+          <Link className="wordmark" to="/"><BuddyAvatar emotion="happy" size="sm" /><span>Little Buddy</span></Link>
           <LangSwitch />
         </div>
         <div className="room-stage auth-stage" ref={faceRef}>

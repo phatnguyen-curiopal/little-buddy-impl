@@ -7,8 +7,7 @@ import { useI18n } from '../lib/i18n.jsx';
 import { api } from '../lib/api.js';
 import { navigate } from '../lib/router.js';
 import { age, isoDay, relativeTime, vnd } from '../lib/format.js';
-import { designFor, toyActions, toyView } from '../lib/buddy.js';
-import { DEFAULT_DESIGN } from '../lib/designs.js';
+import { toyActions, toyView } from '../lib/buddy.js';
 import {
   CHILD_LANGUAGES, answersKey, awakeToyOf, badCodeChar, birthDateProblem, buddyPatch, characterWho, childBody,
   cleanCode, codeReady, codeRejected, draftOf, fitVoice, formatCode, newDraft, ownVoicesOf, questionnaireAnswers, rankCharacters, rebaseDraft,
@@ -111,7 +110,7 @@ function CharacterChange({ child, buddy, onChanged, locked = false }) {
       <p className="pe-label" id="ed-character">{t('wzCharacterLabel')}</p>
       {!open && (<>
         <div className="p-current">
-          <span className="wz-char-mini"><BuddyFigure design={designFor(current.slug)} emotion="happy" /></span>
+          <span className="wz-char-mini"><BuddyFigure emotion="happy" /></span>
           <span><b>{current.name}</b><br /><span className="small">{characterWho(current, t)}</span></span>
         </div>
         <button type="button" className="btn btn-soft btn-block" disabled={locked} onClick={start}>{Icon.refresh}{t('wzCharChange')}</button>
@@ -319,7 +318,7 @@ export function ToyDrawer({ id, onClose }) {
         </div>
         <div className="layer-body">
           <Room size="md" night={look.dim} className="drawer-room">
-            <span className="room-stage"><BuddyFigure design={view.design} emotion={look.emotion === 'neutral' ? 'happy' : look.emotion} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} label={name} /></span>
+            <span className="room-stage"><BuddyFigure emotion={look.emotion === 'neutral' ? 'happy' : look.emotion} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} label={name} /></span>
             <span className="room-corner"><Chip tone={look.tone} dot>{t(look.key)}</Chip></span>
           </Room>
 
@@ -403,10 +402,10 @@ export function ToyDrawer({ id, onClose }) {
 // ---------- Adding a Buddy ----------
 
 // Buddy introduces each step of the wizard from its own speech bubble.
-function Guide({ design, emotion, title, sub }) {
+function Guide({ emotion, title, sub }) {
   return (
     <div className="guide">
-      <span className="guide-figure"><BuddyFigure design={design} emotion={emotion} /></span>
+      <span className="guide-figure"><BuddyFigure emotion={emotion} /></span>
       <div className="guide-bubble">
         <h3 className="step-title">{title}</h3>
         {sub && <p className="muted small">{sub}</p>}
@@ -724,7 +723,6 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
 
   const phases = wizardPhases({ withCode, resume });
   const at = stepNumber(phases, step);
-  const guide = confirmed && slug ? designFor(slug) : DEFAULT_DESIGN;
   const someAwake = d.children.some((c) => awakeToyOf(d.devices, c.id));
   const done = saved ?? existing;
   const doneName = done?.character_name ?? charName;
@@ -744,7 +742,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
         <div className="wiz-body" ref={body}>
           {leaving ? (
             <div className="wiz-step">
-              <Guide design={guide} emotion="curious" title={t('wzLeaveT')}
+              <Guide emotion="curious" title={t('wzLeaveT')}
                 sub={canSave ? t('wzLeaveSaveB', { name: charName }) : isWeb ? t('wzLeaveLaterWebB', { child: kid }) : t('wzLeaveLaterB', { child: kid })} />
               {error && <p className="msg msg--bad" role="alert">{error}</p>}
               <div className="wiz-actions">
@@ -757,7 +755,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
           ) : (<>
             {step === 'code' && (
               <form className="wiz-step" noValidate onSubmit={(e) => { e.preventDefault(); if (codeReady(code)) go('child'); }}>
-                <Guide design={DEFAULT_DESIGN} emotion={bad || error ? 'confused' : 'curious'} title={t('wzCodeT')} />
+                <Guide emotion={bad || error ? 'confused' : 'curious'} title={t('wzCodeT')} />
                 <div className="card stack">
                   <input className={`input code-input ${error ? 'shake' : ''}`} value={formatCode(code)} onChange={onCode} placeholder="XXXX-XXXX" maxLength={9}
                     autoComplete="off" autoCapitalize="characters" spellCheck="false" aria-describedby="code-msg" data-autofocus aria-label={t('wzCodeT')}
@@ -773,7 +771,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
 
             {step === 'child' && (
               <div className="wiz-step">
-                <Guide design={DEFAULT_DESIGN} emotion="happy" title={t('wzChildT')} sub={withCode ? t('wzChildHelpCode') : t('wzChildHelpWeb')} />
+                <Guide emotion="happy" title={t('wzChildT')} sub={withCode ? t('wzChildHelpCode') : t('wzChildHelpWeb')} />
                 {d.children.length > 0 && (
                   <div className="choices" role="group" aria-label={t('wzChildT')}>
                     {d.children.map((c, i) => {
@@ -820,7 +818,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
 
             {step === 'existing' && existing && (
               <div className="wiz-step">
-                <Guide design={designFor(existing.character_slug)} emotion="love" title={t('wzExistingT', { name: existing.character_name, child: kid })}
+                <Guide emotion="love" title={t('wzExistingT', { name: existing.character_name, child: kid })}
                   sub={resume && !justAdded ? t('wzExistingResumeB', { name: existing.character_name, child: kid })
                     : isWeb ? t('wzExistingWebB', { name: existing.character_name, child: kid }) : t('wzExistingB', { name: existing.character_name, child: kid })} />
                 <div className="card"><BuddySummary buddy={existing} voices={d.voices} /></div>
@@ -834,7 +832,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
             {step === 'personality' && (
               <div className="wiz-step">
                 {justAdded && !reviewed && <div className="banner banner--ok">{Icon.check}<span>{isWeb ? t('wzAddedWeb', { name: kid }) : t('wzAdded', { name: kid })}</span></div>}
-                <Guide design={guide} emotion="thinking" title={t('wzPersonalityT', { child: kid })} sub={t('wzPersonalityB')} />
+                <Guide emotion="thinking" title={t('wzPersonalityT', { child: kid })} sub={t('wzPersonalityB')} />
                 <div className="choices">
                   <button type="button" className="choice big-choice" data-autofocus onClick={() => go('quiz')}>
                     <span className="big-choice-icon">{Icon.list}</span>
@@ -856,7 +854,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
             {step === 'quiz' && (
               <div className="wiz-step">
                 <div className="wiz-title"><h3 className="step-title">{t('wzPersonalityT', { child: kid })}</h3></div>
-                <PersonalityQuiz design={guide} onExit={() => go('personality')} onPick={() => go('pick')}
+                <PersonalityQuiz onExit={() => go('personality')} onPick={() => go('pick')}
                   onResult={(c) => { set({ personality: c }); forward('role'); }} />
               </div>
             )}
@@ -864,7 +862,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
             {step === 'pick' && (
               <div className="wiz-step">
                 <div className="wiz-title"><h3 className="step-title">{t('wzPersonalityT', { child: kid })}</h3></div>
-                <PersonalityPicker design={guide} value={draft.personality} onPick={(c) => set({ personality: c })} />
+                <PersonalityPicker value={draft.personality} onPick={(c) => set({ personality: c })} />
                 <div className="wiz-actions wiz-row">
                   <button type="button" className="btn btn-soft btn-lg" onClick={() => go('personality')}>{t('back')}</button>
                   <button type="button" className="btn btn-pop btn-lg grow" disabled={!draft.personality} onClick={() => forward('role')}>{t('useThis')}</button>
@@ -874,7 +872,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
 
             {step === 'role' && (
               <div className="wiz-step">
-                <Guide design={guide} emotion="love" title={t('wzRoleT')} sub={t('wzRoleB')} />
+                <Guide emotion="love" title={t('wzRoleT')} sub={t('wzRoleB')} />
                 <RolePicker value={draft.role} onChange={(role) => set({ role })} autoFocus />
                 <div className="wiz-actions wiz-row">
                   <button type="button" className="btn btn-soft btn-lg" onClick={backToReview ?? (() => go('personality'))}>{t('back')}</button>
@@ -885,7 +883,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
 
             {step === 'language' && (
               <div className="wiz-step">
-                <Guide design={guide} emotion="curious" title={t('wzLangT')} sub={t('wzLangB')} />
+                <Guide emotion="curious" title={t('wzLangT')} sub={t('wzLangB')} />
                 <LanguagePicker value={draft.language} autoFocus
                   onChange={(language) => set({ language, voice_id: fitVoice(draft.voice_id, d.voices, language, child) })} />
                 <div className="wiz-actions wiz-row">
@@ -903,7 +901,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
                     onChange={(s) => { setSlug(s); setSlugPicked(true); }} />
                 ) : quizError ? (
                   <div className="card center">
-                    <BuddyFigure design={DEFAULT_DESIGN} emotion="confused" className="figure--md" />
+                    <BuddyFigure emotion="confused" className="figure--md" />
                     <p className="msg msg--bad" role="alert">{errText(quizError)}</p>
                     <button type="button" className="btn btn-pop" data-autofocus onClick={() => setRetry((n) => n + 1)}>{t('tryAgain')}</button>
                   </div>
@@ -919,7 +917,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
 
             {step === 'voice' && (
               <div className="wiz-step">
-                <Guide design={designFor(slug)} emotion="happy" title={t('wzVoiceT', { name: charName })} sub={t('wzVoiceB', { name: charName })} />
+                <Guide emotion="happy" title={t('wzVoiceT', { name: charName })} sub={t('wzVoiceB', { name: charName })} />
                 <section className="card pe-section">
                   <p className="pe-label" id="wz-voice">{t('wzVoiceLabel')}</p>
                   <VoicePicker voices={d.voices} own={ownVoicesOf(character)} mode={draft.language} child={child} value={draft.voice_id} autoFocus
@@ -945,7 +943,7 @@ export function AddToyModal({ onClose, childId: resumeId = null }) {
 
             {step === 'done' && (
               <div className="wiz-step wiz-done">
-                <span className="wiz-done-figure"><BuddyFigure design={designFor(done?.character_slug ?? slug)} emotion="excited" /></span>
+                <span className="wiz-done-figure"><BuddyFigure emotion="excited" /></span>
                 <div className="card center">
                   <h2>{t('wzReadyT', { name: doneName })}</h2>
                   <p className="muted">{isWeb ? t('wzReadyWebB', { name: doneName }) : t('wzReadyB')}</p>

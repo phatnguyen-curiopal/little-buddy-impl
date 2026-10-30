@@ -5,7 +5,6 @@ import Room from '../../components/Room.jsx';
 import { Chip, Icon, Skeleton } from '../../components/ui.jsx';
 import { useI18n } from '../../lib/i18n.jsx';
 import { Link, navigate, useLocation } from '../../lib/router.js';
-import { designFor } from '../../lib/buddy.js';
 import { CARE_TABS, STAGES, careHref, careState, dayLabel } from '../../lib/care.js';
 import { useFamilyData } from '../data.jsx';
 import { CareIcon } from './common.jsx';
@@ -50,7 +49,6 @@ export default function CareScreen() {
 
   const child = kids.find((c) => c.id === childId) ?? kids[0];
   const buddy = d.buddies?.[child.id] ?? null;
-  const design = designFor(buddy?.character_slug);
   const buddyName = buddy?.character_name ?? 'Buddy';
   // Another child or tab is the same screen: the page stays where it is.
   const go = (next) => navigate(careHref({ childId: child.id, tab, ...next }), { replace: true, scroll: false });
@@ -66,7 +64,7 @@ export default function CareScreen() {
             const on = c.id === child.id;
             return (
               <button key={c.id} type="button" className="care-kid" aria-pressed={on} onClick={() => go({ childId: c.id })}>
-                <BuddyAvatar design={designFor(b?.character_slug)} emotion={on ? 'happy' : 'neutral'} size="sm" />
+                <BuddyAvatar emotion={on ? 'happy' : 'neutral'} size="sm" />
                 <span>{c.name}</span>
                 {waiting > 0 && <span className="care-dot" aria-hidden="true">{waiting}</span>}
                 {waiting > 0 && <span className="sr-only">{t('careAlertsWaiting', { n: waiting })}</span>}
@@ -76,12 +74,12 @@ export default function CareScreen() {
         </div>
       )}
 
-      <Hero child={child} buddy={buddy} design={design} buddyName={buddyName} />
+      <Hero child={child} buddy={buddy} buddyName={buddyName} />
 
       <Tabs tab={tab} onPick={(name) => go({ tab: name })} waiting={alerts[child.id] ?? 0} buddyName={buddyName} />
 
       <div id="care-panel" className="care-panel" role="tabpanel" aria-labelledby={`care-tab-${tab}`}>
-        <Panel key={`${child.id}:${tab}`} child={child} buddy={buddy} design={design} buddyName={buddyName} />
+        <Panel key={`${child.id}:${tab}`} child={child} buddy={buddy} buddyName={buddyName} />
       </div>
     </div>
   );
@@ -89,13 +87,13 @@ export default function CareScreen() {
 
 // The child and their Buddy in a little room, how long they have been
 // friends and whether Buddy is remembering.
-function Hero({ child, buddy, design, buddyName }) {
+function Hero({ child, buddy, buddyName }) {
   const { t, lang } = useI18n();
   const stage = STAGES.includes(buddy?.relationship_stage) ? buddy.relationship_stage : null;
   return (
     <section className="care-hero" aria-labelledby="care-hero-title">
       <Room size="sm" className="care-hero-room">
-        <span className="room-stage"><BuddyFigure design={design} emotion={buddy ? 'love' : 'sleepy'} dim={!buddy} /></span>
+        <span className="room-stage"><BuddyFigure emotion={buddy ? 'love' : 'sleepy'} dim={!buddy} /></span>
       </Room>
       <div className="care-hero-text">
         <h2 id="care-hero-title">{buddy ? t('careHeroTitle', { buddy: buddyName, child: child.name }) : child.name}</h2>

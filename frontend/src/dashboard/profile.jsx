@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { BuddyAvatar, BuddyFigure } from '../components/Buddy.jsx';
 import { Icon } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
-import { LANGUAGE_MODES, ROLES, designFor } from '../lib/buddy.js';
+import { LANGUAGE_MODES, ROLES } from '../lib/buddy.js';
 import { GROUPS, QUESTIONS, TYPES, scoreQuiz, typeOf } from '../lib/personality.js';
 import { characterWho, fitVoice, ownVoicesOf, pickVoice, pickedVoice, sampleUrl, voiceChosen, voiceGroup } from '../lib/wizard.js';
 
-// A child's Buddy: a character (Bo, Pip or Luna, each drawn in its own
-// design), how it talks to the child (role), the language it speaks, one of
+// A child's Buddy: a character (Bo, Pip or Luna), how it talks to the child (role), the language it speaks, one of
 // 16 personalities found with a short quiz or picked directly, and a voice.
 // The pieces are screen-sized so the add-a-Buddy wizard shows one per step
 // while the drawer puts them on one page for quick edits.
@@ -28,7 +27,7 @@ export function BuddySummary({ buddy, voices }) {
   const type = typeOrNull(buddy.personality);
   return (
     <div className="p-summary">
-      <BuddyAvatar design={designFor(buddy.character_slug)} emotion={type?.emotion ?? 'happy'} size="lg" />
+      <BuddyAvatar emotion={type?.emotion ?? 'happy'} size="lg" />
       <div>
         <div className="p-name">{buddy.character_name}</div>
         <div className="muted small">{t(`role_${buddy.role}`)} · {t(`roleSays_${buddy.role}`)}</div>
@@ -56,7 +55,7 @@ export function BuddyReview({ draft, character, voices, onEdit }) {
   ];
   return (
     <div className="review card">
-      <div className="review-figure"><BuddyFigure design={designFor(character?.slug)} emotion={type?.emotion ?? 'happy'} /></div>
+      <div className="review-figure"><BuddyFigure emotion={type?.emotion ?? 'happy'} /></div>
       {rows.map(([step, label, value]) => (
         <div key={step} className="review-row">
           <span className="review-text"><span className="muted small">{label}</span><b>{value}</b></span>
@@ -124,7 +123,7 @@ export function CharacterPicker({ characters, value, onChange, matchSlug = null,
         return (
           <button key={c.slug} type="button" className="choice wz-char" aria-pressed={on} onClick={() => onChange(c.slug)}
             data-autofocus={(autoFocus && on) || undefined}>
-            <span className="wz-char-stage"><BuddyFigure design={designFor(c.slug)} emotion={on ? 'excited' : 'happy'} /></span>
+            <span className="wz-char-stage"><BuddyFigure emotion={on ? 'excited' : 'happy'} /></span>
             <span className="wz-char-text">
               {tags && (
                 <span className="wz-char-tags">
@@ -145,7 +144,7 @@ export function CharacterPicker({ characters, value, onChange, matchSlug = null,
 
 // One question per screen. onExit (back from the first question) and onPick
 // (switch to the grid from the result) are optional: the drawer has tabs.
-export function PersonalityQuiz({ onResult, onExit, onPick, design }) {
+export function PersonalityQuiz({ onResult, onExit, onPick }) {
   const { t } = useI18n();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -157,7 +156,7 @@ export function PersonalityQuiz({ onResult, onExit, onPick, design }) {
     return (
       <div className="quiz quiz-result card">
         <p className="eyebrow">{t('quizResult')}</p>
-        <div className="quiz-figure"><BuddyFigure design={design} emotion={type.emotion} /></div>
+        <div className="quiz-figure"><BuddyFigure emotion={type.emotion} /></div>
         <div><b className="p-name">{t(`ptype_${code}`)}</b> <span className="mono muted">{code}</span></div>
         <p className="muted">{t(`ptypeDesc_${code}`)}</p>
         <div className="row-actions">
@@ -197,7 +196,7 @@ export function PersonalityQuiz({ onResult, onExit, onPick, design }) {
   );
 }
 
-export function PersonalityPicker({ value, onPick, design }) {
+export function PersonalityPicker({ value, onPick }) {
   const { t } = useI18n();
   return (
     <div className="picker">
@@ -209,7 +208,7 @@ export function PersonalityPicker({ value, onPick, design }) {
             {TYPES.filter((ty) => ty.group === g).map((ty) => (
               <button key={ty.code} type="button" className="choice ptype-card" aria-pressed={value === ty.code} onClick={() => onPick(ty.code)}
                 data-autofocus={value === ty.code || undefined}>
-                <BuddyAvatar design={design} emotion={ty.emotion} size="sm" />
+                <BuddyAvatar emotion={ty.emotion} size="sm" />
                 <span className="ptype-text">
                   <span className="mono ptype-code">{ty.code}</span>
                   <b>{t(`ptype_${ty.code}`)}</b>
@@ -317,7 +316,6 @@ export function BuddyEditor({ value, onChange, buddy, child, voices, character }
   const [tab, setTab] = useState('pick');
   const [quizKey, setQuizKey] = useState(0);
   const set = (patch) => onChange({ ...value, ...patch });
-  const design = designFor(buddy.character_slug);
   const type = typeOrNull(value.personality);
   // Voices belong to one language, so a new language keeps a picked voice
   // only if Buddy still speaks with it (backend-v2 would drop it too).
@@ -333,7 +331,7 @@ export function BuddyEditor({ value, onChange, buddy, child, voices, character }
       <section className="pe-section card">
         <p className="pe-label" id="ed-personality">{t('personalityLabel')}</p>
         <div className="p-current">
-          <BuddyAvatar design={design} emotion={type?.emotion ?? 'neutral'} />
+          <BuddyAvatar emotion={type?.emotion ?? 'neutral'} />
           <span>
             {type
               ? <><b>{t(`ptype_${type.code}`)}</b> <span className="mono">{type.code}</span><br /><span className="small">{t(`ptypeDesc_${type.code}`)}</span></>
@@ -345,8 +343,8 @@ export function BuddyEditor({ value, onChange, buddy, child, voices, character }
           <button type="button" aria-pressed={tab === 'pick'} onClick={() => setTab('pick')}>{t('tabPick')}</button>
         </div>
         {tab === 'quiz'
-          ? <PersonalityQuiz key={quizKey} design={design} onResult={(code) => { set({ personality: code }); setTab('pick'); }} />
-          : <PersonalityPicker design={design} value={value.personality} onPick={(code) => set({ personality: code })} />}
+          ? <PersonalityQuiz key={quizKey} onResult={(code) => { set({ personality: code }); setTab('pick'); }} />
+          : <PersonalityPicker value={value.personality} onPick={(code) => set({ personality: code })} />}
       </section>
       <section className="pe-section card">
         <p className="pe-label" id="ed-language">{t('wzLanguageLabel')}</p>

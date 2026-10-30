@@ -9,7 +9,7 @@ import { CareIcon, Loadable, usePaged } from './common.jsx';
 
 // Weekly digests: the week's themes, written for a parent after Sunday
 // night (never the child's words), newest first. One week at a time.
-export default function WeeklyTab({ child, design, buddyName }) {
+export default function WeeklyTab({ child, buddyName }) {
   const { t, lang } = useI18n();
   const digests = usePaged((cursor) => api.digests(child.id, { cursor }));
   const [picked, setPicked] = useState(null);
@@ -35,7 +35,7 @@ export default function WeeklyTab({ child, design, buddyName }) {
         </div>
       ) : (
         <section className="card care-empty">
-          <span className="care-empty-figure"><BuddyFigure design={design} emotion="sleepy" /></span>
+          <span className="care-empty-figure"><BuddyFigure emotion="sleepy" /></span>
           <h3>{t('careWeeklyEmptyT')}</h3>
           <p className="muted">{t('careWeeklyEmptyB', vars)}</p>
         </section>

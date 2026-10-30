@@ -8,7 +8,7 @@ import { Link } from '../lib/router.js';
 import { relativeTime } from '../lib/format.js';
 import { normalizeEmotion } from '../lib/emotions.js';
 import { reducedMotion, useCountUp } from '../lib/motion.js';
-import { designFor, toyActions, toyView } from '../lib/buddy.js';
+import { toyActions, toyView } from '../lib/buddy.js';
 import { useFamilyData, useLayers } from './data.jsx';
 
 export function childOf(children, id) {
@@ -129,7 +129,7 @@ export function ToyCard({ device }) {
     <article className="toy-card">
       <div className="toy-card-top">
         <Room size="sm" night={look.dim} className="toy-card-room">
-          <span className="room-stage"><BuddyFigure design={view.design} emotion={face} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} /></span>
+          <span className="room-stage"><BuddyFigure emotion={face} dim={look.dim} phase={look.dim ? 'rest' : 'idle'} /></span>
         </Room>
         <div className="toy-card-text">
           <h3>{view.name}</h3>
@@ -194,7 +194,7 @@ export function TurnRow({ turn }) {
   const what = TURN_TYPES.has(turn.turn_type) ? t(`tt_${turn.turn_type}`, vars) : t('turnTalked', vars);
   return (
     <div className="turn">
-      <BuddyAvatar design={designFor(buddy?.character_slug)} emotion={emotion} />
+      <BuddyAvatar emotion={emotion} />
       <div className="turn-body">
         <div className="turn-head"><b>{what}</b><span className="muted small">{relativeTime(turn.created_at, t)}</span></div>
         <span className="muted small">{t(`emo_${emotion}`)}</span>

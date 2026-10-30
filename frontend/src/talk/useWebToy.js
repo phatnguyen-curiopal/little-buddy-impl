@@ -32,10 +32,10 @@ onSessionChange(() => {
   if (!hasSession()) secrets.clear();
 });
 
-// The turn ends after this much quiet following the child's words: about
-// five seconds, since a child pauses a lot mid-thought and Buddy must not
-// jump in.
-export const SILENCE_MS = 5000;
+// The turn ends after this much quiet following the child's words: two
+// seconds, long enough for a breath between sentences, short enough that
+// the answer feels like a reply.
+export const SILENCE_MS = 2000;
 // Frames kept from just before speech was confirmed (300 ms), so the first
 // syllable is not lost.
 const PRE_ROLL_FRAMES = 15;

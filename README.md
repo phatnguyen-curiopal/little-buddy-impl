@@ -24,6 +24,7 @@ ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
 |---|---|
 | `backend/` | API Node.js: quản lý thiết bị, xác thực thiết bị (HMAC), tài khoản phụ huynh (JWT), endpoint quản trị. Xem `backend/README.md`. |
 | `brain/` | Dịch vụ hội thoại của Buddy: nhận dạng giọng nói, bộ nhớ, prompt, mô hình ngôn ngữ, tổng hợp giọng. Xem `brain/README.md`. |
+| `backend-v2/` | Backend mới theo đề xuất kỹ thuật (TypeScript): Parent API, voice service, worker, PostgreSQL + pgvector, OpenAI và ElevenLabs. Xem `backend-v2/README.md`. |
 | `frontend/` | Website cho phụ huynh (Vite + React): trang giới thiệu sản phẩm và bảng điều khiển sau khi đăng nhập, nơi trình duyệt cũng đóng vai đồ chơi để trò chuyện với Buddy. Song ngữ. Chạy ở http://localhost:5174. Xem `frontend/README.md`. |
 | `deploy/` | Triển khai bản demo lên https://little-buddy.curiopal.com: `bash deploy/deploy.sh`. Xem `deploy/README.md`. |
 | `docker/` | Script khởi tạo Postgres (tạo thêm database test). |

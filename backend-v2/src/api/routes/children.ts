@@ -157,7 +157,7 @@ export function registerChildren(app: FastifyInstance, deps: ApiDeps) {
   });
 
   const CONTROLS = `daily_limit_min, quiet_start::text AS quiet_start, quiet_end::text AS quiet_end, bedtime::text AS bedtime,
-    topics_to_avoid, mood_pin, updated_at, xmin::text AS etag`;
+    topics_to_avoid, mood_pin, surprise_play, speak_first, updated_at, xmin::text AS etag`;
 
   app.get('/children/:childId/controls', async (req, reply) => {
     const child = await childFor(deps, req);
@@ -179,18 +179,25 @@ export function registerChildren(app: FastifyInstance, deps: ApiDeps) {
           bedtime: { type: 'string', pattern: '^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$' },
           topics_to_avoid: { type: 'array', maxItems: 20, items: { type: 'string', maxLength: 60 } },
           mood_pin: { type: ['integer', 'null'], minimum: 0, maximum: 100 },
+          // Optional, so older clients keep working: startle games ("hù") and
+          // letting Buddy speak first (which the service must also allow).
+          surprise_play: { type: 'boolean' },
+          speak_first: { type: 'boolean' },
         },
       },
     },
   }, async (req, reply) => {
     const child = await childFor(deps, req);
     const etag = ifMatch(req);
-    const b = req.body as { daily_limit_min: number | null; quiet_start: string | null; quiet_end: string | null; bedtime: string; topics_to_avoid: string[]; mood_pin: number | null };
+    const b = req.body as {
+      daily_limit_min: number | null; quiet_start: string | null; quiet_end: string | null; bedtime: string; topics_to_avoid: string[]; mood_pin: number | null;
+      surprise_play?: boolean; speak_first?: boolean;
+    };
     const r = await db.query(
       `UPDATE child_controls SET daily_limit_min = $3, quiet_start = $4::time, quiet_end = $5::time, bedtime = $6::time,
-              topics_to_avoid = $7, mood_pin = $8, updated_at = now()
+              topics_to_avoid = $7, mood_pin = $8, surprise_play = coalesce($9, surprise_play), speak_first = coalesce($10, speak_first), updated_at = now()
        WHERE child_id = $1 AND xmin::text = $2 RETURNING ${CONTROLS}`,
-      [child.id, etag, b.daily_limit_min, b.quiet_start, b.quiet_end, b.bedtime, b.topics_to_avoid, b.mood_pin],
+      [child.id, etag, b.daily_limit_min, b.quiet_start, b.quiet_end, b.bedtime, b.topics_to_avoid, b.mood_pin, b.surprise_play ?? null, b.speak_first ?? null],
     );
     if (!r.rows[0]) throw new HttpError(412, 'stale-write', 'These settings changed since you loaded them. Reload and try again.');
     return sendWithEtag(reply, r.rows[0] as { etag: string });

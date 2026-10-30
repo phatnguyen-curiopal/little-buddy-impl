@@ -30,6 +30,10 @@ const LEARN_SYSTEM = [
   '- promises: what BUDDY promised to do or ask about later. due as YYYY-MM-DD when known, else null.',
   '- relationship: new nicknames, inside jokes, rituals, secret greetings or stories made together.',
   '- canon: what BUDDY said about itself (favourites, skills, its day) that must stay consistent later.',
+  '- words: in bilingual play, second-language words BUDDY taught in its reply (by buddy) or the CHILD said in their second',
+  '  language (by child), with the meaning in the other language; else an empty list.',
+  '- Growth: when the child shows that something they found hard or were scared of is now fine, add a strengths fact and put',
+  '  the old fact in corrects.',
   '- If the speaker is clearly not the child (a sibling or friend introduced themselves), extract nothing about the child.',
 ].join('\n');
 
@@ -110,6 +114,7 @@ export async function learnFromTurn(deps: { db: Db; gateway: ModelGateway; log: 
   const items = (extracted.relationship ?? []).map((r) => ({ ...r, content: short(r.content) })).filter((r) => r.content);
   const promises = (extracted.promises ?? []).map((p) => ({ ...p, content: short(p.content) })).filter((p) => p.content);
   const events = (extracted.events ?? []).map((e) => ({ ...e, description: short(e.description) })).filter((e) => e.description);
+  const words = (extracted.words ?? []).map((w) => ({ ...w, word: short(w.word, 40) })).filter((w) => w.word && (w.language === 'vi' || w.language === 'en'));
 
   const texts = [
     ...facts.map((f) => f.statement),
@@ -165,12 +170,14 @@ export async function learnFromTurn(deps: { db: Db; gateway: ModelGateway; log: 
 
     for (const [i, f] of facts.entries()) {
       const personId = f.about ? (who(f.about, f.about)?.id ?? null) : null;
-      if (f.corrects) {
-        await q.query(
-          "UPDATE fact SET status = 'superseded' WHERE child_id = $1 AND status = 'active' AND lower(statement) = lower($2)",
+      // Superseded first, so the new fact cannot merge into the one it
+      // replaces; linked afterwards, which is how growth is found later.
+      const replaced = f.corrects
+        ? (await q.query<{ id: string }>(
+          "UPDATE fact SET status = 'superseded' WHERE child_id = $1 AND status = 'active' AND lower(statement) = lower($2) RETURNING id",
           [turn.child_id, short(f.corrects)],
-        );
-      }
+        )).rows.map((r) => r.id)
+        : [];
       const dup = (
         await q.query<{ id: string }>(
           `SELECT id FROM fact
@@ -198,6 +205,25 @@ export async function learnFromTurn(deps: { db: Db; gateway: ModelGateway; log: 
       await q.query(
         'INSERT INTO fact_evidence (fact_id, turn_id, observed_at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
         [factId, turn.id, turn.created_at],
+      );
+      if (replaced.length) await q.query('UPDATE fact SET superseded_by = $2 WHERE id = ANY($1::uuid[])', [replaced, factId]);
+      n += 1;
+    }
+
+    // A word the child says comes back for review later and later: 1, 3, 7,
+    // 14, then 30 days. A word Buddy teaches keeps its schedule.
+    for (const w of words) {
+      const usedNow = w.by === 'child' ? 1 : 0;
+      await q.query(
+        `INSERT INTO word_bank (child_id, word, word_key, language, meaning, taught, used)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (child_id, language, word_key) DO UPDATE SET
+           taught = word_bank.taught + EXCLUDED.taught, used = word_bank.used + EXCLUDED.used,
+           meaning = coalesce(word_bank.meaning, EXCLUDED.meaning), last_seen_at = now(),
+           next_review_at = CASE WHEN EXCLUDED.used > 0
+             THEN now() + make_interval(days => (ARRAY[1, 3, 7, 14, 30])[least(word_bank.used + 1, 5)])
+             ELSE word_bank.next_review_at END`,
+        [turn.child_id, w.word, w.word.toLowerCase(), w.language, short(w.meaning, 60) || null, 1 - usedNow, usedNow],
       );
       n += 1;
     }

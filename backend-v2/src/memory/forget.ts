@@ -6,7 +6,7 @@ import type { Db } from '../db/index.ts';
 
 export async function forgetEverything(db: Db, childId: string): Promise<void> {
   await db.tx(async (q) => {
-    for (const table of ['fact', 'person', 'child_event', 'episode', 'relationship_item', 'trait', 'what_works', 'turn', 'chat_session']) {
+    for (const table of ['fact', 'person', 'child_event', 'episode', 'relationship_item', 'trait', 'what_works', 'word_bank', 'voice_baseline', 'turn', 'chat_session']) {
       await q.query(`DELETE FROM ${table} WHERE child_id = $1`, [childId]);
     }
     for (const table of ['buddy_canon', 'diary_entry', 'story_arc', 'mood_day']) {

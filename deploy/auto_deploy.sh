@@ -26,7 +26,7 @@ while :; do
   else
     echo "auto: deploying $rev"
     mkdir -p "$upload"
-    git -C "$repo" archive --format=tar.gz -o "$upload/src.tgz" HEAD backend brain deploy
+    git -C "$repo" archive --format=tar.gz -o "$upload/src.tgz" HEAD backend backend-v2 brain deploy
     # The host's node is too old for Vite; a throwaway container builds it.
     docker run --rm -v "$repo/frontend:/app" -v little-buddy-npm-cache:/root/.npm -w /app node:22-alpine \
       sh -c 'npm ci --no-audit --no-fund --loglevel=error && npm run build >/dev/null'

@@ -80,10 +80,41 @@ else
   echo "remote: no env/webhook.env, so pushes do not deploy (see deploy/README.md)"
 fi
 
+# backend-v2, the new backend, beside the demo (deploy/compose.v2.yml). It
+# goes out only once the demo is healthy, and nothing in it can fail or undo
+# the demo's deploy: every step returns instead of exiting.
+deploy_v2() {
+  local v2="docker compose -f src/deploy/compose.v2.yml"
+  if [ ! -f env/backend-v2.env ]; then
+    echo "remote: no env/backend-v2.env, so backend-v2 is not deployed (see deploy/README.md)"
+    return 0
+  fi
+  if [ ! -d src/backend-v2 ]; then
+    echo "remote: this upload has no backend-v2/ (packed by an older auto_deploy.sh); the next deploy includes it"
+    return 0
+  fi
+  echo "remote: backend-v2: building and migrating"
+  $v2 build --quiet || return 1
+  $v2 run -T --rm --no-deps api node src/bin/migrate.ts </dev/null || return 1
+  $v2 run -T --rm --no-deps api node src/bin/seed.ts </dev/null || return 1
+  $v2 up -d --remove-orphans || return 1
+  for i in $(seq 1 30); do
+    if curl -fs -o /dev/null http://127.0.0.1:3610/healthz && curl -fs -o /dev/null http://127.0.0.1:3611/healthz; then
+      echo "$REV" > deployed_rev_v2
+      echo "remote: backend-v2 healthy at $REV"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "remote: backend-v2 not healthy after 60 s; see: $v2 logs --tail 50" >&2
+  return 1
+}
+
 for i in $(seq 1 30); do
   if curl -fs -o /dev/null http://127.0.0.1:3600/healthz && curl -fs -o /dev/null http://127.0.0.1:8600/healthz; then
     echo "$REV" > deployed_rev
     echo "remote: healthy, deployed $REV"
+    deploy_v2 || echo "remote: backend-v2 did not deploy; the demo above is unaffected" >&2
     exit 0
   fi
   sleep 2

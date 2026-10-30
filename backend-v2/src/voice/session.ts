@@ -12,12 +12,14 @@ import type { SttStream } from '../gateway/types.ts';
 import { DOWNLINK, FrameChunker, UPLINK, decodeFrame, encodeFrame } from '../audio/frames.ts';
 import { pcmSeconds, SAMPLE_RATE } from '../audio/wav.ts';
 import { activeBuddy, type CharacterPack, type Instance } from '../character/packs.ts';
+import { GAMES, wantsToPlay } from '../character/play.ts';
 import { localTime } from '../character/mood.ts';
 import { loadDeviceSecret, verifyChallenge } from '../devices/credentials.ts';
 import { alsoWord, type PersonCard } from '../memory/names.ts';
 import { loadPeople } from '../memory/recall.ts';
 import { randomToken } from '../util/crypto.ts';
 import { CLOSE, PROTOCOL_VERSION, parseToyMessage, type ToyMessage } from './protocol.ts';
+import { foldBaseline, ToneMeter, type VoiceBaseline } from './tone.ts';
 import {
   prefetchFor, runTurn, speculate, speechLanguage, textKey,
   type ChildRow, type Controls, type Prefetch, type Speculation, type TurnOutcome, type TurnTiming, type VoiceDeps,
@@ -39,6 +41,9 @@ interface TurnState {
   language: Lang;
   cards: PersonCard[];
   stt: SttStream;
+  tone: ToneMeter | null;
+  // Buddy speaks first: a turn the server started, with no words to hear.
+  greet: boolean;
   prefetch: Prefetch;
   partial: string;
   spec: Speculation | null;
@@ -66,7 +71,7 @@ function minutesOf(time: string | null): number | null {
   return h * 60 + (m || 0);
 }
 
-export function inQuietHours(controls: Controls, hour: number, minute: number): boolean {
+export function inQuietHours(controls: Pick<Controls, 'quiet_start' | 'quiet_end'>, hour: number, minute: number): boolean {
   const start = minutesOf(controls.quiet_start);
   const end = minutesOf(controls.quiet_end);
   if (start === null || end === null || start === end) return false;
@@ -90,6 +95,13 @@ export class DeviceSession {
   private lastTurnAt = 0;
   private history: ChatMessage[] = [];
   private questionStreak = 0;
+  // Per chat session: the game in progress, games played, turns since the
+  // last game, and the once-a-session moments already used.
+  private game: { id: string; turns: number } | null = null;
+  private gamesPlayed: string[] = [];
+  private turnsSinceGame = 99;
+  private turnCount = 0;
+  private shown = { goal: false, words: false, growth: false };
   private seqDown = 0;
   private closed = false;
   private inbox: Promise<void> = Promise.resolve();
@@ -146,6 +158,7 @@ export class DeviceSession {
         return this.onCancel(msg.turn_id);
       case 'status':
         await this.deps.db.query('UPDATE device SET last_seen_at = now() WHERE id = $1', [this.device.id]);
+        if (msg.event === 'wake') await this.maybeGreet();
         return;
       default:
         return;
@@ -191,10 +204,12 @@ export class DeviceSession {
     if (!child) return null;
     const controls = (
       await db.query<Controls>(
-        'SELECT daily_limit_min, quiet_start::text AS quiet_start, quiet_end::text AS quiet_end, bedtime::text AS bedtime, mood_pin FROM child_controls WHERE child_id = $1',
+        `SELECT daily_limit_min, quiet_start::text AS quiet_start, quiet_end::text AS quiet_end, bedtime::text AS bedtime, mood_pin,
+                surprise_play, speak_first
+         FROM child_controls WHERE child_id = $1`,
         [child.id],
       )
-    ).rows[0] ?? { daily_limit_min: null, quiet_start: null, quiet_end: null, bedtime: '20:30', mood_pin: null };
+    ).rows[0] ?? { daily_limit_min: null, quiet_start: null, quiet_end: null, bedtime: '20:30', mood_pin: null, surprise_play: true, speak_first: false };
     const local = localTime(child.time_zone);
     const used = await db.query<{ s: number }>('SELECT talk_seconds AS s FROM usage_daily WHERE child_id = $1 AND day = $2::date', [child.id, local.date]);
     return { child, controls, usedSeconds: used.rows[0]?.s ?? 0 };
@@ -247,7 +262,10 @@ export class DeviceSession {
       // Bound to this turn's state, so a late partial from an older stream lands on a finished turn.
       onPartial: (text) => t && this.onPartial(t, text),
     });
-    t = { id: turnId, bytes: 0, abort, phase: 'listening', loaded, buddy, language, cards: people, stt, prefetch, partial: '', spec: null, specAbort: null, specCount: 0 };
+    t = {
+      id: turnId, bytes: 0, abort, phase: 'listening', loaded, buddy, language, cards: people, stt, tone: new ToneMeter(), greet: false,
+      prefetch, partial: '', spec: null, specAbort: null, specCount: 0,
+    };
     this.turn = t;
     this.send({ type: 'face', turn_id: turnId, emotion: 'listening', phase: 'listening' });
   }
@@ -272,6 +290,7 @@ export class DeviceSession {
     }
     t.bytes += frame.payload.length;
     t.stt.write(frame.payload);
+    t.tone?.push(frame.payload);
   }
 
   // The partial holding the child's last words usually lands a few hundred
@@ -324,6 +343,11 @@ export class DeviceSession {
     this.chatSessionId = r.rows[0].id;
     this.history = [];
     this.questionStreak = 0;
+    this.game = null;
+    this.gamesPlayed = [];
+    this.turnsSinceGame = 99;
+    this.turnCount = 0;
+    this.shown = { goal: false, words: false, growth: false };
     return true;
   }
 
@@ -363,13 +387,16 @@ export class DeviceSession {
     const { child, controls, usedSeconds } = t.loaded;
     this.send({ type: 'face', turn_id: t.id, emotion: 'thinking', phase: 'thinking' });
 
-    const transcript = this.hear(t, msg);
+    const transcript = t.greet ? Promise.resolve('') : this.hear(t, msg);
     // runTurn awaits the transcript; this handler only keeps a failure that
     // lands during the session write below from counting as unhandled.
     transcript.catch(() => {});
     const firstTurn = await this.ensureChatSession(child.id, t.buddy.instance.id);
     const chunker = new FrameChunker();
     const serverTurnId = randomUUID();
+    const seed = `${this.chatSessionId}:${this.turnCount}`;
+    // A typed turn has no voice to read.
+    const typed = this.deps.config.voice.allowTextTurns && Boolean(msg.text?.trim());
 
     const outcome = await runTurn({
       deps: this.deps,
@@ -383,6 +410,15 @@ export class DeviceSession {
       questionStreak: this.questionStreak,
       serverTurnId,
       cards: t.cards,
+      play: {
+        active: this.game ? (GAMES.find((g) => g.id === this.game!.id) ?? null) : null,
+        wantsToPlay: wantsToPlay(t.buddy.instance.playfulness, this.turnsSinceGame, seed),
+        played: this.gamesPlayed,
+        seed,
+      },
+      allow: { goal: !this.shown.goal, words: !this.shown.words, growth: !this.shown.growth },
+      tone: typed ? null : t.tone,
+      greet: t.greet,
       transcript,
       speculation: t.spec,
       prefetch: t.prefetch,
@@ -417,10 +453,63 @@ export class DeviceSession {
       } catch (err) {
         log.error('turn persist failed', { child_id: child.id, error: err });
       }
-      this.history.push({ role: 'user', content: outcome.childText }, { role: 'assistant', content: outcome.replyText });
+      if (outcome.childText) this.history.push({ role: 'user', content: outcome.childText });
+      this.history.push({ role: 'assistant', content: outcome.replyText });
       if (this.history.length > 12) this.history.splice(0, this.history.length - 12);
       this.questionStreak = outcome.replyText.includes('?') ? this.questionStreak + 1 : 0;
+      this.afterTurn(outcome);
     }
+  }
+
+  private afterTurn(outcome: TurnOutcome): void {
+    this.turnCount += 1;
+    if (outcome.goalShown) this.shown.goal = true;
+    if (outcome.wordsShown) this.shown.words = true;
+    if (outcome.mirroredFactId) this.shown.growth = true;
+    const g = outcome.game;
+    if (!g) {
+      this.game = null;
+      this.turnsSinceGame += 1;
+      return;
+    }
+    this.turnsSinceGame = 0;
+    if (!this.gamesPlayed.includes(g.id)) this.gamesPlayed.push(g.id);
+    const turns = g.continues && this.game?.id === g.id ? this.game.turns + 1 : 1;
+    // A game runs a few turns at most; then Buddy follows the child again.
+    this.game = turns >= 4 ? null : { id: g.id, turns };
+  }
+
+  // Speaking first (product decision: off for now). Only when the operator
+  // allows it for the whole service and the parent opted in, within the
+  // same gate as a tap, once a day, after the child has been away a while.
+  private async maybeGreet(): Promise<void> {
+    const { config, db } = this.deps;
+    if (!config.voice.speakFirst || (this.turn && this.turn.phase !== 'done')) return;
+    const loaded = await this.loadChild();
+    if (!loaded?.controls.speak_first) return;
+    const buddy = await activeBuddy(db, loaded.child.id);
+    if (this.gate(loaded, buddy) || !buddy) return;
+    const recent = await db.query(
+      `SELECT 1 FROM turn WHERE child_id = $1
+         AND (created_at > now() - interval '3 hours' OR (turn_type = 'greet' AND created_at > now() - interval '20 hours'))
+       LIMIT 1`,
+      [loaded.child.id],
+    );
+    if (recent.rowCount) return;
+    const turnId = randomUUID();
+    const silent: SttStream = { write() {}, finish: async () => '', close() {} };
+    const t: TurnState = {
+      id: turnId, bytes: 0, abort: new AbortController(), phase: 'processing', loaded, buddy, language: speechLanguage(loaded.child, buddy.instance),
+      cards: [], stt: silent, tone: null, greet: true, prefetch: prefetchFor(this.deps, loaded.child, buddy.instance, loaded.controls),
+      partial: '', spec: null, specAbort: null, specCount: 0,
+    };
+    this.turn = t;
+    // The toy learns the turn is Buddy's before any face or audio arrives.
+    this.send({ type: 'buddy_turn', turn_id: turnId });
+    void this.processTurn(t, { type: 'turn_end', turn_id: turnId, reason: 'tap', text: null }, { endAt: performance.now() }).catch((err) => {
+      this.deps.log.error('greeting crashed', { device_id: this.device?.id, error: err });
+      if ((t.phase as TurnState['phase']) !== 'done') this.stopTurn(t);
+    });
   }
 
   private sendFrame(payload: Buffer): void {
@@ -459,7 +548,36 @@ export class DeviceSession {
       if (outcome.dueHandled?.kind === 'event') await q.query("UPDATE child_event SET status = 'followed_up' WHERE id = $1", [outcome.dueHandled.id]);
       if (outcome.dueHandled?.kind === 'promise') await q.query("UPDATE relationship_item SET status = 'kept', last_used_at = now() WHERE id = $1", [outcome.dueHandled.id]);
       if (outcome.nudgeIds.length) await q.query("UPDATE nudge SET status = 'used', used_at = now() WHERE id = ANY($1::uuid[])", [outcome.nudgeIds]);
-      if (child.learning_enabled) await queue.enqueue('learn-turn', { turn_id: serverTurnId }, { q });
+      if (outcome.mirroredFactId) await q.query('UPDATE fact SET mirrored_at = now() WHERE id = $1', [outcome.mirroredFactId]);
+      // Which games keep this child playing, and their usual voice, are
+      // things Buddy learns about them: only with learning on.
+      if (child.learning_enabled && outcome.game) {
+        const kept = outcome.game.continues;
+        await q.query(
+          `INSERT INTO what_works (child_id, key, attempts, successes) VALUES ($1, $2, $3, $4)
+           ON CONFLICT (child_id, key) DO UPDATE SET attempts = what_works.attempts + EXCLUDED.attempts,
+             successes = what_works.successes + EXCLUDED.successes, updated_at = now()`,
+          [child.id, `play:${outcome.game.id}`, kept ? 0 : 1, kept ? 1 : 0],
+        );
+      }
+      if (child.learning_enabled && outcome.tone) {
+        const old = (await q.query<VoiceBaseline>(
+          'SELECT turns, loudness_mean, loudness_m2, pitch_mean, pitch_m2, pace_mean, pace_m2 FROM voice_baseline WHERE child_id = $1 FOR UPDATE',
+          [child.id],
+        )).rows[0] ?? null;
+        const b = foldBaseline(old, outcome.tone);
+        if (b) {
+          await q.query(
+            `INSERT INTO voice_baseline (child_id, turns, loudness_mean, loudness_m2, pitch_mean, pitch_m2, pace_mean, pace_m2)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (child_id) DO UPDATE SET turns = $2, loudness_mean = $3, loudness_m2 = $4, pitch_mean = $5, pitch_m2 = $6,
+               pace_mean = $7, pace_m2 = $8, updated_at = now()`,
+            [child.id, b.turns, b.loudness_mean, b.loudness_m2, b.pitch_mean, b.pitch_m2, b.pace_mean, b.pace_m2],
+          );
+        }
+      }
+      // Buddy speaking first gives the learner no words of the child's.
+      if (child.learning_enabled && outcome.childText) await queue.enqueue('learn-turn', { turn_id: serverTurnId }, { q });
     });
     digests.invalidate(child.id);
   }

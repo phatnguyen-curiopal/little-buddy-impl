@@ -32,7 +32,9 @@ export async function migrate(db: Db, opts: { dir?: string; log?: Logger } = {})
 
   await db.exec('CREATE TABLE IF NOT EXISTS schema_migration (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
   const done = new Set((await db.query<{ name: string }>('SELECT name FROM schema_migration')).rows.map((r) => r.name));
-  const files = (await readdir(dir)).filter((f) => f.endsWith('.sql')).sort();
+  // Only NNN_name.sql: a synced folder can leave copies such as
+  // "001_schema 2.sql", which sort first and would apply the schema twice.
+  const files = (await readdir(dir)).filter((f) => /^\d{3}_[a-z0-9_]+\.sql$/.test(f)).sort();
   const applied: string[] = [];
   for (const file of files) {
     if (done.has(file)) continue;

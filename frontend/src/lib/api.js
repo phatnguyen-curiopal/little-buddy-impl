@@ -135,6 +135,7 @@ export const api = {
   addChild: (body) => request('POST', '/api/children', { body }),
   devices: () => request('GET', '/api/devices'),
   claim: (body) => request('POST', '/api/devices/claim', { body }),
+  createWebToy: (body) => request('POST', '/api/devices/web', { body }),
   setChild: (id, childId) => request('PATCH', `/api/devices/${id}`, { body: { child_id: childId } }),
   // patch: any of name, role, personality, personality_source, language
   // (vi|en), voice_id (null = the default voice), learn, mood_pin (0..100,

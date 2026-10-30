@@ -44,3 +44,10 @@ test('with the web toy off, /api/me says so and no secret is revealed', async ()
   const row = await pool.query('SELECT secret_revealed_at FROM devices WHERE id = $1', [d.id]);
   assert.equal(row.rows[0].secret_revealed_at, null);
 });
+
+test('with the web toy off, a Buddy cannot be made without a card', async () => {
+  const p = await registerParent(api);
+  const res = await api('POST', '/api/devices/web', { token: p.token, body: {} });
+  assert.equal(res.status, 403);
+  assert.equal(res.body.error.code, 'web_toy_disabled');
+});

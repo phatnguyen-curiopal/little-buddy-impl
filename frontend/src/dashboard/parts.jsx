@@ -158,6 +158,7 @@ export function AddTile() {
 export function Onboard() {
   const { t } = useI18n();
   const { openAdd } = useLayers();
+  const webToy = useFamilyData().me?.web_toy === true;
   return (
     <section className="onboard">
       <Room size="lg" className="onboard-room">
@@ -165,7 +166,7 @@ export function Onboard() {
       </Room>
       <div className="onboard-text">
         <h2>{t('onboardT')}</h2>
-        <p>{t('onboardB')}</p>
+        <p>{webToy ? t('onboardWebB') : t('onboardB')}</p>
         <button type="button" className="btn btn-pop btn-lg" onClick={() => openAdd()}>{Icon.plus}{t('addToy')}</button>
       </div>
     </section>

@@ -70,7 +70,7 @@ test('keys built at runtime exist', () => {
     ...ROLES.flatMap((r) => [`role_${r}`, `roleSays_${r}`]),
     ...DESIGNS.flatMap((d) => [`design_${d}`, `designTag_${d}`]),
     ...['quiz', 'picked', 'default'].map((s) => `source_${s}`),
-    ...['rate_limited', 'network_error', 'invalid_credentials', 'email_taken', 'claim_code_invalid', 'purchase_not_pending', 'disabled_by_operator'].map((c) => `err_${c}`),
+    ...['rate_limited', 'network_error', 'invalid_credentials', 'email_taken', 'claim_code_invalid', 'purchase_not_pending', 'disabled_by_operator', 'web_toy_limit', 'web_toy_disabled'].map((c) => `err_${c}`),
   ];
   const missing = dynamic.filter((k) => !(k in vi) || !(k in en));
   assert.deepEqual(missing, []);

@@ -188,6 +188,7 @@ mục gốc chạy cả brain, backend và frontend); `/admin` gọi bằng curl
 | GET | `/api/me` | Tài khoản, gia đình và `web_toy` (true/false) |
 | POST / GET | `/api/children` | `{name, birth_year}`, `birth_year` từ 2000 đến năm hiện tại |
 | POST | `/api/devices/claim` | `{claim_code, child_id?, profile?}` → `{device}` (có `device.profile`). Hồ sơ sai: 400 `validation_error`, `details` liệt kê từng trường |
+| POST | `/api/devices/web` | `{child_id?}` → 201 `{device}`: Buddy sống trên web, không cần mã thẻ, tạo và ghép trong một bước với hồ sơ mặc định (`hardware_rev` `web`, seri `WEB<yyMM>-NNNN`). Cần `WEB_TOY=on` (403 `web_toy_disabled`), tối đa 3 mỗi gia đình (409 `web_toy_limit`) |
 | GET | `/api/devices` | Thiết bị của gia đình |
 | PATCH | `/api/devices/:id` | `{child_id}` (uuid hoặc null) |
 | PATCH | `/api/devices/:id/profile` | Bất kỳ tập con nào của `{name, role, personality, personality_source, language, voice_id, learn, mood_pin}` → `{device}`. `mood_pin: null` bỏ ghim, `voice_id: null` về giọng mặc định; giọng không tồn tại là 400. Ghi sự kiện `profile_updated`; 409 `device_revoked` |

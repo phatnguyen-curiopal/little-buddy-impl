@@ -127,7 +127,7 @@ export function ToyDrawer({ id, onClose }) {
         {error && <p className="msg msg--bad">{error}</p>}
         {confirm ? (
           <div className="confirm">
-            <p>{t('removeAsk')}</p>
+            <p>{device.hardware_rev === 'web' ? t('removeAskWeb') : t('removeAsk')}</p>
             <div className="row-actions">
               <button type="button" className="btn btn-danger-solid" disabled={busy} data-autofocus onClick={() => act(() => api.unpair(device.id), t('removed'), true)}>{t('removeYes')}</button>
               <button type="button" className="btn btn-soft" onClick={() => setConfirm(false)}>{t('cancel')}</button>
@@ -153,20 +153,26 @@ function Guide({ design, emotion, title, sub }) {
 }
 
 // Screens of the add-toy wizard and the stepper phase each one lights up.
-const PHASES = ['code', 'child', 'name', 'look', 'role', 'personality', 'review'];
+// With the web toy on, a Buddy needs no card: the wizard opens on the child
+// screen and the code screen is one tap away for a physical toy.
+const CODE_PHASES = ['code', 'child', 'name', 'look', 'role', 'personality', 'review'];
+const WEB_PHASES = CODE_PHASES.slice(1);
 const PHASE_OF = { quiz: 'personality', pick: 'personality', done: 'review' };
 const sameProfile = (a, b) => a.name === b.name && a.design === b.design && a.role === b.role && a.personality === b.personality;
 
 // The toy is claimed as soon as the child is chosen, with the default profile,
 // so a wrong code shows up before any profile work and closing the wizard
-// later never loses the toy. The profile screens then save with one PATCH.
+// later never loses the toy. A web Buddy is created at that same point. The
+// profile screens then save with one PATCH.
 export function AddToyModal({ onClose }) {
   const { t } = useI18n();
   const d = useFamilyData();
   const toast = useToast();
   const errText = useErrorText();
   const body = useRef(null);
-  const [step, setStep] = useState('code');
+  const webToy = d.me?.web_toy === true;
+  const [withCode, setWithCode] = useState(!webToy);
+  const [step, setStep] = useState(webToy ? 'child' : 'code');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [child, setChild] = useState(d.children[0]?.id ?? null);
@@ -198,17 +204,18 @@ export function AddToyModal({ onClose }) {
     setError('');
   };
 
-  const claim = async (childId) => {
+  const add = async (childId) => {
     setBusy(true);
     setError('');
+    const target = childId ? { child_id: childId } : {};
     try {
-      const out = await api.claim({ claim_code: code, ...(childId ? { child_id: childId } : {}) });
+      const out = withCode ? await api.claim({ claim_code: code, ...target }) : await api.createWebToy(target);
       setDevice(out.device);
       // A retried claim returns the toy as it is, profile included.
       setDraft(out.device.profile ?? DEFAULT_PROFILE);
       go('name');
     } catch (err) {
-      if (err.code === 'claim_code_invalid' || err.code === 'validation_error') setStep('code');
+      if (withCode && (err.code === 'claim_code_invalid' || err.code === 'validation_error')) setStep('code');
       setError(errText(err));
     } finally {
       setBusy(false);
@@ -270,8 +277,10 @@ export function AddToyModal({ onClose }) {
     forward('look');
   };
 
+  const phases = withCode ? CODE_PHASES : WEB_PHASES;
+  const isWeb = device?.hardware_rev === 'web';
   const phase = PHASE_OF[step] ?? step;
-  const at = step === 'done' ? PHASES.length : PHASES.indexOf(phase) + 1;
+  const at = step === 'done' ? phases.length : phases.indexOf(phase) + 1;
   const name = draft.name.trim() || 'Buddy';
   const look = draft.design;
   return (
@@ -280,8 +289,8 @@ export function AddToyModal({ onClose }) {
         <div className="wiz-top">
           <CloseButton onClick={requestClose} />
           <h2 id="add-title" className="sr-only">{t('addTitle')}</h2>
-          <div className="steps" role="progressbar" aria-label={t('stepOf', { n: at, total: PHASES.length })} aria-valuemin={1} aria-valuemax={PHASES.length} aria-valuenow={at}>
-            {PHASES.map((s, i) => <span key={s} className={i < at ? 'on' : ''} />)}
+          <div className="steps" role="progressbar" aria-label={t('stepOf', { n: at, total: phases.length })} aria-valuemin={1} aria-valuemax={phases.length} aria-valuenow={at}>
+            {phases.map((s, i) => <span key={s} className={i < at ? 'on' : ''} />)}
           </div>
         </div>
 
@@ -306,13 +315,14 @@ export function AddToyModal({ onClose }) {
                 </div>
                 <div className="wiz-actions">
                   <button type="submit" className="btn btn-pop btn-lg btn-block" disabled={!codeReady(code)}>{t('next')}</button>
+                  {webToy && <button type="button" className="btn btn-soft btn-block" onClick={() => { setWithCode(false); setCode(''); go('child'); }}>{t('noCode')}</button>}
                 </div>
               </form>
             )}
 
             {step === 'child' && (
               <div className="wiz-step">
-                <Guide design={look} emotion="happy" title={t('childTitle')} sub={t('childHelp')} />
+                <Guide design={look} emotion="happy" title={t('childTitle')} sub={withCode ? t('childHelp') : t('webBuddyHelp')} />
                 {d.children.length > 0 && (
                   <div className="choices" role="group" aria-label={t('childTitle')}>
                     {d.children.map((c, i) => (
@@ -329,11 +339,12 @@ export function AddToyModal({ onClose }) {
                   : <button type="button" className="add-tile add-tile--row" onClick={() => setAdding(true)}><span className="add-tile-plus">{Icon.plus}</span><b>{t('addChildInline')}</b></button>}
                 {error && <p className="msg msg--bad">{error}</p>}
                 <div className="wiz-actions">
-                  <button type="button" className="btn btn-pop btn-lg btn-block" disabled={busy || !child} onClick={() => claim(child)}>{busy ? t('checking') : t('next')}</button>
+                  <button type="button" className="btn btn-pop btn-lg btn-block" disabled={busy || !child} onClick={() => add(child)}>{busy ? (withCode ? t('checking') : t('creatingBuddy')) : t('next')}</button>
                   <div className="wiz-row">
-                    <button type="button" className="btn btn-soft" disabled={busy} onClick={() => go('code')}>{t('back')}</button>
-                    <button type="button" className="btn btn-soft grow" disabled={busy} onClick={() => claim(null)}>{t('later')}</button>
+                    {withCode && <button type="button" className="btn btn-soft" disabled={busy} onClick={() => go('code')}>{t('back')}</button>}
+                    <button type="button" className="btn btn-soft grow" disabled={busy} onClick={() => add(null)}>{t('later')}</button>
                   </div>
+                  {!withCode && <button type="button" className="link" disabled={busy} onClick={() => { setWithCode(true); go('code'); }}>{t('haveCode')}</button>}
                 </div>
               </div>
             )}
@@ -420,9 +431,10 @@ export function AddToyModal({ onClose }) {
                 <span className="wiz-done-figure"><BuddyFigure design={look} emotion="excited" /></span>
                 <div className="card center">
                   <h2>{t('readyNamed', { name: draft.name.trim() })}</h2>
-                  <p className="muted">{t('readyB')}</p>
+                  <p className="muted">{isWeb ? t('readyWebB') : t('readyB')}</p>
                   {device && <p className="mono muted small">{device.serial}</p>}
-                  <button type="button" className="btn btn-pop btn-lg btn-block" data-autofocus onClick={onClose}>{t('done')}</button>
+                  {isWeb && webToy && <button type="button" className="btn btn-pop btn-lg btn-block" data-autofocus onClick={() => { onClose(); navigate(`/app/talk?toy=${encodeURIComponent(device.id)}`); }}>{Icon.mic}{t('talkTo', { name: draft.name.trim() })}</button>}
+                  <button type="button" className={`btn ${isWeb && webToy ? 'btn-soft' : 'btn-pop'} btn-lg btn-block`} data-autofocus={isWeb && webToy ? undefined : true} onClick={onClose}>{t('done')}</button>
                 </div>
               </div>
             )}

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { pool, withTransaction } from '../store/db.js';
 import * as devices from '../store/device.js';
 import * as childrenStore from '../store/child.js';
+import * as familiesStore from '../store/family.js';
 import * as profiles from '../store/profile.js';
 import * as voicesStore from '../store/voice.js';
 import { DEFAULT_PROFILE, validateProfile, isVoiceFkError, unknownVoice, voiceWrongLanguage } from '../personalization/roles.js';
@@ -118,6 +119,49 @@ export async function provisionBatch({ label, hardwareRev, count, notes = null, 
     if (err.code === '23505') throw conflict('provision_collision', 'a generated code collided; run the batch again');
     throw err;
   }
+}
+
+// A Buddy made on the website lives only in a browser. It is a device like
+// any other (sealed secret, lifecycle, web credential), so nothing downstream
+// has a special case; it only skips the card: it is claimed as it is made and
+// its claim code is hashed and thrown away, since nobody will ever type it.
+// An unpaired web Buddy is therefore an orphan nobody can claim back.
+export const WEB_HARDWARE_REV = 'web';
+export const MAX_WEB_TOYS_PER_FAMILY = 3;
+
+// One batch per month keeps the 4-digit serial index in range.
+function webBatchLabel(now = new Date()) {
+  return `WEB${String(now.getUTCFullYear()).slice(2)}${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+export async function createWebToy({ familyId, childId = null, actorId = null }) {
+  const id = randomUUID();
+  const secretEnc = wrapSecret(id, newDeviceSecret());
+  return withTransaction(async (tx) => {
+    // The family lock serializes the cap check with the insert.
+    await familiesStore.lockForUpdate(tx, familyId);
+    if (await devices.countInFamilyByRev(tx, familyId, WEB_HARDWARE_REV) >= MAX_WEB_TOYS_PER_FAMILY) {
+      throw conflict('web_toy_limit', `a family can have at most ${MAX_WEB_TOYS_PER_FAMILY} web Buddies`);
+    }
+    if (childId) {
+      const child = await childrenStore.findInFamily(tx, childId, familyId);
+      if (!child) throw notFound('child_not_found', 'child not found');
+    }
+    const batch = await devices.nextInBatch(tx, { label: webBatchLabel(), hardwareRev: WEB_HARDWARE_REV, notes: 'web Buddies created on the site' });
+    await devices.insertDevices(tx, [{
+      id,
+      serial: serialFor(batch.label, batch.size),
+      batchId: batch.id,
+      hardwareRev: WEB_HARDWARE_REV,
+      secretEnc,
+      claimCodeHash: claimCodeHash(newClaimCode()),
+    }]);
+    await devices.insertEvent(tx, { deviceId: id, event: 'provisioned', actorKind: 'parent', actorId, detail: { web: true } });
+    await devices.claim(tx, id, { familyId, childId });
+    await profiles.upsert(tx, id, DEFAULT_PROFILE);
+    await devices.insertEvent(tx, { deviceId: id, event: 'claimed', actorKind: 'parent', actorId, detail: { family_id: familyId, child_id: childId } });
+    return devices.findInFamily(tx, id, familyId);
+  });
 }
 
 // A voice id of the right shape that names no voice fails the foreign key

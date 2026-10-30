@@ -111,6 +111,14 @@ dashboardRouter.post('/devices/claim', requireParent, claimLimit, async (req, re
   res.json(deviceResponse(row));
 });
 
+// A web Buddy needs no card. It shares the claim limit, and the registry caps
+// how many a family can have, so it cannot be used to mint devices.
+dashboardRouter.post('/devices/web', requireParent, requireWebToy, claimLimit, async (req, res) => {
+  const body = validateBody(req.body, { child_id: { type: 'uuid', nullable: true } });
+  const row = await registry.createWebToy({ familyId: req.familyId, childId: body.child_id ?? null, actorId: req.parent.id });
+  res.status(201).json(deviceResponse(row));
+});
+
 dashboardRouter.patch('/devices/:id/profile', requireParent, async (req, res) => {
   const row = await registry.updateProfile({ deviceId: deviceId(req), familyId: req.familyId, patch: req.body, actorId: req.parent.id });
   res.json(deviceResponse(row));

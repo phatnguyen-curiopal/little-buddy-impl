@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
-import ToyShell from '../components/ToyShell.jsx';
-import { Icon, Pill, useErrorText, useToast } from '../components/ui.jsx';
+import { BuddyFigure } from '../components/Buddy.jsx';
+import Room from '../components/Room.jsx';
+import { Icon, useErrorText, useToast } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { api } from '../lib/api.js';
 import { Link, navigate, useLocation } from '../lib/router.js';
@@ -11,13 +11,15 @@ import { designOf } from '../lib/designs.js';
 import { useWebToy, webToySupported } from '../talk/useWebToy.js';
 import { canSend, tapAction } from '../talk/machine.js';
 import { micSupported } from '../talk/mic.js';
-import { useFamilyData } from './data.jsx';
+import { useFamilyData, useLayers } from './data.jsx';
 import { Onboard, useToyName } from './parts.jsx';
 
-// The Talk screen: the browser plays the chosen toy. Left, Buddy's body
-// with the real button (tap to talk, the toy notices the end of speech);
-// right, the conversation as text, with a box to type instead of talking.
-// Every answer goes through the same gate and credits as the real toy.
+// The Talk screen: the browser plays the chosen toy. Buddy fills its room,
+// as in a talking-pet game, with round buttons around it and one big button
+// to talk (tap, talk, the toy notices the end of speech). The conversation
+// as text sits beside the room on a wide screen and slides up over it on a
+// phone, with a box to type instead of talking. Every answer goes through
+// the same gate and credits as the real toy.
 
 const TOY_PHASE = {
   idle: 'idle', denied: 'idle',
@@ -33,6 +35,8 @@ function faceFor(state) {
   if (state.status === 'connecting') return 'neutral';
   if (state.status === 'asleep') return 'sleepy';
   if (state.status === 'offline') return 'confused';
+  if (state.status === 'listening') return 'listening';
+  if (state.status === 'thinking' || state.status === 'starting') return 'thinking';
   return state.emotion;
 }
 
@@ -67,33 +71,33 @@ function useErrorHint(code, name) {
   }
 }
 
-function LanguageSwitch({ device, disabled }) {
+// The conversation language as one round button, VI or EN, like the toy's
+// own switch.
+function LanguageButton({ device, disabled }) {
   const { t } = useI18n();
   const d = useFamilyData();
   const toast = useToast();
   const errText = useErrorText();
   const [busy, setBusy] = useState(false);
   const current = device.profile?.language ?? 'vi';
-  const pick = async (language) => {
-    if (language === current || busy) return;
+  const next = current === 'vi' ? 'en' : 'vi';
+  const flip = async () => {
+    if (busy) return;
     setBusy(true);
     try {
-      await api.updateProfile(device.id, { language });
+      await api.updateProfile(device.id, { language: next });
       await d.reload();
     } catch (err) {
-      toast(errText(err));
+      toast(errText(err), 'bad');
     } finally {
       setBusy(false);
     }
   };
   return (
-    <div className="seg seg--sm" role="group" aria-label={t('convLang')} title={t('convLangHelp')}>
-      {['vi', 'en'].map((code) => (
-        <button key={code} type="button" aria-pressed={current === code} disabled={busy || disabled} onClick={() => pick(code)}>
-          {code === 'vi' ? t('langVi') : t('langEn')}
-        </button>
-      ))}
-    </div>
+    <button type="button" className="round round--text" disabled={busy || disabled} onClick={flip}
+      aria-label={`${t('convLang')}: ${current === 'vi' ? t('langVi') : t('langEn')}`} title={t('convLangHelp')}>
+      {current.toUpperCase()}
+    </button>
   );
 }
 
@@ -102,14 +106,14 @@ function Bubble({ m, buddyName }) {
   if (m.from === 'system') return <p className="chat-divider"><span>{t('talkNewConvStarted')}</span></p>;
   if (m.from === 'child') {
     return (
-      <p className="bubble bubble--child">
+      <p className="msg-bubble msg-bubble--child">
         <span className="who">{m.voice ? t('talkHeard', { name: buddyName }) : t('talkTyped')}</span>
         {m.text}
       </p>
     );
   }
   return (
-    <p className={`bubble bubble--buddy ${m.denied ? 'bubble--rest' : ''}`}>
+    <p className={`msg-bubble msg-bubble--buddy ${m.denied ? 'msg-bubble--rest' : ''}`}>
       <span className="who">{buddyName} · {t(`emo_${normalizeEmotion(m.emotion)}`)}</span>
       {m.text}
     </p>
@@ -119,15 +123,17 @@ function Bubble({ m, buddyName }) {
 function TalkRoom({ device, toys }) {
   const { t } = useI18n();
   const d = useFamilyData();
+  const { openToy } = useLayers();
   const nameOf = useToyName();
   const buddyName = device.profile?.name || 'Buddy';
   const design = designOf(device);
   const stageRef = useRef(null);
-  const ringRef = useRef(null);
+  const sceneRef = useRef(null);
   const logRef = useRef(null);
   const inputRef = useRef(null);
   const look = usePointerLook(stageRef);
   const [text, setText] = useState('');
+  const [logOpen, setLogOpen] = useState(false);
   const mic = micSupported();
   const secure = webToySupported();
 
@@ -138,16 +144,16 @@ function TalkRoom({ device, toys }) {
   });
   const { state, onLevel } = toy;
 
-  // The ring follows the mic level without re-rendering the screen 50
-  // times a second: the level goes straight into a CSS variable.
+  // The mic ring and Buddy's tummy glow follow the level without
+  // re-rendering 50 times a second: it goes straight into a CSS variable.
   useEffect(() => onLevel((level) => {
-    ringRef.current?.style.setProperty('--level', level.toFixed(3));
+    sceneRef.current?.style.setProperty('--level', level.toFixed(3));
   }), [onLevel]);
 
   useEffect(() => {
     const el = logRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [state.messages.length, state.status]);
+  }, [state.messages.length, state.status, logOpen]);
 
   const status = useStatusText(state, buddyName);
   const hint = useErrorHint(state.error, buddyName);
@@ -156,10 +162,20 @@ function TalkRoom({ device, toys }) {
   const face = faceFor(state);
   const phase = TOY_PHASE[state.status] ?? 'rest';
   const typing = state.status === 'thinking' || (state.status === 'starting' && state.mode === 'text');
+  const resting = state.status === 'asleep' || state.status === 'offline';
+  const listening = state.status === 'listening';
+
+  const lastBuddy = [...state.messages].reverse().find((m) => m.from === 'buddy');
+  const lastChild = [...state.messages].reverse().find((m) => m.from === 'child');
+
+  const openTyping = () => {
+    setLogOpen(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
 
   const tap = () => {
     if (!mic && action !== 'end') {
-      inputRef.current?.focus();
+      openTyping();
       return;
     }
     toy.tap();
@@ -173,79 +189,111 @@ function TalkRoom({ device, toys }) {
   const balance = d.wallet?.balance ?? null;
 
   return (
-    <div className="talk-layout">
-      <section className="talk-stage" ref={stageRef} aria-label={t('talkTo', { name: buddyName })}>
-        <ToyShell
-          design={design}
-          phase={phase}
-          emotion={face}
-          look={phase === 'idle' ? look : null}
-          onTap={tap}
-          pressed={state.status === 'listening'}
-          label={state.status === 'listening' ? t('toyTapStop') : t('talkTapStart', { name: buddyName })}
-          busy={!action}
-          live
-          dim={state.status === 'asleep' || state.status === 'offline'}
-          ringRef={ringRef}
-        />
-        <div className="talk-status" aria-live="polite">
-          <p className="status"><i className={`status-dot status-dot--${DOT[state.status] ?? 'idle'}`} />{status}</p>
-          {hint && <p className="talk-hint">{hint}</p>}
-          {!mic && secure && <p className="talk-hint">{t('talkMicNote')}</p>}
-          {(state.status === 'offline' || state.status === 'asleep') && device.status === 'active' && secure && (
-            <button type="button" className="btn ghost-light sm" onClick={toy.reconnect}>{t('talkReconnect')}</button>
-          )}
-          {state.status === 'asleep' && device.status !== 'active' && (
-            <Link className="btn ghost-light sm" to="/app/toys">{t('talkGoToys')}</Link>
+    <div className={`talk ${logOpen ? 'talk--log' : ''}`}>
+      <Room size="full" scene night={resting} className={`talk-scene talk-scene--${phase}`} ref={sceneRef}>
+        <div className="talk-top">
+          <Link className="round" to="/app" aria-label={t('back')}>{Icon.back}</Link>
+          <div className="talk-plate">
+            {toys.length > 1 ? (
+              <select className="plate-select" aria-label={t('talkPick')} value={device.id}
+                onChange={(e) => navigate(`/app/talk?toy=${encodeURIComponent(e.target.value)}`, { replace: true })}>
+                {toys.map((x) => <option key={x.id} value={x.id}>{nameOf(x, d.children)}</option>)}
+              </select>
+            ) : <span className="plate-name">{buddyName}</span>}
+            <i className={`plate-dot plate-dot--${DOT[state.status] ?? (resting ? 'rest' : 'idle')}`} aria-hidden="true" />
+          </div>
+          {balance !== null && (
+            <Link to="/app/credits" className={`coin-mini ${balance === 0 ? 'is-out' : balance <= 5 ? 'is-low' : ''}`} aria-label={`${t('balLabel')}: ${balance}`}>
+              <span className="coin coin--sm" aria-hidden="true"><span>C</span></span><b>{balance}</b>
+            </Link>
           )}
         </div>
-      </section>
 
-      <section className="panel chat" aria-label={t('nav_talk')}>
-        <div className="chat-head">
-          <div className="chat-who">
-            <span className={`chip-screen chip-screen--sm ${state.status === 'asleep' ? 'dim' : ''}`}><BuddyScreen design={design} emotion={face} dim={state.status === 'asleep'} /></span>
-            <div className="chat-name">
-              {toys.length > 1 ? (
-                <select className="input input--auto chat-pick" aria-label={t('talkPick')} value={device.id}
-                  onChange={(e) => navigate(`/app/talk?toy=${encodeURIComponent(e.target.value)}`, { replace: true })}>
-                  {toys.map((x) => <option key={x.id} value={x.id}>{nameOf(x, d.children)}</option>)}
-                </select>
-              ) : <b>{nameOf(device, d.children)}</b>}
-              <span className="feed-sub">{t('talkDemoNote')}</span>
-            </div>
-          </div>
-          <div className="chat-tools">
-            <LanguageSwitch device={device} disabled={device.status === 'revoked'} />
-            {balance !== null && (
-              <Pill tone={balance === 0 ? 'bad' : balance <= 5 ? 'warn' : 'ok'} icon={Icon.coin}>
-                <span className="sr-only">{t('balLabel')}: </span>{t('credits', { n: balance })}
-              </Pill>
+        <div className="talk-side">
+          <LanguageButton device={device} disabled={device.status === 'revoked'} />
+          <button type="button" className="round" disabled={!sendable || state.messages.length === 0} onClick={toy.newConversation} aria-label={t('talkNewConv')}>{Icon.refresh}</button>
+          <button type="button" className="round" onClick={() => openToy(device.id)} aria-label={t('profileTitle')}>{Icon.sliders}</button>
+        </div>
+
+        <div className="talk-say" aria-hidden="true">
+          {lastChild && !listening && <span className="heard-chip">{lastChild.voice ? t('talkHeard', { name: buddyName }) : t('talkTyped')}: {lastChild.text}</span>}
+          {typing && <span className="say-bubble say-bubble--dots"><span className="dots"><i /><i /><i /></span></span>}
+          {!typing && lastBuddy && !listening && <span key={lastBuddy.id} className={`say-bubble pop-in ${lastBuddy.denied ? 'say-bubble--rest' : ''}`}>{lastBuddy.text}</span>}
+        </div>
+
+        <div className="scene-stage">
+          <span className="room-stage talk-stage" ref={stageRef}>
+            <BuddyFigure design={design} emotion={face} phase={phase} look={phase === 'idle' ? look : null} dim={resting} />
+          </span>
+        </div>
+
+        <div className="scene-ground talk-ground">
+          <div className="talk-status" aria-live="polite">
+            <p className={`status-chip status-chip--${DOT[state.status] ?? (resting ? 'rest' : 'idle')}`}>{status}</p>
+            {hint && <p className="talk-hint">{hint}</p>}
+            {!mic && secure && <p className="talk-hint">{t('talkMicNote')}</p>}
+            {resting && device.status === 'active' && secure && (
+              <button type="button" className="btn btn-soft btn-sm" onClick={toy.reconnect}>{t('talkReconnect')}</button>
             )}
-            <button type="button" className="btn ghost sm" disabled={!sendable || state.messages.length === 0} onClick={toy.newConversation}>
-              {t('talkNewConv')}
-            </button>
+            {state.status === 'asleep' && device.status !== 'active' && (
+              <Link className="btn btn-pop btn-sm" to="/app/toys">{t('talkGoToys')}</Link>
+            )}
           </div>
-        </div>
 
+          <div className="talk-controls">
+            <button type="button" className="round round--lg talk-type" onClick={openTyping} aria-label={t('talkKeyboard')}>{Icon.keyboard}</button>
+            <button
+              type="button"
+              className={`mic-btn ${listening ? 'is-on' : ''}`}
+              onClick={tap}
+              aria-pressed={listening}
+              aria-label={listening ? t('toyTapStop') : t('talkTapStart', { name: buddyName })}
+              aria-disabled={!action || undefined}
+            >
+              <span className="mic-ring" aria-hidden="true" />
+              {listening ? Icon.stop : Icon.mic}
+            </button>
+            <button type="button" className="round round--lg talk-log-btn" onClick={() => setLogOpen(true)} aria-label={t('talkLog')}>{Icon.chat}</button>
+          </div>
+          <p className="talk-note">{t('talkDemoNote')}</p>
+        </div>
+      </Room>
+
+      <section className="talk-log card" aria-label={t('talkLog')}>
+        <div className="card-head">
+          <h2>{t('talkLog')}</h2>
+          <button type="button" className="round round--sm talk-log-close" onClick={() => setLogOpen(false)} aria-label={t('talkHideLog')}>{Icon.x}</button>
+        </div>
         <div className="chat-log" ref={logRef} role="log" aria-live="polite" aria-label={t('talkLog')}>
           {state.messages.length === 0 && !typing && <p className="empty">{t('talkEmpty', { name: buddyName })}</p>}
           {state.messages.map((m) => <Bubble key={m.id} m={m} buddyName={buddyName} />)}
           {typing && (
-            <p className="bubble bubble--buddy bubble--typing" aria-label={t('talkThinking', { name: buddyName })}>
+            <p className="msg-bubble msg-bubble--buddy msg-bubble--typing" aria-label={t('talkThinking', { name: buddyName })}>
               <span className="dots"><i /><i /><i /></span>
             </p>
           )}
         </div>
-
         <form className="chat-input" onSubmit={submit}>
           <label className="sr-only" htmlFor="talk-text">{t('talkInputLabel')}</label>
           <input id="talk-text" ref={inputRef} className="input" value={text} maxLength={2000} autoComplete="off"
             placeholder={t('talkInputPh', { name: buddyName })} onChange={(e) => setText(e.target.value)} />
-          <button type="submit" className="btn pop" disabled={!sendable || !text.trim()}>{t('talkSend')}</button>
+          <button type="submit" className="btn btn-pop" disabled={!sendable || !text.trim()}>{t('talkSend')}</button>
         </form>
       </section>
     </div>
+  );
+}
+
+function TalkEmpty({ title, body, cta }) {
+  return (
+    <Room size="lg" night className="talk-empty">
+      <span className="room-stage"><BuddyFigure emotion="sleepy" dim phase="rest" /></span>
+      <div className="room-card">
+        <h2>{title}</h2>
+        <p className="muted">{body}</p>
+        {cta}
+      </div>
+    </Room>
   );
 }
 
@@ -266,25 +314,10 @@ export default function Talk() {
     if (selected && selected.id !== wanted) navigate(`/app/talk?toy=${encodeURIComponent(selected.id)}`, { replace: true });
   }, [selected, wanted]);
 
-  if (d.me && d.me.web_toy === false) {
-    return (
-      <section className="panel center pad">
-        <span className="chip-screen chip-screen--xl dim"><BuddyScreen emotion="sleepy" dim /></span>
-        <h2>{t('talkOffT')}</h2>
-        <p className="muted">{t('talkOffB')}</p>
-      </section>
-    );
-  }
+  if (d.me && d.me.web_toy === false) return <TalkEmpty title={t('talkOffT')} body={t('talkOffB')} />;
   if (!d.devices.length) return <Onboard />;
   if (!selected) {
-    return (
-      <section className="panel center pad">
-        <span className="chip-screen chip-screen--xl dim"><BuddyScreen emotion="sleepy" dim /></span>
-        <h2>{t('talkNoToyT')}</h2>
-        <p className="muted">{t('talkNoToyB')}</p>
-        <Link className="btn pop" to="/app/toys">{t('talkGoToys')}</Link>
-      </section>
-    );
+    return <TalkEmpty title={t('talkNoToyT')} body={t('talkNoToyB')} cta={<Link className="btn btn-pop" to="/app/toys">{t('talkGoToys')}</Link>} />;
   }
   // key: a different toy is a different device session from scratch.
   return <TalkRoom key={selected.id} device={selected} toys={toys} />;

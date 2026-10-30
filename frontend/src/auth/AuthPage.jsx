@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
-import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
-import { LangSwitch, useErrorText } from '../components/ui.jsx';
+import { BuddyAvatar, BuddyFigure } from '../components/Buddy.jsx';
+import Room from '../components/Room.jsx';
+import { Icon, LangSwitch, useErrorText } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { Link, navigate, useLocation } from '../lib/router.js';
@@ -54,16 +55,21 @@ export default function AuthPage({ mode }) {
 
   return (
     <div className="auth">
-      <div className="auth-side">
-        <Link className="wordmark" to="/"><span className="dotface"><BuddyScreen emotion="neutral" /></span><span>Little Buddy</span></Link>
-        <div className="auth-face" ref={faceRef}><span className="chip-screen chip-screen--hero float"><BuddyScreen emotion={emotion} look={look} /></span></div>
-        <p className="auth-quote">{reg ? t('authQuoteReg') : t('authQuoteLogin')}</p>
-      </div>
+      <Room size="full" className="auth-room">
+        <div className="auth-top">
+          <Link className="round" to="/" aria-label={t('backHome')}>{Icon.back}</Link>
+          <Link className="wordmark" to="/"><BuddyAvatar design="miu" emotion="happy" size="sm" /><span>Little Buddy</span></Link>
+          <LangSwitch />
+        </div>
+        <p className="say-bubble auth-quote">{reg ? t('authQuoteReg') : t('authQuoteLogin')}</p>
+        <span className="room-stage auth-stage" ref={faceRef}><BuddyFigure emotion={emotion} look={look} /></span>
+      </Room>
       <div className="auth-main">
-        <div className="auth-top"><Link className="link" to="/">{t('backHome')}</Link><LangSwitch /></div>
-        <form className="form auth-form" onSubmit={submit} noValidate>
+        <form className="auth-form" onSubmit={submit} noValidate>
           <h1>{reg ? t('createTitle') : t('welcomeBack')}</h1>
-          <p className="muted">{reg ? t('registerNote') : t('loginSub')}</p>
+          {reg
+            ? <p className="banner banner--gold"><span className="coin coin--sm" aria-hidden="true"><span>C</span></span><span>{t('registerNote')}</span></p>
+            : <p className="muted">{t('loginSub')}</p>}
           {reg && (<>
             <div className="field"><label htmlFor="auth-family">{t('familyName')}</label><input id="auth-family" className="input" value={form.family_name} onChange={set('family_name')} maxLength={80} autoComplete="off" placeholder={t('familyPh')} /></div>
             <div className="field"><label htmlFor="auth-display">{t('yourName')} <span className="muted">({t('optional')})</span></label><input id="auth-display" className="input" value={form.display_name} onChange={set('display_name')} maxLength={80} autoComplete="name" /></div>
@@ -77,9 +83,9 @@ export default function AuthPage({ mode }) {
             </div>
             <span className="muted small">{t('pwHint')}</span>
           </div>
-          {error && <p className="msg bad shake">{error}</p>}
-          <button type="submit" className="btn pop lg block sheen" disabled={busy}>{busy ? t('wait') : reg ? t('register') : t('signIn')}</button>
-          <p className="muted center-text">
+          {error && <p className="msg msg--bad shake">{error}</p>}
+          <button type="submit" className="btn btn-pop btn-lg btn-block" disabled={busy}>{busy ? t('wait') : reg ? t('register') : t('signIn')}</button>
+          <p className="muted center">
             {reg ? t('haveAccount') : t('noAccount')}{' '}
             <Link className="link" to={`${reg ? '/login' : '/register'}${search.get('next') ? `?next=${encodeURIComponent(search.get('next'))}` : ''}`}>{reg ? t('signIn') : t('register')}</Link>
           </p>

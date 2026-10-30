@@ -20,8 +20,8 @@ export const MOOD_MAX = 100;
 
 // How the website draws this toy. The physical toy and the brain never see
 // it; the codes match frontend/src/lib/designs.js.
-export const DESIGNS = Object.freeze(['orbit', 'volt', 'glim']);
-export const DEFAULT_DESIGN = 'orbit';
+export const DESIGNS = Object.freeze(['miu', 'orbit', 'volt', 'glim']);
+export const DEFAULT_DESIGN = 'miu';
 
 // Conversation settings every claim starts from, so a new owner never
 // inherits the previous family's. learn is off until a parent opts in.

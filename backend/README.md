@@ -90,7 +90,7 @@ provisioned | active | disabled ──vận hành──> revoked (vĩnh viễn: 
    Cùng transaction đó ghi **hồ sơ Buddy** (`buddy_profiles`): tên (1 đến 24
    ký tự), vai (`friend` mặc định, `daddy`, `mommy`, `teacher`), một trong 16
    tính cách (`ENFP` mặc định), nguồn (`quiz`, `picked`, `default`) và ngoại
-   hình trên web (`design`: `orbit` mặc định, `volt`, `glim`; brain không dùng). Không
+   hình trên web (`design`: `miu` mặc định, `orbit`, `volt`, `glim`; brain không dùng). Không
    gửi `profile` thì dùng mặc định Buddy / bạn thân / ENFP. Mỗi lần ghép đều
    ghi đè hồ sơ, nên đồ chơi đổi chủ không mang theo tên, tính cách và ngoại
    hình cũ.

@@ -89,7 +89,7 @@ export default {
   needFamily: 'Please enter a family name.', badEmail: "That email doesn't look right.", shortPw: 'Password needs at least 8 characters.',
 
   // app
-  appNav: 'Navigation', nav_overview: 'Overview', nav_toys: 'Toys', nav_credits: 'Credits', nav_activity: 'Activity', nav_family: 'Family', nav_talk: 'Talk',
+  appNav: 'Navigation', nav_overview: 'Home', nav_toys: 'Toys', nav_credits: 'Credits', nav_activity: 'Activity', nav_family: 'Family', nav_talk: 'Talk',
   hi: 'Hi {name}', signOut: 'Sign out', addToy: 'Add a toy', loadFailed: "We couldn't load your data. Check your connection and try again.",
   notFoundT: "We couldn't find that page",
   balLabel: 'Credits left', balUnit: 'credits', balHint: '1 credit = 1 answer. Shared by every Buddy at home.', buy: 'Buy credits',
@@ -225,4 +225,7 @@ export default {
   err_token_expired: 'Your session ended. Please sign in again.', err_refresh_token_reused: 'Your session ended. Please sign in again.',
   err_no_session: 'Please sign in again.', err_internal_error: 'The server had a problem. Please try again in a few minutes.', err_http_error: 'Something went wrong. Please try again.',
   err_web_toy_disabled: 'Talking on the web is off.',
+  // redesign (Miu)
+  design_miu: 'Miu', designTag_miu: 'Talking kitten', designNew: 'New', stepOf: 'Step {n} of {total}',
+  talkKeyboard: 'Type a message', talkHideLog: 'Hide the conversation',
 };

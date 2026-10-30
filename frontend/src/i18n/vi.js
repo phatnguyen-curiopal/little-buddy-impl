@@ -89,7 +89,7 @@ export default {
   needFamily: 'Nhập tên gia đình giúp mình nhé.', badEmail: 'Email chưa đúng định dạng.', shortPw: 'Mật khẩu cần ít nhất 8 ký tự.',
 
   // app
-  appNav: 'Điều hướng', nav_overview: 'Tổng quan', nav_toys: 'Đồ chơi', nav_credits: 'Lượt hỏi', nav_activity: 'Hoạt động', nav_family: 'Gia đình', nav_talk: 'Trò chuyện',
+  appNav: 'Điều hướng', nav_overview: 'Trang chủ', nav_toys: 'Đồ chơi', nav_credits: 'Lượt hỏi', nav_activity: 'Hoạt động', nav_family: 'Gia đình', nav_talk: 'Trò chuyện',
   hi: 'Chào {name}', signOut: 'Đăng xuất', addToy: 'Thêm đồ chơi', loadFailed: 'Chưa tải được dữ liệu. Kiểm tra kết nối rồi thử lại nhé.',
   notFoundT: 'Không tìm thấy trang này',
   balLabel: 'Lượt hỏi còn lại', balUnit: 'lượt', balHint: '1 lượt = 1 câu trả lời. Mọi Buddy trong nhà dùng chung.', buy: 'Mua thêm lượt',
@@ -225,4 +225,7 @@ export default {
   err_token_expired: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.', err_refresh_token_reused: 'Phiên đăng nhập đã hết. Bạn đăng nhập lại nhé.',
   err_no_session: 'Bạn đăng nhập lại nhé.', err_internal_error: 'Máy chủ gặp trục trặc. Bạn thử lại sau ít phút nhé.', err_http_error: 'Có lỗi xảy ra. Bạn thử lại nhé.',
   err_web_toy_disabled: 'Trò chuyện trên web đang tắt.',
+  // redesign (Miu)
+  design_miu: 'Miu', designTag_miu: 'Mèo con biết nói', designNew: 'Mới', stepOf: 'Bước {n}/{total}',
+  talkKeyboard: 'Gõ tin nhắn', talkHideLog: 'Ẩn cuộc trò chuyện',
 };

@@ -1,8 +1,24 @@
 # Little Buddy: website cho phụ huynh
 
 Trang giới thiệu sản phẩm (`/`) và bảng điều khiển cho phụ huynh sau khi đăng
-nhập (`/app`). Song ngữ tiếng Việt và tiếng Anh. Đây là frontend duy nhất của
-repo; các endpoint vận hành `/admin` không có giao diện.
+nhập (`/app`). Song ngữ tiếng Việt và tiếng Anh. Đây là frontend duy nhất được
+build và triển khai; các endpoint vận hành `/admin` không có giao diện. Giao
+diện cũ (trước khi làm lại theo kiểu game thú cưng biết nói) được giữ nguyên
+trong `../frontend-legacy/` để tham khảo.
+
+## Giao diện
+
+Lấy cảm hứng từ các game thú cưng biết nói, giữ nguyên bảng màu của trang
+(`src/styles/tokens.css`):
+
+- Buddy đứng trong căn phòng của mình (`src/components/Room.jsx`: tường chấm
+  bi, cửa sổ ban đêm, sàn, tấm thảm dưới chân), xung quanh là các nút tròn.
+- Nút và thẻ "đồ chơi": có viền đáy đậm, bấm vào thì lún xuống.
+- Lượt hỏi hiện như bộ đếm đồng xu vàng, có nút cộng để mua thêm.
+- Phông chữ Baloo 2 (tiêu đề, nút) và Nunito (nội dung).
+- Trên điện thoại: thanh trên cùng và thanh tab dưới đáy với nút Trò chuyện
+  tròn to ở giữa. Từ 900px: thanh điều hướng bên trái.
+- Chế độ tối theo hệ điều hành.
 
 ## Chạy
 
@@ -46,18 +62,34 @@ mô phỏng đúng hành vi này.
 
 ## Cảm xúc của Buddy
 
-Buddy có ba ngoại hình (`src/lib/designs.js`): **Orbit** (nhà thám hiểm không
-gian, mặc định), **Volt** (chú mèo robot) và **Glim** (đốm sáng trong lọ thủy
-tinh). Mỗi đồ chơi chọn ngoại hình riêng trong hồ sơ (bước "Ngoại hình" của
-luồng thêm đồ chơi, hoặc trong drawer); chỗ nào vẽ Buddy mà không gắn với đồ
-chơi cụ thể (logo, trang giới thiệu, đăng nhập) thì dùng Orbit. Thân đồ chơi
-ở `src/components/ToyShell.jsx`, mặt đứng riêng (thẻ, chip) ở
-`src/components/buddy/BuddyScreen.jsx`.
+Buddy có bốn ngoại hình (`src/lib/designs.js`):
 
-14 cảm xúc, mỗi cảm xúc có chuyển động riêng, toàn bộ bằng CSS trong
-`src/styles/buddy.css`. Mắt và miệng là đa giác `clip-path` cùng số điểm
+- **Miu**: mèo con biết nói, mặc định.
+- **Orbit**: nhà thám hiểm không gian.
+- **Volt**: chú mèo robot.
+- **Glim**: đốm sáng trong lọ thủy tinh.
+
+Mỗi đồ chơi chọn ngoại hình riêng trong hồ sơ (bước "Ngoại hình" của luồng
+thêm đồ chơi, hoặc trong drawer). Chỗ nào vẽ Buddy mà không gắn với đồ chơi cụ
+thể (logo, trang giới thiệu, đăng nhập) thì dùng Miu. Mọi nơi vẽ Buddy qua
+`src/components/Buddy.jsx`: `BuddyFigure` (cả thân) và `BuddyAvatar` (mặt
+nhỏ trong danh sách).
+
+**Miu** là một hình SVG (`src/components/Miu.jsx`):
+
+- Bảng tư thế cho từng cảm xúc ở `src/lib/miu.js` (thuần, có test): mắt,
+  lông mày, miệng, tai, tay, má hồng và hình phụ như dấu hỏi, chữ z, giọt
+  nước mắt.
+- Chuyển động bằng CSS trong `src/styles/miu.css`: đổi tư thế mượt, thở, vẫy
+  đuôi, chớp mắt, nút trên bụng sáng theo micro khi đang nghe.
+
+**Ba robot** vẽ bằng `src/components/ToyShell.jsx` (thân) và
+`src/components/buddy/BuddyScreen.jsx` (mặt), chuyển động toàn bộ bằng CSS
+trong `src/styles/buddy.css`. Mắt và miệng là đa giác `clip-path` cùng số điểm
 (`src/styles/buddy-shapes.css`, sinh bởi `node scripts/buddy_shapes.js`) nên
-mặt chuyển mượt từ cảm xúc này sang cảm xúc khác: `neutral`, `listening`, `thinking`, `happy`,
+mặt chuyển mượt từ cảm xúc này sang cảm xúc khác.
+
+14 cảm xúc: `neutral`, `listening`, `thinking`, `happy`,
 `excited`, `laughing`, `love`, `curious`, `surprised`, `wink`, `shy`,
 `confused`, `sad`, `sleepy`. Giá trị lạ hiển thị `neutral`. Khi dùng brain, mô
 hình tự gắn cảm xúc cho mỗi câu trả lời; chế độ mock chỉ gửi `listening`,
@@ -69,12 +101,17 @@ Chỉ giữ hiệu ứng thuộc về cách một thành phần hoạt động; 
 trang hay nội dung vừa tải (không trượt vào, không hiện dần khi cuộn, cột biểu
 đồ đứng yên, số lượt hiện ngay).
 
-Hiệu ứng được giữ: Buddy ở hero lơ lửng, tự đổi khuôn mặt khoảng mỗi 3 giây khi
-rảnh, mắt nhìn theo con trỏ, và chạy thử một lượt hỏi khi chạm nút; mọi chuyển
-động của khuôn mặt; ký hiệu và ánh sáng nền ở hero; thẻ nhấc lên khi rê chuột,
-thẻ giá nghiêng theo chuột; số lượt đếm khi thay đổi (sau khi mua); hộp thoại,
-ngăn kéo, thông báo và pháo giấy khi mua lượt hoặc thêm đồ chơi. Tất cả tắt khi
-hệ điều hành bật "giảm chuyển động".
+Hiệu ứng được giữ:
+
+- Buddy ở hero: tự đổi khuôn mặt khi rảnh, mắt nhìn theo con trỏ, chạy thử một
+  lượt hỏi khi chạm nút micro.
+- Miu: thở, vẫy đuôi, chớp mắt; mọi chuyển động khi đổi cảm xúc.
+- Nút lún xuống khi bấm; vòng sáng quanh nút micro theo âm lượng khi đang nghe.
+- Số lượt đếm khi thay đổi (sau khi mua).
+- Hộp thoại, ngăn kéo, bảng trượt từ dưới lên, thông báo.
+- Pháo giấy khi mua lượt hoặc thêm đồ chơi.
+
+Tất cả tắt khi hệ điều hành bật "giảm chuyển động".
 
 ## Thêm Buddy và hồ sơ của Buddy
 
@@ -84,17 +121,22 @@ Thêm đồ chơi là một chuỗi màn hình, mỗi màn một việc:
 2. Chọn bé (hoặc "Để sau"). Bấm tiếp là **ghép ngay** với hồ sơ mặc định
    (Buddy / bạn thân / ENFP), nên mã sai bị phát hiện ở đây, trước khi làm hồ sơ.
 3. Đặt tên (gợi ý sẵn vài tên, nút "Gợi ý tên khác" chọn ngẫu nhiên).
-4. Cách Buddy xưng hô với bé: bạn thân (tớ, cậu), bố, mẹ, cô giáo (con).
-5. Tính cách: **làm trắc nghiệm** 12 câu về người bạn mình muốn cho bé, mỗi câu
+4. Ngoại hình: Miu (mặc định), Orbit, Volt hoặc Glim, mỗi lựa chọn là một
+   Buddy nhỏ đang động.
+5. Cách Buddy xưng hô với bé: bạn thân (tớ, cậu), bố, mẹ, cô giáo (con).
+6. Tính cách: **làm trắc nghiệm** 12 câu về người bạn mình muốn cho bé, mỗi câu
    một màn (3 câu mỗi trục E/I, S/N, T/F, J/P, số lẻ nên luôn có đa số), hoặc
    **tự chọn** trong 16 tính cách chia 4 nhóm.
-6. Xem lại, "Sửa" từng mục, rồi "Lưu hồ sơ" (một lệnh `PATCH`).
+7. Xem lại, "Sửa" từng mục, rồi "Lưu hồ sơ" (một lệnh `PATCH`).
+
+Mỗi bước là một màn hình riêng (cửa sổ lớn từ 760px), Buddy giới thiệu bước
+đó trong bong bóng lời thoại.
 
 Huỷ giữa chừng:
 
 - Trước bước 2: không có gì được ghi, đồ chơi vẫn chưa được ghép.
 - Đang gửi yêu cầu: không đóng được cửa sổ.
-- Từ bước 3 đến 6: đóng (✕, Esc, bấm ra ngoài, "Để sau") sẽ hỏi lại. "Làm tiếp"
+- Từ bước 3 đến 7: đóng (✕, Esc, bấm ra ngoài, "Để sau") sẽ hỏi lại. "Làm tiếp"
   quay lại, "Lưu và đóng" lưu những gì đã chọn (nếu có thay đổi). Đồ chơi đã
   thuộc gia đình, hồ sơ hoàn tất sau được trong bảng chi tiết.
 - Mất phản hồi khi ghép: gửi lại mã sẽ nhận lại đúng đồ chơi (backend coi là
@@ -162,10 +204,15 @@ bé không nói gì, hay huỷ giữa chừng thì không trừ.
   `audio`, các khung PCM16, `audio_end`, rồi `turn_done`. AudioContext được
   bật khi chạm nút hoặc bấm Gửi (trình duyệt chỉ cho phát âm thanh sau một
   thao tác của người dùng).
-- **Cửa sổ trò chuyện**: bong bóng câu bé nói (lượt nói hiện câu Buddy nghe
+- **Căn phòng**: Buddy (theo ngoại hình của đồ chơi) đứng giữa phòng. Câu trả
+  lời gần nhất hiện trong bong bóng phía trên, kèm câu Buddy nghe được. Ở trên
+  có bảng tên (chọn Buddy khi có hơn một Buddy đang thức) và số lượt còn lại.
+  Bên phải là các nút tròn: ngôn ngữ trò chuyện (VI/EN), cuộc trò chuyện mới,
+  hồ sơ. Dưới cùng là nút micro to, nút bàn phím và nút mở cuộc trò chuyện.
+- **Cuộc trò chuyện**: bong bóng câu bé nói (lượt nói hiện câu Buddy nghe
   được, để phát hiện nghe nhầm) và câu Buddy trả lời, dấu ba chấm khi Buddy
-  đang nghĩ, ô nhắn tin, nút "Cuộc trò chuyện mới", chọn Buddy (khi có hơn một
-  Buddy đang thức), đổi ngôn ngữ trò chuyện và số lượt còn lại. Sau mỗi lượt,
+  đang nghĩ, ô nhắn tin. Từ 900px nằm cạnh căn phòng; trên điện thoại trượt
+  từ dưới lên khi bấm nút bàn phím hoặc nút cuộc trò chuyện. Sau mỗi lượt,
   dữ liệu gia đình được tải lại (số lượt, Hoạt động).
 
 **Cần secure context**: trình duyệt chỉ cho dùng micro và WebCrypto (để ký
@@ -179,20 +226,20 @@ Logic thuần có test: `src/talk/signing.js` (bản WebCrypto của
 `src/talk/dsp.js` (lọc, hạ mẫu, cắt khung, giải mã PCM), `src/talk/vad.js`
 (nhận biết hết câu), `src/talk/machine.js` (máy trạng thái, kế hoạch kết nối
 lại). Phần gắn với trình duyệt: `src/talk/useWebToy.js`, `mic.js`, `player.js`;
-giao diện ở `src/dashboard/Talk.jsx`; thân đồ chơi dùng chung với hero ở
-`src/components/ToyShell.jsx`.
+giao diện ở `src/dashboard/Talk.jsx`; Buddy vẽ qua `BuddyFigure`
+(`src/components/Buddy.jsx`), dùng chung với hero và các màn khác.
 
 ## Cấu trúc
 
 ```
-src/lib/        routes (thuần), router, api (token + refresh), auth, i18n, translate, format, stats, emotions, designs, motion, personality, toySettings
+src/lib/        routes (thuần), router, api (token + refresh), auth, i18n, translate, format, stats, emotions, designs, miu (tư thế của Miu), motion, personality, toySettings
 src/i18n/       vi.js, en.js (mọi câu chữ)
-src/components/ Toy (hero), ToyShell (thân đồ chơi, ba ngoại hình), buddy/ (BuddyFace, BuddyScreen), Confetti, ui (Layer, Toast, Pill, LangSwitch...)
+src/components/ Buddy (BuddyFigure, BuddyAvatar), Miu, Room (căn phòng), Toy (hero), ToyShell (thân ba robot), buddy/ (BuddyFace, BuddyScreen), Confetti, ui (Layer, Toast, Chip, Coin, LangSwitch...)
 src/talk/       đồ chơi trên web: signing, dsp, vad, machine (thuần), useWebToy, mic, player
 src/marketing/  MarketingPage
 src/auth/       AuthPage
 src/dashboard/  AppShell, screens, Talk, layers (drawer, thêm đồ chơi, mua lượt), profile (hồ sơ, trắc nghiệm, cài đặt trò chuyện), WeekChart, parts, data
-src/styles/     tokens, base, motion, buddy-shapes, buddy, marketing, app
+src/styles/     tokens, base, motion, buddy-shapes, buddy (robot), miu, marketing, app
 scripts/        buddy_shapes.js (sinh buddy-shapes.css)
 tests/          node --test cho các module thuần
 ```

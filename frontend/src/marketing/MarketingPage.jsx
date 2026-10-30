@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import BuddyScreen from '../components/buddy/BuddyScreen.jsx';
+import { useEffect, useState } from 'react';
+import { BuddyAvatar, BuddyFigure } from '../components/Buddy.jsx';
+import Room from '../components/Room.jsx';
 import Toy from '../components/Toy.jsx';
-import { Icon, LangSwitch } from '../components/ui.jsx';
+import { CoinStack, Icon, LangSwitch } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { Link } from '../lib/router.js';
-import { reducedMotion, usePointerVars } from '../lib/motion.js';
+import { reducedMotion } from '../lib/motion.js';
 import { EMOTIONS } from '../lib/emotions.js';
 import { ROLES } from '../lib/personality.js';
 import { api } from '../lib/api.js';
@@ -16,11 +17,6 @@ const FALLBACK_PACKS = [
   { id: 'starter', credits: 20, price_amount: 49000, currency: 'VND' },
   { id: 'family', credits: 60, price_amount: 129000, currency: 'VND' },
   { id: 'big', credits: 150, price_amount: 299000, currency: 'VND' },
-];
-
-const GLYPHS = [
-  ['?', 8, 18, 0, 11], ['★', 16, 70, 2, 14], ['!', 30, 30, 4, 9], ['♥', 44, 82, 1, 13], ['?', 58, 12, 3, 12],
-  ['★', 70, 60, 5, 10], ['♪', 84, 26, 2, 15], ['!', 92, 74, 0, 12], ['★', 24, 90, 3, 9], ['?', 78, 88, 4, 11],
 ];
 
 function Nav() {
@@ -37,24 +33,24 @@ function Nav() {
   return (
     <header className={`nav ${scrolled ? 'nav--solid' : ''} ${open ? 'nav--open' : ''}`}>
       <div className="wrap nav-inner">
-        <a className="wordmark" href="#top"><span className="dotface"><BuddyScreen emotion="neutral" /></span><span>Little Buddy</span></a>
+        <a className="wordmark" href="#top"><BuddyAvatar design="miu" emotion="happy" size="sm" /><span>Little Buddy</span></a>
         <nav className="nav-links" aria-label={t('navSections')}>
           {links.map(([href, key]) => <a key={href} href={href}>{t(key)}</a>)}
         </nav>
         <div className="nav-actions">
-          <LangSwitch dark />
-          <Link className="btn ghost-light sm" to="/login">{t('signIn')}</Link>
-          <Link className="btn pop sm" to="/register">{t('start')}</Link>
+          <LangSwitch />
+          <Link className="btn btn-soft btn-sm" to="/login">{t('signIn')}</Link>
+          <Link className="btn btn-pop btn-sm" to="/register">{t('start')}</Link>
         </div>
-        <button type="button" className="menu-btn" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? t('closeMenu') : t('menu')}</button>
+        <button type="button" className="btn btn-soft btn-sm menu-btn" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? t('closeMenu') : t('menu')}</button>
       </div>
       {open && (
         <div className="wrap menu-panel">
           {links.map(([href, key]) => <a key={href} href={href} onClick={() => setOpen(false)}>{t(key)}</a>)}
           <div className="menu-row">
-            <LangSwitch dark />
-            <Link className="btn ghost-light sm" to="/login">{t('signIn')}</Link>
-            <Link className="btn pop sm" to="/register">{t('start')}</Link>
+            <LangSwitch />
+            <Link className="btn btn-soft btn-sm" to="/login">{t('signIn')}</Link>
+            <Link className="btn btn-pop btn-sm" to="/register">{t('start')}</Link>
           </div>
         </div>
       )}
@@ -64,27 +60,18 @@ function Nav() {
 
 function Hero() {
   const { t } = useI18n();
-  const ref = useRef(null);
-  usePointerVars(ref);
   return (
-    <section className="hero" id="top" ref={ref}>
-      <div className="hero-glow" aria-hidden="true" />
-      <div className="glyphs" aria-hidden="true">
-        {GLYPHS.map(([g, x, y, d, s], i) => <span key={i} style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s`, fontSize: `${s * 2}px` }}>{g}</span>)}
-      </div>
-      <div className="wrap hero-inner">
+    <section className="wrap hero" id="top">
+      <div className="hero-card room-wall">
         <div className="hero-copy">
-          <p className="eyebrow">{t('heroEyebrow')}</p>
-          <h1>
-            <span>{t('heroA')}</span>
-            <span className="accent">{t('heroB')}</span>
-          </h1>
+          <p className="tag-pill">{t('heroEyebrow')}</p>
+          <h1><span>{t('heroA')}</span> <span className="accent">{t('heroB')}</span></h1>
           <p className="hero-sub">{t('heroSub')}</p>
           <div className="hero-ctas">
-            <Link className="btn pop lg sheen" to="/register">{t('ctaStart')}{Icon.arrow}</Link>
-            <a className="btn ghost-light lg" href="#how">{t('ctaHow')}</a>
+            <Link className="btn btn-pop btn-xl" to="/register">{t('ctaStart')}{Icon.arrow}</Link>
+            <a className="btn btn-soft btn-xl" href="#how">{t('ctaHow')}</a>
           </div>
-          <p className="trust"><i />{t('trust')}</p>
+          <p className="trust">{t('trust')}</p>
         </div>
         <Toy />
       </div>
@@ -94,22 +81,16 @@ function Hero() {
 
 function HowItWorks() {
   const { t } = useI18n();
-  const steps = [
-    { n: 1, face: 'listening' },
-    { n: 2, face: 'happy' },
-    { n: 3, face: null },
-  ];
+  const steps = [{ n: 1, face: 'listening' }, { n: 2, face: 'thinking' }, { n: 3, face: 'happy' }];
   return (
     <section className="band" id="how">
       <div className="wrap">
         <div className="band-head"><p className="eyebrow">{t('howEyebrow')}</p><h2>{t('howTitle')}</h2><p>{t('howSub')}</p></div>
-        <div className="steps">
+        <div className="how">
           {steps.map((s) => (
-            <article key={s.n} className="step lift">
-              <div className="step-top">
-                <span className="step-n">{s.n}</span>
-                {s.face ? <span className="chip-screen"><BuddyScreen emotion={s.face} /></span> : <span className="mini-phone"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="6.5" y="3" width="11" height="18" rx="3" /><path d="M10.5 17.5h3" /></svg></span>}
-              </div>
+            <article key={s.n} className="how-card">
+              <span className="how-n">{s.n}</span>
+              <Room size="sm" className="how-room"><span className="room-stage"><BuddyFigure emotion={s.face} /></span></Room>
               <h3>{t(`s${s.n}t`)}</h3>
               <p>{t(`s${s.n}b`)}</p>
             </article>
@@ -136,32 +117,24 @@ function Emotions() {
     setPicked(e);
   };
   return (
-    <section className="band alt" id="emotions">
+    <section className="band" id="emotions">
       <div className="wrap">
-        <div className="band-head"><p className="eyebrow">{t('emoEyebrow')}</p><h2>{t('emoTitle')}</h2><p>{t('emoSub')}</p></div>
-        <div className="emo-layout">
-          <div className="emo-stage">
-            <div className="emo-screen" key={picked}><BuddyScreen emotion={picked} label={t(`emo_${picked}`)} /></div>
-            <div className="emo-caption" aria-live="polite">
-              <b>{t(`emo_${picked}`)}</b>
-              <span>{t(`emoWhen_${picked}`)}</span>
+        <div className="emo card">
+          <div className="band-head band-head--left"><p className="eyebrow">{t('emoEyebrow')}</p><h2>{t('emoTitle')}</h2><p>{t('emoSub')}</p></div>
+          <div className="emo-layout">
+            <Room size="md" className="emo-stage">
+              <span className="room-stage"><BuddyFigure emotion={picked} label={t(`emo_${picked}`)} /></span>
+              <div className="emo-caption" aria-live="polite"><b>{t(`emo_${picked}`)}</b><span>{t(`emoWhen_${picked}`)}</span></div>
+            </Room>
+            <div className="emo-grid">
+              {EMOTIONS.map((e) => (
+                <button key={e} type="button" className="emo-tile" aria-pressed={picked === e}
+                  onClick={() => choose(e)} onPointerEnter={() => choose(e)} onFocus={() => choose(e)}>
+                  <BuddyAvatar design="miu" emotion={e} />
+                  <span>{t(`emo_${e}`)}</span>
+                </button>
+              ))}
             </div>
-          </div>
-          <div className="emo-grid">
-            {EMOTIONS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                className="emo-tile"
-                aria-pressed={picked === e}
-                onClick={() => choose(e)}
-                onPointerEnter={() => choose(e)}
-                onFocus={() => choose(e)}
-              >
-                <span className="chip-screen"><BuddyScreen emotion={e} /></span>
-                <span>{t(`emo_${e}`)}</span>
-              </button>
-            ))}
           </div>
         </div>
       </div>
@@ -171,38 +144,37 @@ function Emotions() {
 
 function Features() {
   const { t } = useI18n();
-  const scenes = [
-    <><rect width="100" height="100" fill="#8FB2FF" /><circle cx="72" cy="28" r="12" fill="#FFE08A" /><path d="M0 78 Q30 64 55 76 T100 72 V100 H0z" fill="#14B8A6" /></>,
-    <><rect width="100" height="100" fill="#111A2E" /><circle cx="30" cy="30" r="3" fill="#E8EEFA" /><circle cx="70" cy="20" r="2" fill="#E8EEFA" /><circle cx="55" cy="47" r="16" fill="#E8EEFA" /><circle cx="50" cy="42" r="3" fill="#A3B3CE" /></>,
-    <><rect width="100" height="100" fill="#2F6BFF" /><path d="M20 72 Q50 30 80 72z" fill="#F97316" /><circle cx="50" cy="45" r="8" fill="#FDBA74" /></>,
-    <><rect width="100" height="100" fill="#FFE7D1" /><path d="M15 80 L50 30 L85 80z" fill="#C2410C" /><rect x="44" y="60" width="12" height="20" fill="#0B1220" /></>,
-  ];
   return (
     <section className="band" id="meet">
       <div className="wrap">
         <div className="band-head"><p className="eyebrow">{t('featEyebrow')}</p><h2>{t('featTitle')}</h2></div>
-        <div className="bento">
-          <article className="tile tile--a lift">
-            <h3>{t('f1t')}</h3><p>{t('f1b')}</p>
-            <div className="say-lines">
+        <div className="features">
+          <article className="feature card">
+            <div className="feature-art say-lines">
               <span className="say say--child">{t('f1c')}</span><span className="say say--buddy">{t('f1d')}</span>
               <span className="say say--child">{t('f1e')}</span><span className="say say--buddy">{t('f1f')}</span>
             </div>
+            <h3>{t('f1t')}</h3><p>{t('f1b')}</p>
           </article>
-          <article className="tile tile--b lift">
-            <h3>{t('vadT')}</h3><p>{t('vadB')}</p>
-            <div className="vad" aria-hidden="true">
-              <div className="vad-wave">{Array.from({ length: 14 }, (_, i) => <span key={i} style={{ '--i': i }} />)}</div>
+          <article className="feature card">
+            <div className="feature-art vad" aria-hidden="true">
+              <div className="vad-wave">{Array.from({ length: 16 }, (_, i) => <span key={i} style={{ '--i': i }} />)}</div>
               <div className="vad-labels"><span className="vad-speak">{t('vadSpeak')}</span><span className="vad-done">{Icon.check}{t('vadDone')}</span></div>
             </div>
+            <h3>{t('vadT')}</h3><p>{t('vadB')}</p>
           </article>
-          <article className="tile tile--c lift">
+          <article className="feature card">
+            <div className="feature-art scenes" aria-hidden="true">
+              <span className="scene scene--a">{Icon.moon}</span>
+              <span className="scene scene--b">{Icon.sun}</span>
+              <span className="scene scene--c">{Icon.spark}</span>
+              <span className="scene scene--d"><BuddyAvatar design="miu" emotion="wink" size="sm" /></span>
+            </div>
             <h3>{t('f3t')}</h3><p>{t('f3b')}</p>
-            <div className="scenes">{scenes.map((sc, i) => <div key={i} className="scene"><svg viewBox="0 0 100 100" aria-hidden="true">{sc}</svg></div>)}</div>
           </article>
-          <article className="tile tile--d lift">
+          <article className="feature card">
+            <div className="feature-art personas">{ROLES.map((r, i) => <span key={r} className={`persona ${i === 0 ? 'is-on' : ''}`}>{t(`role_${r}`)}</span>)}</div>
             <h3>{t('f4t')}</h3><p>{t('f4b')}</p>
-            <div className="personas">{ROLES.map((r) => <span key={r} className="persona">{t(`role_${r}`)}</span>)}</div>
           </article>
         </div>
       </div>
@@ -224,12 +196,17 @@ function Safety() {
   const items = ['mic', 'shield', 'bell', 'tag', 'lock', 'hand'];
   return (
     <section className="band safety" id="safety">
-      <div className="wrap">
-        <div className="band-head"><p className="eyebrow">{t('safeEyebrow')}</p><h2>{t('safeTitle')}</h2><p>{t('safeSub')}</p></div>
+      <div className="wrap safety-inner">
+        <div className="safety-head">
+          <p className="eyebrow">{t('safeEyebrow')}</p>
+          <h2>{t('safeTitle')}</h2>
+          <p>{t('safeSub')}</p>
+          <Room size="sm" night className="safety-room"><span className="room-stage"><BuddyFigure emotion="sleepy" /></span></Room>
+        </div>
         <div className="promises">
           {items.map((ic, i) => (
             <div key={ic} className="promise">
-              <div className="ic"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="draw">{SAFETY_ICONS[ic]}</svg></div>
+              <span className="promise-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{SAFETY_ICONS[ic]}</svg></span>
               <h3>{t(`sa${i + 1}t`)}</h3>
               <p>{t(`sa${i + 1}b`)}</p>
             </div>
@@ -240,26 +217,8 @@ function Safety() {
   );
 }
 
-function PriceCard({ pack }) {
-  const { t, lang } = useI18n();
-  const ref = useRef(null);
-  usePointerVars(ref, { tilt: true });
-  const best = pack.id === 'big';
-  return (
-    <article className={`price ${best ? 'price--best' : ''}`}>
-      <div className="price-inner" ref={ref}>
-        <h3>{t(`pack_${pack.id}`)}{best && <span className="badge">{t('best')}</span>}</h3>
-        <div className="price-amt">{vnd(pack.price_amount, lang)}</div>
-        <div className="price-credits">{t('credits', { n: pack.credits })}</div>
-        <div className="price-per">{t('perAnswer', { p: vnd(pricePerAnswer(pack), lang) })}</div>
-        <Link className={`btn ${best ? 'pop' : 'ghost'} block`} to="/register">{t('choose')}</Link>
-      </div>
-    </article>
-  );
-}
-
 function Pricing() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [packs, setPacks] = useState(FALLBACK_PACKS);
   useEffect(() => {
     api.packs().then((out) => { if (out?.packs?.length) setPacks(out.packs); }).catch(() => {});
@@ -268,8 +227,23 @@ function Pricing() {
     <section className="band" id="pricing">
       <div className="wrap">
         <div className="band-head"><p className="eyebrow">{t('priceEyebrow')}</p><h2>{t('priceTitle')}</h2><p>{t('priceSub')}</p></div>
-        <div className="free"><b>{t('freeA')}</b><span>{t('freeB')}</span></div>
-        <div className="price-grid">{packs.map((p) => <PriceCard key={p.id} pack={p} />)}</div>
+        <div className="free"><span className="coin coin--lg" aria-hidden="true"><span>C</span></span><span><b>{t('freeA')}</b> {t('freeB')}</span></div>
+        <div className="shop shop--wide">
+          {packs.map((p) => {
+            const best = p.id === 'big';
+            return (
+              <article key={p.id} className={`shop-item ${best ? 'shop-item--best' : ''}`}>
+                {best && <span className="ribbon">{t('best')}</span>}
+                <CoinStack credits={p.credits} />
+                <span className="shop-name">{t(`pack_${p.id}`)}</span>
+                <span className="shop-credits">{t('credits', { n: p.credits })}</span>
+                <span className="shop-price">{vnd(p.price_amount, lang)}</span>
+                <span className="shop-per">{t('perAnswer', { p: vnd(pricePerAnswer(p), lang) })}</span>
+                <Link className={`btn ${best ? 'btn-pop' : 'btn-soft'} btn-block`} to="/register">{t('choose')}</Link>
+              </article>
+            );
+          })}
+        </div>
         <div className="price-notes">
           {['note1', 'note2', 'note3'].map((k) => <span key={k}>{Icon.check}{t(k)}</span>)}
         </div>
@@ -281,12 +255,12 @@ function Pricing() {
 function Faq() {
   const { t } = useI18n();
   return (
-    <section className="band alt" id="faq">
-      <div className="wrap">
+    <section className="band" id="faq">
+      <div className="wrap wrap--narrow">
         <div className="band-head"><p className="eyebrow">{t('faqEyebrow')}</p><h2>{t('faqTitle')}</h2></div>
         <div className="faq">
           {[1, 2, 3, 4, 5, 6].map((n) => (
-            <details key={n}><summary>{t(`q${n}`)}</summary><p>{t(`a${n}`)}</p></details>
+            <details key={n} open={n === 1}><summary>{t(`q${n}`)}<span className="faq-plus" aria-hidden="true">{Icon.plus}</span></summary><p>{t(`a${n}`)}</p></details>
           ))}
         </div>
       </div>
@@ -297,19 +271,17 @@ function Faq() {
 function Closing() {
   const { t } = useI18n();
   return (
-    <section className="closing">
+    <section className="band closing">
       <div className="wrap">
-        <div className="closing-card">
-          <div className="closing-faces" aria-hidden="true">
-            {['happy', 'love', 'excited', 'wink'].map((e, i) => <span key={e} className="chip-screen float" style={{ '--i': i }}><BuddyScreen emotion={e} /></span>)}
-          </div>
-          <div>
+        <div className="closing-card room-wall">
+          <div className="closing-copy">
             <h2>{t('closeTitle')}</h2>
             <p>{t('closeSub')}</p>
+            <Link className="btn btn-pop btn-xl" to="/register">{t('closeCta')}{Icon.arrow}</Link>
           </div>
-          <Link className="btn dark lg sheen" to="/register">{t('closeCta')}{Icon.arrow}</Link>
+          <span className="closing-figure"><BuddyFigure emotion="love" /></span>
         </div>
-        <footer className="footer"><span>© 2026 Little Buddy</span><span>{t('footerMade')}</span></footer>
+        <footer className="footer"><span className="wordmark"><BuddyAvatar design="miu" emotion="neutral" size="sm" />Little Buddy</span><span>{t('footerMade')}</span><span>© 2026 Little Buddy</span></footer>
       </div>
     </section>
   );

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ToyShell from './ToyShell.jsx';
+import { BuddyFigure } from './Buddy.jsx';
+import Room from './Room.jsx';
+import { Icon } from './ui.jsx';
 import { useI18n } from '../lib/i18n.jsx';
 import { reducedMotion, usePointerLook } from '../lib/motion.js';
 
-// The hero toy. It behaves like the real one: one tap opens the microphone,
-// the toy notices on its own when the child has stopped talking, then it
-// thinks and answers with a face to match. A second tap while it listens
-// means "I'm done" and ends the turn early.
+// The hero toy: Miu in its room. It behaves like the real one: one tap opens
+// the microphone, the toy notices on its own when the child has stopped
+// talking, then it thinks and answers with a face to match. A second tap
+// while it listens means "I'm done" and ends the turn early.
 const SCRIPTS = [
   { id: 1, emotion: 'happy' },
   { id: 2, emotion: 'laughing' },
@@ -130,31 +132,44 @@ export default function Toy() {
 
   const shownQuestion = phase === 'idle' ? '' : question.slice(0, phase === 'listening' ? words : (early ? words : question.length)).join(' ');
 
-  return (
-    <div className="stage" ref={ref}>
-      <ToyShell
-        phase={phase}
-        emotion={emotion}
-        look={phase === 'idle' ? look : null}
-        onTap={tap}
-        pressed={phase === 'listening'}
-        label={phase === 'listening' ? t('toyTapStop') : t('toyTap')}
-      />
+  const chipTone = phase === 'heard' ? 'thinking' : phase;
+  const wave = (
+    <span className="wave" aria-hidden="true">
+      {bars.map((h, i) => <span key={i} style={{ transform: `scaleY(${h.toFixed(2)})` }} />)}
+    </span>
+  );
 
-      <div className="talk" aria-live="polite">
-        <div className="status"><i className={`status-dot status-dot--${phase}`} />{status}</div>
-        <div className="wave" aria-hidden="true">
-          {bars.map((h, i) => <span key={i} style={{ transform: `scaleY(${h.toFixed(2)})` }} />)}
-        </div>
+  return (
+    <Room size="lg" scene className={`hero-room hero-room--${phase}`}>
+      <div className="hero-say" aria-live="polite">
         {shownQuestion && (
-          <p className="bubble bubble--child">
-            <span className="who">{t('asked')}</span>
-            {shownQuestion}{phase === 'listening' && speaking && <span className="caret" />}
-          </p>
+          <p className="heard-chip"><span className="who">{t('asked')}:</span> {shownQuestion}{phase === 'listening' && speaking && <span className="caret" />}</p>
         )}
-        {phase === 'thinking' && <p className="bubble bubble--buddy"><span className="dots"><i /><i /><i /></span></p>}
-        {phase === 'answer' && <p className="bubble bubble--buddy pop-in"><span className="who">Buddy</span>{t(`demo${s.id}a`)}</p>}
+        {phase === 'thinking' && <p className="say-bubble say-bubble--dots"><span className="dots"><i /><i /><i /></span></p>}
+        {phase === 'answer' && <p className="say-bubble pop-in">{t(`demo${s.id}a`)}</p>}
       </div>
-    </div>
+      <div className="scene-stage">
+        <span className="room-stage hero-stage" ref={ref}>
+          <BuddyFigure emotion={emotion} look={phase === 'idle' ? look : null} phase={phase === 'listening' ? 'listening' : 'idle'} />
+        </span>
+      </div>
+      <div className="scene-ground hero-controls">
+        <p className={`status-chip status-chip--${chipTone}`}>{status}</p>
+        <div className="hero-mic">
+          {wave}
+          <button
+            type="button"
+            className={`mic-btn ${phase === 'listening' ? 'is-on' : ''}`}
+            onClick={tap}
+            aria-pressed={phase === 'listening'}
+            aria-label={phase === 'listening' ? t('toyTapStop') : t('toyTap')}
+          >
+            <span className="mic-ring" aria-hidden="true" />
+            {phase === 'listening' ? Icon.stop : Icon.mic}
+          </button>
+          {wave}
+        </div>
+      </div>
+    </Room>
   );
 }

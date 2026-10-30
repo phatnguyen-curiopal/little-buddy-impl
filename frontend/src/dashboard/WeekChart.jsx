@@ -23,14 +23,14 @@ export default function WeekChart({ turns }) {
   const top = Math.max(4, Math.ceil(Math.max(...data.map((d) => d.n)) / 2) * 2);
   const y = (v) => TOP + ph - (v / top) * ph;
   const band = pw / 7;
-  const bw = Math.min(40, band * 0.54);
+  const bw = Math.min(48, band * 0.62);
   const short = new Intl.DateTimeFormat(localeOf(lang), { weekday: 'short' });
   const long = new Intl.DateTimeFormat(localeOf(lang), { weekday: 'long', day: 'numeric', month: 'numeric' });
   const base = TOP + ph;
 
   return (
-    <section className="panel chart-panel">
-      <div className="panel-head"><h2>{t('chartTitle')}</h2><span className="total">{t('chartTotal', { n: total })}</span></div>
+    <section className="card chart">
+      <div className="card-head"><h2>{t('chartTitle')}</h2><span className="chart-total">{t('chartTotal', { n: total })}</span></div>
       <div className="chart-wrap">
         <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={t('chartTitle')}>
           {[0, top / 2, top].map((v) => (
@@ -43,7 +43,7 @@ export default function WeekChart({ turns }) {
             const x = L + i * band + (band - bw) / 2;
             const yt = y(d.n);
             const h = base - yt;
-            const r = Math.min(4, h);
+            const r = Math.min(10, h, bw / 2);
             const tip = t('tip', { d: long.format(d.start), n: d.n });
             return (
               <g key={d.start}>

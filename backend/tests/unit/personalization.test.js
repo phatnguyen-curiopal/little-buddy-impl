@@ -14,7 +14,7 @@ const fields = (fn) => {
 
 test('a full profile is cleaned: name trimmed and collapsed, code uppercased', () => {
   const out = validateProfile({ name: '  Bin   Bin ', role: 'teacher', personality: 'intj', personality_source: 'quiz' });
-  assert.deepEqual(out, { name: 'Bin Bin', role: 'teacher', personality: 'INTJ', personality_source: 'quiz', design: 'orbit', ...DEFAULT_SETTINGS });
+  assert.deepEqual(out, { name: 'Bin Bin', role: 'teacher', personality: 'INTJ', personality_source: 'quiz', design: 'miu', ...DEFAULT_SETTINGS });
 });
 
 test('a full profile without a source counts as picked', () => {
@@ -37,7 +37,7 @@ test('partial updates accept any subset but not nothing', () => {
 test('defaults and roles match the prototype friend persona and the four spec roles', () => {
   assert.deepEqual({ ...DEFAULT_PROFILE }, {
     name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default',
-    design: 'orbit',
+    design: 'miu',
     language: 'vi', voice_id: null, learn: false, mood_pin: null,
   });
   assert.deepEqual(Object.keys(ROLES), ['friend', 'daddy', 'mommy', 'teacher']);
@@ -60,9 +60,9 @@ test('settings: a full profile can carry them, and bad ones are listed with the 
   assert.deepEqual(fields(() => validateProfile({ voice_id: 42 }, { partial: true })), ['voice_id']);
 });
 
-test('design: one of the three, never null; a full profile defaults to orbit', () => {
-  assert.deepEqual(DESIGNS, ['orbit', 'volt', 'glim']);
-  assert.equal(validateProfile({ name: 'Kem', role: 'friend', personality: 'ENFP' }).design, 'orbit');
+test('design: one of the four, never null; a full profile defaults to miu', () => {
+  assert.deepEqual(DESIGNS, ['miu', 'orbit', 'volt', 'glim']);
+  assert.equal(validateProfile({ name: 'Kem', role: 'friend', personality: 'ENFP' }).design, 'miu');
   assert.equal(validateProfile({ name: 'Kem', role: 'friend', personality: 'ENFP', design: 'glim' }).design, 'glim');
   assert.deepEqual(validateProfile({ design: 'volt' }, { partial: true }), { design: 'volt' });
   assert.deepEqual(fields(() => validateProfile({ design: null }, { partial: true })), ['design']);

@@ -6,7 +6,7 @@ import { registerParent, provisionDevice, adminHeaders } from '../helpers/fixtur
 import { pool } from '../../store/db.js';
 
 // What every claim starts from, whatever the toy's past.
-const SETTINGS = { design: 'orbit', language: 'vi', voice_id: null, learn: false, mood_pin: null };
+const SETTINGS = { design: 'miu', language: 'vi', voice_id: null, learn: false, mood_pin: null };
 
 let srv;
 let api;
@@ -154,7 +154,7 @@ test('settings: set, clear the mood pin with null, keep 0 as a real pin, and lea
 
   let res = await patch(p, d.id, { language: 'en', learn: true, mood_pin: 0, voice_id: ZIGGY });
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body.device.profile, { name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default', design: 'orbit', language: 'en', voice_id: ZIGGY, learn: true, mood_pin: 0 });
+  assert.deepEqual(res.body.device.profile, { name: 'Buddy', role: 'friend', personality: 'ENFP', personality_source: 'default', design: 'miu', language: 'en', voice_id: ZIGGY, learn: true, mood_pin: 0 });
 
   res = await patch(p, d.id, { name: 'Kem' });
   assert.equal(res.body.device.profile.mood_pin, 0, 'an absent field is untouched');
@@ -246,7 +246,7 @@ test('design: chosen at claim, changed alone by a patch, and reset for the next 
 
   assert.equal((await api('DELETE', `/api/devices/${d.id}`, { token: p1.token })).status, 204);
   res = await claim(p2, d.claimCode);
-  assert.equal(res.body.device.profile.design, 'orbit');
+  assert.equal(res.body.device.profile.design, 'miu');
 });
 
 test('a claim resets every setting, so the next owner never inherits them', async () => {

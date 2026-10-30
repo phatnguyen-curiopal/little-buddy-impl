@@ -1,0 +1,44 @@
+/* Miu, the talking kitten (components/Miu.jsx). The pose of each feeling
+   comes from lib/miu.js as inline transforms and opacities; this sheet makes
+   them move: parts glide to the next pose, Miu breathes, wags its tail and
+   blinks, and the tummy button glows with the microphone while listening.
+   Transforms use the drawing's own coordinates (transform-box: view-box), so
+   the pivots below are points in the 400 x 440 picture. */
+.miu { overflow: visible; }
+.miu text { font-family: var(--display); }
+.miu-fade { transition: opacity 0.25s ease; }
+.miu-ear, .miu-arm, .miu-iris, .miu-glow { transform-box: view-box; transition: transform 0.45s var(--ease-spring); }
+.miu-ear-l { transform-origin: 125px 115px; }
+.miu-ear-r { transform-origin: 275px 115px; }
+.miu-arm-l { transform-origin: 132px 288px; }
+.miu-arm-r { transform-origin: 268px 288px; }
+.miu-iris { transition-duration: 0.3s; transition-timing-function: var(--ease-out); }
+.miu-pupil { transition: r 0.3s ease; }
+
+.miu-breath { transform-box: view-box; transform-origin: 200px 412px; animation: miu-breath 3.2s ease-in-out infinite; }
+.miu-tail { transform-box: view-box; transform-origin: 262px 382px; animation: miu-wag 2.4s ease-in-out infinite; }
+.miu-eye { transform-box: view-box; animation: miu-blink 5.5s ease-in-out infinite; transition: opacity 0.2s ease; }
+.miu-eyes > .miu-eye:last-child { animation-delay: 0.02s; }
+.miu-float { transform-box: fill-box; transform-origin: center; animation: miu-float 2.6s ease-in-out infinite; }
+.miu-zzz { animation: miu-float 3s ease-in-out infinite; }
+
+.miu-glow { transform-origin: 200px 354px; opacity: 0.45; transition: opacity 0.2s ease, transform 0.1s linear; }
+.miu-p-listening .miu-glow { opacity: 0.95; transform: scale(calc(1 + var(--level, 0) * 0.9)); }
+
+/* A happier Miu bounces, a sleepy one breathes slower. */
+.miu-e-excited .miu-breath, .miu-e-laughing .miu-breath { animation: miu-bounce 0.7s ease-in-out infinite; }
+.miu-e-sleepy .miu-breath { animation-duration: 5s; }
+.miu-e-sleepy .miu-tail, .miu-e-sad .miu-tail { animation-duration: 5s; }
+.miu-e-excited .miu-tail, .miu-e-happy .miu-tail, .miu-e-love .miu-tail { animation-duration: 0.9s; }
+.miu-e-thinking .miu-tail { animation: none; }
+.miu-dim { filter: saturate(0.6) brightness(0.85); }
+
+@keyframes miu-breath { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px) scale(1.008, 0.995); } }
+@keyframes miu-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes miu-wag { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(9deg); } }
+@keyframes miu-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+@keyframes miu-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .miu-breath, .miu-tail, .miu-eye, .miu-float, .miu-zzz { animation: none !important; }
+}

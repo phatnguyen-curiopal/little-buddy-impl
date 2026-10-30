@@ -134,6 +134,8 @@ async function createWorld(db: Db, config: Config, gateway: ModelGateway, setup:
   for (const day of [0, 1]) await db.query('SELECT ensure_turn_partition((current_date + $1::int))', [day]);
 
   const familyId = (await db.query<{ id: string }>('INSERT INTO family DEFAULT VALUES RETURNING id')).rows[0].id;
+  // Every answered turn costs a credit, as for a real family's welcome credits.
+  await db.query("INSERT INTO credit_ledger (family_id, kind, delta, reason) VALUES ($1, 'grant', 1000, 'welcome')", [familyId]);
   const parentId = (await db.query<{ id: string }>(
     "INSERT INTO parent_user (family_id, email, auth_provider, auth_subject) VALUES ($1, $2, 'email', $2) RETURNING id",
     [familyId, `eval-${familyId}@example.com`],

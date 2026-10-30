@@ -58,6 +58,18 @@ export interface Config {
     appleClientIds: string[];
     accessTtlSec: number;
     refreshTtlDays: number;
+    // scrypt N for password hashes; the stored string carries it, so raising
+    // it later still verifies old hashes.
+    scryptCost: number;
+  };
+  web: {
+    // Whether a parent may play a Buddy in the browser (a toy with no card).
+    webToy: boolean;
+    maxWebToys: number;
+    // demo stands in for a payment provider and gives credits away, so
+    // production refuses it.
+    paymentProvider: 'demo' | 'disabled';
+    welcomeCredits: number;
   };
 }
 
@@ -78,6 +90,12 @@ function int(value: string | undefined, fallback: number, name: string): number 
 
 function list(value: string | undefined): string[] {
   return (value ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+function onOff(value: string | undefined, fallback: boolean, name: string): boolean {
+  if (value === undefined || value === '') return fallback;
+  if (value !== 'on' && value !== 'off') throw new Error(`config: ${name} must be on or off`);
+  return value === 'on';
 }
 
 function orNull(value: string | undefined): string | null {
@@ -139,6 +157,13 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       appleClientIds: list(env.APPLE_CLIENT_IDS),
       accessTtlSec: int(env.ACCESS_TTL_SEC, 15 * 60, 'ACCESS_TTL_SEC'),
       refreshTtlDays: int(env.REFRESH_TTL_DAYS, 60, 'REFRESH_TTL_DAYS'),
+      scryptCost: int(env.SCRYPT_COST, mode === 'test' ? 1024 : 32768, 'SCRYPT_COST'),
+    },
+    web: {
+      webToy: onOff(env.WEB_TOY, !prod, 'WEB_TOY'),
+      maxWebToys: int(env.MAX_WEB_TOYS_PER_FAMILY, 3, 'MAX_WEB_TOYS_PER_FAMILY'),
+      paymentProvider: env.PAYMENT_PROVIDER ? (env.PAYMENT_PROVIDER as Config['web']['paymentProvider']) : prod ? 'disabled' : 'demo',
+      welcomeCredits: int(env.WELCOME_CREDITS, 1000, 'WELCOME_CREDITS'),
     },
   };
 
@@ -149,7 +174,10 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     if (config.voice.allowTextTurns) throw new Error('config: ALLOW_TEXT_TURNS is refused in production');
     if (config.auth.emailDevEcho) throw new Error('config: EMAIL_DEV_ECHO is refused in production');
     if (config.gateway !== 'live') throw new Error('config: GATEWAY must be live in production');
+    if (config.web.paymentProvider === 'demo') throw new Error('config: PAYMENT_PROVIDER=demo is refused in production: it gives credits away');
   }
+  if (!['demo', 'disabled'].includes(config.web.paymentProvider)) throw new Error('config: PAYMENT_PROVIDER must be demo or disabled');
+  if (config.auth.scryptCost < 1024 || (config.auth.scryptCost & (config.auth.scryptCost - 1)) !== 0) throw new Error('config: SCRYPT_COST must be a power of two, at least 1024');
   if (config.gateway === 'live') {
     if (!config.openai.apiKey) throw new Error('config: OPENAI_API_KEY is required when GATEWAY=live');
     if (!config.elevenlabs.apiKey) throw new Error('config: ELEVENLABS_API_KEY is required when GATEWAY=live');

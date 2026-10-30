@@ -12,9 +12,17 @@ export function registerAccount(app: FastifyInstance, deps: ApiDeps) {
     const { parentId, familyId } = authOf(req);
     const parent = (await db.query('SELECT id, email, display_name, role, auth_provider FROM parent_user WHERE id = $1', [parentId])).rows[0];
     if (!parent) throw notFound('account');
-    const family = (await db.query('SELECT id, country, created_at FROM family WHERE id = $1', [familyId])).rows[0];
+    const family = (await db.query('SELECT id, name, country, created_at FROM family WHERE id = $1', [familyId])).rows[0];
     const children = (await db.query('SELECT id, name, nickname FROM child WHERE family_id = $1 ORDER BY created_at', [familyId])).rows;
-    return { parent, family, children };
+    // What the site may offer: playing a Buddy in the browser, and buying credits.
+    return { parent, family, children, web_toy: deps.config.web.webToy, payments: deps.config.web.paymentProvider };
+  });
+
+  app.patch('/family', {
+    schema: { body: { type: 'object', required: ['name'], additionalProperties: false, properties: { name: { type: 'string', minLength: 1, maxLength: 80 } } } },
+  }, async (req) => {
+    const r = await db.query('UPDATE family SET name = $2 WHERE id = $1 RETURNING id, name, country, created_at', [authOf(req).familyId, (req.body as { name: string }).name.trim()]);
+    return r.rows[0];
   });
 
   app.patch('/me', {

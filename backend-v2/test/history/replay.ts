@@ -15,6 +15,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 
 import { buildApi } from '../../src/api/app.ts';
+import { chargeTurn } from '../../src/billing/credits.ts';
 import { signAccess } from '../../src/auth/jwt.ts';
 import { createOidcVerifier } from '../../src/auth/oidc.ts';
 import { decide } from '../../src/character/director.ts';
@@ -115,7 +116,9 @@ export async function replayYear(histories: KidHistory[], opts: { end?: Date } =
   const startedAt = performance.now();
   const setups = histories.map((h) => localToUtc(h.start, h.child.timeZone).getTime());
   const clock = startClock(Math.min(...setups) - 3_600_000);
-  const config = testConfig();
+  // A year of talk costs a credit a turn; enough welcome credits that no
+  // family runs dry, since the replay records turns rather than gating them.
+  const config = testConfig({ WELCOME_CREDITS: '5000' });
   const record: ReplayRecord = { sessions: new Map(), turns: new Map(), followUps: [], stages: {}, logged: [], jobs: 0, ms: 0 };
   const log = createLogger('warn', {}, (line) => record.logged.push(line));
   const db = await createCopyableDb();
@@ -322,6 +325,7 @@ export async function replayYear(histories: KidHistory[], opts: { end?: Date } =
         if (handled?.kind === 'event') await q.query("UPDATE child_event SET status = 'followed_up' WHERE id = $1", [handled.id]);
         if (handled?.kind === 'promise') await q.query("UPDATE relationship_item SET status = 'kept', last_used_at = now() WHERE id = $1", [handled.id]);
         if (nudges.length) await q.query("UPDATE nudge SET status = 'used', used_at = now() WHERE id = ANY($1::uuid[])", [nudges]);
+        await chargeTurn(q, { familyId: ids.familyId, childId: ids.childId, turnId });
         if (child.learning_enabled) await workerDeps.queue.enqueue('learn-turn', { turn_id: turnId }, { q });
       });
       if (handled) record.followUps.push({ kid: kid.key, kind: handled.kind, text: handled.text, at: new Date(), session: s.id });

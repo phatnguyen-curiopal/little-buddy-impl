@@ -43,8 +43,8 @@ describe('schema and migrations', () => {
 
   it('creates every table, using halfvec on pgvector 0.7+', async () => {
     const tables = await db.query<{ n: number }>("SELECT count(*)::int AS n FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'schema_migration'");
-    // 37 domain tables plus 5 operational ones (refresh_token, email_login, idempotency_key, push_token, job).
-    assert.equal(tables.rows[0].n, 42);
+    // 41 domain tables plus 5 operational ones (refresh_token, email_login, idempotency_key, push_token, job).
+    assert.equal(tables.rows[0].n, 46);
     const col = await db.query<{ t: string }>("SELECT format_type(atttypid, atttypmod) AS t FROM pg_attribute WHERE attrelid = 'fact'::regclass AND attname = 'embedding'");
     assert.equal(col.rows[0].t, 'halfvec(1536)');
   });

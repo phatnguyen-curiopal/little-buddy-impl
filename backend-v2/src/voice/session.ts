@@ -11,6 +11,7 @@ import type { ChatMessage, Lang } from '../domain/types.ts';
 import type { SttStream } from '../gateway/types.ts';
 import { DOWNLINK, FrameChunker, UPLINK, decodeFrame, encodeFrame } from '../audio/frames.ts';
 import { pcmSeconds, SAMPLE_RATE } from '../audio/wav.ts';
+import { balance, chargeTurn } from '../billing/credits.ts';
 import { activeBuddy, type CharacterPack, type Instance } from '../character/packs.ts';
 import { GAMES, wantsToPlay } from '../character/play.ts';
 import { localTime } from '../character/mood.ts';
@@ -30,6 +31,7 @@ interface Loaded {
   child: ChildRow;
   controls: Controls;
   usedSeconds: number;
+  credits: number;
 }
 
 interface TurnState {
@@ -203,7 +205,7 @@ export class DeviceSession {
     const { db } = this.deps;
     const child = (
       await db.query<ChildRow>(
-        'SELECT id, name, nickname, birth_date::text AS birth_date, languages, time_zone, learning_enabled FROM child WHERE id = $1',
+        'SELECT id, family_id, name, nickname, birth_date::text AS birth_date, languages, time_zone, learning_enabled FROM child WHERE id = $1',
         [this.device.child_id],
       )
     ).rows[0];
@@ -217,8 +219,11 @@ export class DeviceSession {
       )
     ).rows[0] ?? { daily_limit_min: null, quiet_start: null, quiet_end: null, bedtime: '20:30', mood_pin: null, surprise_play: true, speak_first: false };
     const local = localTime(child.time_zone);
-    const used = await db.query<{ s: number }>('SELECT talk_seconds AS s FROM usage_daily WHERE child_id = $1 AND day = $2::date', [child.id, local.date]);
-    return { child, controls, usedSeconds: used.rows[0]?.s ?? 0 };
+    const [used, credits] = await Promise.all([
+      db.query<{ s: number }>('SELECT talk_seconds AS s FROM usage_daily WHERE child_id = $1 AND day = $2::date', [child.id, local.date]),
+      balance(db, child.family_id),
+    ]);
+    return { child, controls, usedSeconds: used.rows[0]?.s ?? 0, credits };
   }
 
   private async readyState() {
@@ -289,6 +294,9 @@ export class DeviceSession {
   // Denials carry no reason to the toy; the clip is the whole answer.
   private gate(loaded: Loaded | null, buddy: unknown): 'napping' | 'sleepy' | null {
     if (!loaded || !buddy) return 'napping';
+    // An answer costs one credit; an empty wallet looks the same as a
+    // napping toy, and the parent sees the balance in the app.
+    if (loaded.credits < 1) return 'napping';
     const local = localTime(loaded.child.time_zone);
     if (inQuietHours(loaded.controls, local.hour, local.minute)) return 'sleepy';
     if (loaded.controls.daily_limit_min !== null && loaded.usedSeconds >= loaded.controls.daily_limit_min * 60) return 'sleepy';
@@ -587,6 +595,11 @@ export class DeviceSession {
       if (outcome.dueHandled?.kind === 'promise') await q.query("UPDATE relationship_item SET status = 'kept', last_used_at = now() WHERE id = $1", [outcome.dueHandled.id]);
       if (outcome.nudgeIds.length) await q.query("UPDATE nudge SET status = 'used', used_at = now() WHERE id = ANY($1::uuid[])", [outcome.nudgeIds]);
       if (outcome.mirroredFactId) await q.query('UPDATE fact SET mirrored_at = now() WHERE id = $1', [outcome.mirroredFactId]);
+      // A credit pays for an answer to the child: Buddy greeting first or
+      // asking again after unclear speech answered nothing, so costs nothing.
+      if (outcome.childText && outcome.turnType !== 'greet' && outcome.turnType !== 'clarify') {
+        await chargeTurn(q, { familyId: child.family_id, childId: child.id, turnId: serverTurnId });
+      }
       // Which games keep this child playing, and their usual voice, are
       // things Buddy learns about them: only with learning on.
       if (child.learning_enabled && outcome.game) {

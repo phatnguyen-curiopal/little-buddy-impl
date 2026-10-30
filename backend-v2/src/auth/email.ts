@@ -37,7 +37,7 @@ export async function verifyEmailLogin(db: Db, cfg: Config, rawEmail: string, co
       return null;
     }
     await q.query('DELETE FROM email_login WHERE email = $1', [email]);
-    const who = await findOrCreateParent(q, { provider: 'email', subject: email, email });
+    const who = await findOrCreateParent(q, { provider: 'email', subject: email, email, welcomeCredits: cfg.web.welcomeCredits });
     return { parentId: who.parentId, familyId: who.familyId };
   });
 }

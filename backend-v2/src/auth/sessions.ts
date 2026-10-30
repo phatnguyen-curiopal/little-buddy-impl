@@ -2,6 +2,7 @@
 // use. Presenting a token that was already rotated means it leaked, so every
 // session of that parent ends.
 
+import { welcomeGrant } from '../billing/credits.ts';
 import type { Config } from '../config.ts';
 import type { Db, Queryable } from '../db/index.ts';
 import { randomToken, sha256hex } from '../util/crypto.ts';
@@ -60,7 +61,7 @@ export async function revokeRefresh(q: Queryable, token: string): Promise<void> 
 
 // Signs in an existing parent or creates the family and parent on first sign-in.
 // A verified email links providers, so Apple and email sign-in reach one account.
-export async function findOrCreateParent(q: Queryable, who: { provider: 'email' | 'apple' | 'google'; subject: string; email: string }): Promise<{ parentId: string; familyId: string; created: boolean }> {
+export async function findOrCreateParent(q: Queryable, who: { provider: 'email' | 'apple' | 'google'; subject: string; email: string; welcomeCredits?: number }): Promise<{ parentId: string; familyId: string; created: boolean }> {
   const bySubject = await q.query<{ id: string; family_id: string }>(
     'SELECT id, family_id FROM parent_user WHERE auth_provider = $1 AND auth_subject = $2',
     [who.provider, who.subject],
@@ -73,5 +74,6 @@ export async function findOrCreateParent(q: Queryable, who: { provider: 'email' 
     'INSERT INTO parent_user (family_id, email, auth_provider, auth_subject) VALUES ($1, $2, $3, $4) RETURNING id',
     [fam.rows[0].id, who.email.toLowerCase(), who.provider, who.subject],
   );
+  await welcomeGrant(q, fam.rows[0].id, who.welcomeCredits ?? 0);
   return { parentId: parent.rows[0].id, familyId: fam.rows[0].id, created: true };
 }

@@ -53,6 +53,12 @@ export interface Instance extends Dials {
   language_mode: LanguageMode;
   relationship_stage: Stage;
   met_on: string;
+  // One of the 16 types a parent picked (it already set the dials), or null.
+  personality: string | null;
+  // The voice a parent picked and the language it speaks; null means the
+  // character's own voice.
+  voice_id: string | null;
+  voice_language: Lang | null;
 }
 
 interface SeedCharacter {
@@ -195,10 +201,12 @@ export async function activeBuddy(q: Queryable, childId: string): Promise<{ inst
   const { rows } = await q.query<Instance & PackRow & { instance_id: string }>(
     `SELECT i.id AS instance_id, i.child_id, i.character_id, i.pack_version_id, i.role, i.language_mode,
             i.energy, i.playfulness, i.curiosity, i.warmth, i.structure, i.relationship_stage, i.met_on::text AS met_on,
+            i.personality, i.voice_id, vo.language AS voice_language,
             c.slug, c.name, v.id AS pack_version_id, v.version, v.bible, v.life_rules, v.dial_ranges, v.voices
      FROM character_instance i
      JOIN buddy_character c ON c.id = i.character_id
      JOIN character_pack_version v ON v.id = i.pack_version_id
+     LEFT JOIN voice vo ON vo.id = i.voice_id
      WHERE i.child_id = $1 AND i.status = 'active'`,
     [childId],
   );
@@ -218,6 +226,9 @@ export async function activeBuddy(q: Queryable, childId: string): Promise<{ inst
     curiosity: r.curiosity,
     warmth: r.warmth,
     structure: r.structure,
+    personality: r.personality,
+    voice_id: r.voice_id,
+    voice_language: r.voice_language,
   };
   return { instance, pack: toPack(r) };
 }

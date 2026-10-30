@@ -40,6 +40,7 @@ export interface VoiceDeps {
 
 export interface ChildRow {
   id: string;
+  family_id: string;
   name: string;
   nickname: string | null;
   birth_date: string | null;
@@ -458,7 +459,9 @@ export async function runTurn(ctx: TurnContext): Promise<TurnOutcome> {
     const parser = new ReplyParser({ audioTags: config.elevenlabs.audioTags });
     const spoken: string[] = [];
     let stopped = false;
-    const voiceId = pack.voices[language]?.voice_id ?? pack.voices.vi.voice_id;
+    // The voice a parent picked, when it speaks this turn's language.
+    const picked = instance.voice_id && instance.voice_language === language ? instance.voice_id : null;
+    const voiceId = picked ?? pack.voices[language]?.voice_id ?? pack.voices.vi.voice_id;
 
     const speak = async (text: string, clean: string) => {
       const moderated = gateway.moderate(clean, withTimeout(ctx.signal, 3_000)).catch(() => ({ flagged: false, categories: [] as string[] }));

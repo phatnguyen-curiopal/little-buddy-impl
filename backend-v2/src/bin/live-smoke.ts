@@ -26,7 +26,7 @@ const pack: CharacterPack = {
 };
 const instance: Instance = {
   id: 'smoke', child_id: 'smoke', character_id: 'smoke', pack_version_id: 'smoke', role: 'friend', language_mode: 'vi',
-  relationship_stage: 'buddies', met_on: '2026-10-01', ...seed.profile.dials,
+  relationship_stage: 'buddies', met_on: '2026-10-01', personality: null, voice_id: null, voice_language: null, ...seed.profile.dials,
 };
 
 let t = performance.now();

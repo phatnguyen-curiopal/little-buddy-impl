@@ -12,8 +12,10 @@ export interface Family {
 }
 
 // A family with one child, an active Buddy (Bo) and one claimed toy.
-export async function createFamily(db: Db, config: Config, opts: { learning?: boolean; slug?: string; claimed?: boolean; languageMode?: 'vi' | 'en' | 'bilingual' } = {}): Promise<Family> {
+export async function createFamily(db: Db, config: Config, opts: { learning?: boolean; slug?: string; claimed?: boolean; languageMode?: 'vi' | 'en' | 'bilingual'; credits?: number } = {}): Promise<Family> {
   const fam = (await db.query<{ id: string }>('INSERT INTO family DEFAULT VALUES RETURNING id')).rows[0].id;
+  // A real family starts with welcome credits, and a turn needs one.
+  await db.query("INSERT INTO credit_ledger (family_id, kind, delta, reason) VALUES ($1, 'grant', $2, 'welcome')", [fam, opts.credits ?? 100]);
   const parent = (await db.query<{ id: string }>(
     "INSERT INTO parent_user (family_id, email, auth_provider, auth_subject) VALUES ($1, $2, 'email', $2) RETURNING id",
     [fam, `p${Math.random().toString(36).slice(2)}@example.com`],

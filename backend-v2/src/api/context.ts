@@ -19,6 +19,9 @@ export interface ApiDeps {
   oidc: OidcVerifier;
   // Closes a toy's live socket when the voice service runs in this process.
   onDeviceBlocked?: (deviceId: string) => void;
+  // Pairing (claiming a toy, making a Buddy in the browser): a printed code
+  // is only about 39 bits, so attempts get a budget of their own.
+  pairLimit?: (key: string) => boolean;
 }
 
 export interface AuthCtx {

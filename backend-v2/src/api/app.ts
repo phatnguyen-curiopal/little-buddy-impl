@@ -17,7 +17,12 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 64 * 1024, trustProxy: hops > 0 ? (_address: string, hop: number) => hop < hops : false });
   const parentLimit = createRateLimiter(60, 120);
   const signInLimit = createRateLimiter(10, 20);
+  // Each sign-up mints welcome credits, so new accounts come slowly; token
+  // refreshes come from every open tab and must not eat sign-in attempts.
+  const signUpLimit = createRateLimiter(5 / 60, 5);
+  const refreshLimit = createRateLimiter(60, 120);
   const publicLimit = createRateLimiter(60, 120);
+  const pairLimit = createRateLimiter(10 / 60, 10);
 
   app.decorateRequest('auth', null);
 
@@ -44,7 +49,9 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
   // Sign-in routes: rate limited per IP, no token.
   app.register(async (scope) => {
     scope.addHook('onRequest', async (req) => {
-      if (!signInLimit(`ip:${req.ip}`)) throw new HttpError(429, 'rate-limited', 'Too many attempts, wait a minute');
+      const path = req.url.split('?')[0];
+      const limit = path.endsWith('/auth/register') ? signUpLimit : path.endsWith('/auth/refresh') || path.endsWith('/auth/logout') ? refreshLimit : signInLimit;
+      if (!limit(`ip:${req.ip}`)) throw new HttpError(429, 'rate-limited', 'Too many attempts, wait a minute');
     });
     registerAuth(scope, deps);
   }, { prefix: '/v1' });
@@ -68,12 +75,12 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
       if (!parentLimit(`parent:${claims.sub}`)) throw new HttpError(429, 'rate-limited', 'Too many requests, wait a minute');
     });
     registerAccount(scope, deps);
-    registerChildren(scope, deps);
+    registerChildren(scope, { ...deps, pairLimit });
     registerBuddy(scope, deps);
     registerMemory(scope, deps);
     registerParent(scope, deps);
     registerBilling(scope, deps);
-    registerWeb(scope, deps);
+    registerWeb(scope, { ...deps, pairLimit });
   }, { prefix: '/v1' });
 
   return app;

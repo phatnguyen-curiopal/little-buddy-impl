@@ -9,6 +9,16 @@ ALTER TABLE family ADD COLUMN name text CHECK (name IS NULL OR length(name) BETW
 -- emailed code, Apple or Google.
 ALTER TABLE parent_user ADD COLUMN password_hash text;
 
+-- Signing up with a password proves nothing about the email address, so
+-- those accounts get their own provider and no verified date. An emailed
+-- code or Apple or Google proves it; such a sign-in may then link to an
+-- account with the same address only once that address is verified (see
+-- findOrCreateParent). Every earlier account came from one of those.
+ALTER TABLE parent_user DROP CONSTRAINT parent_user_auth_provider_check;
+ALTER TABLE parent_user ADD CONSTRAINT parent_user_auth_provider_check CHECK (auth_provider IN ('email', 'password', 'apple', 'google'));
+ALTER TABLE parent_user ADD COLUMN email_verified_at timestamptz;
+UPDATE parent_user SET email_verified_at = created_at;
+
 -- Credits ---------------------------------------------------------------------
 
 -- What a family can buy. Packs are deactivated, never deleted, because
@@ -71,6 +81,20 @@ CREATE TABLE credit_ledger (
 CREATE INDEX credit_ledger_family_idx ON credit_ledger (family_id, created_at DESC);
 CREATE UNIQUE INDEX credit_ledger_turn_uq ON credit_ledger (turn_id) WHERE kind = 'debit';
 CREATE UNIQUE INDEX credit_ledger_purchase_uq ON credit_ledger (purchase_id) WHERE kind = 'purchase';
+
+-- Families from before credits start with the demo stage's welcome credits,
+-- as every family made from now on does.
+INSERT INTO credit_ledger (family_id, kind, delta, reason) SELECT id, 'grant', 1000, 'welcome' FROM family;
+
+-- A credit held for a turn while it runs, so two toys of one family cannot
+-- both start a turn on the last credit. The answer's charge replaces it, any
+-- other ending releases it, and it lapses on its own after a few minutes.
+CREATE TABLE credit_hold (
+  id         uuid PRIMARY KEY,
+  family_id  uuid NOT NULL REFERENCES family (id) ON DELETE CASCADE,
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX credit_hold_family_idx ON credit_hold (family_id, expires_at);
 
 -- Buddy: voice and personality type -------------------------------------------
 

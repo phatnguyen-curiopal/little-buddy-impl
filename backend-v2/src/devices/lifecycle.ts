@@ -5,6 +5,14 @@
 
 import type { Queryable } from '../db/index.ts';
 
+// The one-awake-toy-per-child index refused a write: another request gave
+// the child an awake toy in the meantime. Any other unique clash (a serial)
+// is a different problem and is not reported as this one.
+export function isActiveToyClash(err: unknown): boolean {
+  const e = err as { code?: string; constraint?: string };
+  return e.code === '23505' && e.constraint === 'device_active_child_uq';
+}
+
 export type ToyScope = { deviceId: string; familyId: string } | { childId: string } | { familyId: string };
 
 export async function releaseToys(q: Queryable, scope: ToyScope, actor: string): Promise<string[]> {

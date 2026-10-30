@@ -48,7 +48,8 @@ export function registerAuth(app: FastifyInstance, deps: ApiDeps) {
         properties: {
           email,
           password: { type: 'string', minLength: 8, maxLength: 128 },
-          family_name: { type: 'string', minLength: 1, maxLength: 80 },
+          // At least one character that is not a space, since it is trimmed.
+          family_name: { type: 'string', minLength: 1, maxLength: 80, pattern: '\\S' },
           display_name: { type: ['string', 'null'], maxLength: 80 },
         },
       },
@@ -62,8 +63,12 @@ export function registerAuth(app: FastifyInstance, deps: ApiDeps) {
       const out = await deps.db.tx(async (q) => {
         if ((await q.query('SELECT 1 FROM parent_user WHERE lower(email) = $1', [address])).rowCount) throw taken;
         const fam = await q.query<{ id: string }>('INSERT INTO family (name) VALUES ($1) RETURNING id', [body.family_name.trim()]);
+        // Its own provider and no verified date: typing an address proves
+        // nothing about owning it, so an emailed code, Apple or Google may
+        // later take this account over rather than sign into it as it is
+        // (findOrCreateParent).
         const parent = await q.query<{ id: string }>(
-          "INSERT INTO parent_user (family_id, email, display_name, auth_provider, auth_subject, password_hash) VALUES ($1, $2, $3, 'email', $2, $4) RETURNING id",
+          "INSERT INTO parent_user (family_id, email, display_name, auth_provider, auth_subject, password_hash) VALUES ($1, $2, $3, 'password', $2, $4) RETURNING id",
           [fam.rows[0].id, address, body.display_name?.trim() || null, hash],
         );
         await welcomeGrant(q, fam.rows[0].id, deps.config.web.welcomeCredits);

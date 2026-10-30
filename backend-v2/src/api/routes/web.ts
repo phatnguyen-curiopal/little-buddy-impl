@@ -6,9 +6,14 @@ import type { FastifyInstance } from 'fastify';
 
 import { createWebDevice, loadDeviceSecret } from '../../devices/credentials.ts';
 import { b64url } from '../../util/crypto.ts';
+import { isActiveToyClash } from '../../devices/lifecycle.ts';
 import { HttpError, conflict, notFound } from '../../util/errors.ts';
 import { authOf, uuidParam, type ApiDeps } from '../context.ts';
 import { DEVICE_COLUMNS } from './children.ts';
+
+// Revoked Buddies count toward this, or making and removing one in a loop
+// would add devices without end.
+const WEB_TOYS_PER_DAY = 10;
 
 export function registerWeb(app: FastifyInstance, deps: ApiDeps) {
   const { db, config } = deps;
@@ -21,6 +26,8 @@ export function registerWeb(app: FastifyInstance, deps: ApiDeps) {
   }, async (req, reply) => {
     if (!config.web.webToy) throw off();
     const { familyId, parentId } = authOf(req);
+    // The same pairing budget as claiming a toy.
+    if (deps.pairLimit && !deps.pairLimit(`parent:${parentId}`)) throw new HttpError(429, 'rate-limited', 'Too many new Buddies at once, wait a little and try again');
     const childId = (req.body as { child_id: string }).child_id;
     let id: string;
     try {
@@ -34,13 +41,21 @@ export function registerWeb(app: FastifyInstance, deps: ApiDeps) {
           [familyId],
         );
         if (count.rows[0].n >= config.web.maxWebToys) throw conflict('web-toy-limit', `A family can have ${config.web.maxWebToys} Buddies in the browser`);
+        const today = await q.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM device_event e
+           JOIN device d ON d.id = e.device_id
+           JOIN parent_user p ON e.actor = 'parent:' || p.id::text
+           WHERE p.family_id = $1 AND e.kind = 'provisioned' AND d.hardware_rev = 'web' AND e.at > now() - interval '1 day'`,
+          [familyId],
+        );
+        if (today.rows[0].n >= WEB_TOYS_PER_DAY) throw new HttpError(429, 'rate-limited', `A family can make ${WEB_TOYS_PER_DAY} Buddies in the browser a day; try again tomorrow`);
         const busy = await q.query("SELECT 1 FROM device WHERE child_id = $1 AND status = 'active'", [childId]);
         if (busy.rowCount) throw conflict('child-has-toy', 'This child already has a toy; unpair it first');
         return createWebDevice(q, config.deviceKek, { familyId, childId, actor: `parent:${parentId}` });
       });
     } catch (err) {
       // Two requests for one child racing: the one-active-toy index answers.
-      if ((err as { code?: string }).code === '23505') throw conflict('child-has-toy', 'This child already has a toy; unpair it first');
+      if (isActiveToyClash(err)) throw conflict('child-has-toy', 'This child already has a toy; unpair it first');
       throw err;
     }
     const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1`, [id])).rows[0];

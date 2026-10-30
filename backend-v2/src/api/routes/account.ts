@@ -20,9 +20,11 @@ export function registerAccount(app: FastifyInstance, deps: ApiDeps) {
   });
 
   app.patch('/family', {
-    schema: { body: { type: 'object', required: ['name'], additionalProperties: false, properties: { name: { type: 'string', minLength: 1, maxLength: 80 } } } },
+    schema: { body: { type: 'object', required: ['name'], additionalProperties: false, properties: { name: { type: 'string', minLength: 1, maxLength: 80, pattern: '\\S' } } } },
   }, async (req) => {
     const r = await db.query('UPDATE family SET name = $2 WHERE id = $1 RETURNING id, name, country, created_at', [authOf(req).familyId, (req.body as { name: string }).name.trim()]);
+    // A token can outlive its family by a few minutes after DELETE /family.
+    if (!r.rows[0]) throw notFound('family');
     return r.rows[0];
   });
 

@@ -11,7 +11,7 @@ import type { ChatMessage, Lang } from '../domain/types.ts';
 import type { SttStream } from '../gateway/types.ts';
 import { DOWNLINK, FrameChunker, UPLINK, decodeFrame, encodeFrame } from '../audio/frames.ts';
 import { pcmSeconds, SAMPLE_RATE } from '../audio/wav.ts';
-import { balance, chargeTurn } from '../billing/credits.ts';
+import { balance, chargeTurn, releaseCredit, reserveCredit } from '../billing/credits.ts';
 import { activeBuddy, type CharacterPack, type Instance } from '../character/packs.ts';
 import { GAMES, wantsToPlay } from '../character/play.ts';
 import { localTime } from '../character/mood.ts';
@@ -50,6 +50,9 @@ interface TurnState {
   tone: ToneMeter | null;
   // Buddy speaks first: a turn the server started, with no words to hear.
   greet: boolean;
+  // The credit held for this turn while it runs (credit_hold); null once it
+  // is charged or released, and for Buddy's greeting, which costs nothing.
+  hold: string | null;
   prefetch: Prefetch;
   partial: string;
   spec: Speculation | null;
@@ -86,6 +89,12 @@ export function inQuietHours(controls: Pick<Controls, 'quiet_start' | 'quiet_end
   return start < end ? now >= start && now < end : now >= start || now < end;
 }
 
+// A credit pays for an answer to the child: Buddy greeting first, or asking
+// again after unclear speech, answered nothing, so it costs nothing.
+function chargeable(outcome: TurnOutcome): boolean {
+  return Boolean(outcome.childText) && outcome.turnType !== 'greet' && outcome.turnType !== 'clarify';
+}
+
 export class DeviceSession {
   private readonly ws: WebSocket;
   private readonly deps: VoiceDeps;
@@ -98,6 +107,10 @@ export class DeviceSession {
   private device: DeviceRow | null = null;
   private turn: TurnState | null = null;
   private chatSessionId: string | null = null;
+  // The child that chat belongs to. A toy given to another child while it is
+  // connected (in production the API cannot close this socket) must start a
+  // new chat, or the second child would get the first one's.
+  private chatChildId: string | null = null;
   private lastTurnAt = 0;
   private history: ChatMessage[] = [];
   private questionStreak = 0;
@@ -261,6 +274,15 @@ export class DeviceSession {
       this.send({ type: 'turn_done', turn_id: turnId, result: 'blocked' });
       return;
     }
+    // The gate read the balance; the credit itself is held here, under the
+    // family's lock, so two toys of one family cannot both start a turn on
+    // the last one. An empty wallet looks like any other refusal.
+    const hold = randomUUID();
+    if (!(await reserveCredit(db, loaded.child.family_id, hold))) {
+      this.send({ type: 'play_clip', turn_id: turnId, clip: 'napping' });
+      this.send({ type: 'turn_done', turn_id: turnId, result: 'blocked' });
+      return;
+    }
 
     const language = speechLanguage(loaded.child, buddy.instance);
     const abort = new AbortController();
@@ -285,7 +307,7 @@ export class DeviceSession {
     });
     t = {
       id: turnId, bytes: 0, abort, phase: 'listening', loaded, buddy, language, cards: people, before, habits: speechHabits(lexicon),
-      stt, tone: new ToneMeter(), greet: false, prefetch, partial: '', spec: null, specAbort: null, specCount: 0,
+      stt, tone: new ToneMeter(), greet: false, hold, prefetch, partial: '', spec: null, specAbort: null, specCount: 0,
     };
     this.turn = t;
     this.send({ type: 'face', turn_id: turnId, emotion: 'listening', phase: 'listening' });
@@ -350,6 +372,14 @@ export class DeviceSession {
     t.phase = 'done';
     t.abort.abort();
     t.stt.close();
+    // Every ending but an answer that will be charged comes through here, so
+    // the turn's held credit goes back. processTurn takes the hold first when
+    // it is about to charge it.
+    if (t.hold) {
+      const hold = t.hold;
+      t.hold = null;
+      releaseCredit(this.deps.db, hold).catch((err) => this.deps.log.warn('credit release failed', { device_id: this.device?.id, error: err }));
+    }
   }
 
   private onCancel(turnId: string): void {
@@ -362,13 +392,14 @@ export class DeviceSession {
   private async ensureChatSession(childId: string, instanceId: string): Promise<boolean> {
     const { db, config } = this.deps;
     const idle = Date.now() - this.lastTurnAt > config.voice.sessionIdleMs;
-    if (this.chatSessionId && !idle) return false;
+    if (this.chatSessionId && !idle && this.chatChildId === childId) return false;
     if (this.chatSessionId) await db.query('UPDATE chat_session SET ended_at = now() WHERE id = $1 AND ended_at IS NULL', [this.chatSessionId]);
     const r = await db.query<{ id: string }>(
       'INSERT INTO chat_session (child_id, instance_id, device_id) VALUES ($1, $2, $3) RETURNING id',
       [childId, instanceId, this.device!.id],
     );
     this.chatSessionId = r.rows[0].id;
+    this.chatChildId = childId;
     this.history = [];
     this.questionStreak = 0;
     this.game = null;
@@ -477,6 +508,10 @@ export class DeviceSession {
 
     // A cancel can land while runTurn is awaiting; the toy already has its turn_done.
     if ((t.phase as TurnState['phase']) === 'done') return;
+    // An answer that will be charged keeps its hold for persist() to replace
+    // with the charge; stopTurn gives back any other.
+    const hold = outcome.result === 'answered' && chargeable(outcome) ? t.hold : null;
+    if (hold) t.hold = null;
     // Also ends speculations the final words did not need.
     this.stopTurn(t);
     if (this.turn === t) this.turn = null;
@@ -494,9 +529,11 @@ export class DeviceSession {
 
     if (outcome.result === 'answered') {
       try {
-        await this.persist(child, serverTurnId, outcome, pcmSeconds(t.bytes));
+        await this.persist(child, serverTurnId, outcome, pcmSeconds(t.bytes), hold);
       } catch (err) {
         log.error('turn persist failed', { child_id: child.id, error: err });
+        // Nothing was charged, so the held credit goes back.
+        if (hold) await releaseCredit(this.deps.db, hold).catch(() => {});
       }
       if (outcome.childText) this.history.push({ role: 'user', content: outcome.childText });
       this.history.push({ role: 'assistant', content: outcome.replyText });
@@ -531,6 +568,11 @@ export class DeviceSession {
   private async maybeGreet(): Promise<void> {
     const { config, db } = this.deps;
     if (!config.voice.speakFirst || (this.turn && this.turn.phase !== 'done')) return;
+    // The toy may have been paused or given to another child since the last
+    // tap, and the API cannot always tell this socket.
+    const device = (await db.query<DeviceRow>('SELECT id, status, child_id FROM device WHERE id = $1', [this.device!.id])).rows[0];
+    if (!device || device.status !== 'active') return;
+    this.device = device;
     const loaded = await this.loadChild();
     if (!loaded?.controls.speak_first) return;
     const buddy = await activeBuddy(db, loaded.child.id);
@@ -546,7 +588,7 @@ export class DeviceSession {
     const silent: SttStream = { write() {}, finish: async () => '', recheck: async () => '', close() {} };
     const t: TurnState = {
       id: turnId, bytes: 0, abort: new AbortController(), phase: 'processing', loaded, buddy, language: speechLanguage(loaded.child, buddy.instance),
-      cards: [], before: null, habits: [], stt: silent, tone: null, greet: true, prefetch: prefetchFor(this.deps, loaded.child, buddy.instance, loaded.controls),
+      cards: [], before: null, habits: [], stt: silent, tone: null, greet: true, hold: null, prefetch: prefetchFor(this.deps, loaded.child, buddy.instance, loaded.controls),
       partial: '', spec: null, specAbort: null, specCount: 0,
     };
     this.turn = t;
@@ -562,7 +604,7 @@ export class DeviceSession {
     if (this.ws.readyState === this.ws.OPEN) this.ws.send(encodeFrame(DOWNLINK, this.seqDown++, payload));
   }
 
-  private async persist(child: ChildRow, serverTurnId: string, outcome: TurnOutcome, childSeconds: number): Promise<void> {
+  private async persist(child: ChildRow, serverTurnId: string, outcome: TurnOutcome, childSeconds: number, hold: string | null): Promise<void> {
     const { db, queue, digests } = this.deps;
     const day = new Date().toISOString().slice(0, 10);
     if (!partitionsReady.has(day)) {
@@ -595,11 +637,7 @@ export class DeviceSession {
       if (outcome.dueHandled?.kind === 'promise') await q.query("UPDATE relationship_item SET status = 'kept', last_used_at = now() WHERE id = $1", [outcome.dueHandled.id]);
       if (outcome.nudgeIds.length) await q.query("UPDATE nudge SET status = 'used', used_at = now() WHERE id = ANY($1::uuid[])", [outcome.nudgeIds]);
       if (outcome.mirroredFactId) await q.query('UPDATE fact SET mirrored_at = now() WHERE id = $1', [outcome.mirroredFactId]);
-      // A credit pays for an answer to the child: Buddy greeting first or
-      // asking again after unclear speech answered nothing, so costs nothing.
-      if (outcome.childText && outcome.turnType !== 'greet' && outcome.turnType !== 'clarify') {
-        await chargeTurn(q, { familyId: child.family_id, childId: child.id, turnId: serverTurnId });
-      }
+      if (chargeable(outcome)) await chargeTurn(q, { familyId: child.family_id, childId: child.id, turnId: serverTurnId, hold });
       // Which games keep this child playing, and their usual voice, are
       // things Buddy learns about them: only with learning on.
       if (child.learning_enabled && outcome.game) {

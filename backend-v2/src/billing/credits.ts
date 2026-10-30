@@ -2,7 +2,7 @@
 // a new row and the balance is the sum. One answered turn costs one credit,
 // charged in the same transaction that records the turn.
 
-import type { Queryable } from '../db/index.ts';
+import type { Db, Queryable } from '../db/index.ts';
 
 export interface LedgerRow {
   id: number;
@@ -38,8 +38,34 @@ export async function welcomeGrant(q: Queryable, familyId: string, credits: numb
   if (credits > 0) await q.query("INSERT INTO credit_ledger (family_id, kind, delta, reason) VALUES ($1, 'grant', $2, 'welcome')", [familyId, credits]);
 }
 
-// One credit for one answered turn. A retried write charges nothing more.
-export async function chargeTurn(q: Queryable, turn: { familyId: string; childId: string; turnId: string }): Promise<void> {
+// Holds a credit for a turn that is starting, under the family row's lock:
+// the balance minus the holds still running must cover it, so two toys of
+// one family cannot both start a turn on the last credit. A hold lapses on
+// its own, so one that is never released costs a credit for minutes, not for good.
+export async function reserveCredit(db: Db, familyId: string, holdId: string, ttlSec = 180): Promise<boolean> {
+  return db.tx(async (q) => {
+    await q.query('SELECT 1 FROM family WHERE id = $1 FOR UPDATE', [familyId]);
+    await q.query('DELETE FROM credit_hold WHERE family_id = $1 AND expires_at <= now()', [familyId]);
+    const r = await q.query<{ free: number }>(
+      `SELECT (SELECT coalesce(sum(delta), 0) FROM credit_ledger WHERE family_id = $1)
+            - (SELECT count(*) FROM credit_hold WHERE family_id = $1) AS free`,
+      [familyId],
+    );
+    if (Number(r.rows[0].free) < 1) return false;
+    await q.query('INSERT INTO credit_hold (id, family_id, expires_at) VALUES ($1, $2, now() + make_interval(secs => $3))', [holdId, familyId, ttlSec]);
+    return true;
+  });
+}
+
+// A turn that ends without an answer to charge gives its credit back.
+export async function releaseCredit(q: Queryable, holdId: string): Promise<void> {
+  await q.query('DELETE FROM credit_hold WHERE id = $1', [holdId]);
+}
+
+// One credit for one answered turn, taking the place of its hold. A retried
+// write charges nothing more.
+export async function chargeTurn(q: Queryable, turn: { familyId: string; childId: string; turnId: string; hold?: string | null }): Promise<void> {
+  if (turn.hold) await releaseCredit(q, turn.hold);
   await q.query(
     `INSERT INTO credit_ledger (family_id, kind, delta, reason, child_id, turn_id) VALUES ($1, 'debit', -1, 'turn', $2, $3)
      ON CONFLICT (turn_id) WHERE kind = 'debit' DO NOTHING`,

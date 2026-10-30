@@ -207,13 +207,17 @@ export function registerBuddy(app: FastifyInstance, deps: ApiDeps) {
       const [lo, hi] = ranges[k];
       dials[k] = Math.min(hi, Math.max(lo, want));
     }
-    // A picked voice speaks one language: it must suit the Buddy's language,
-    // and a switch to another language drops a voice that no longer fits.
+    // A picked voice speaks one language, and Buddy speaks one language out
+    // loud: its own, or in bilingual mode the child's first language (the
+    // voice service's speechLanguage). The voice must be that one, and a
+    // switch away from it drops a voice that no longer fits.
     const mode = body.language_mode ?? current.language_mode;
-    const suits = (language: string | null) => mode === 'bilingual' || language === mode;
+    const speaks = mode === 'bilingual' ? (child.languages[0] === 'en' ? 'en' : 'vi') : mode;
+    const suits = (language: string | null) => language === speaks;
     let voiceId = current.voice_id;
     if ('voice_id' in body) {
-      voiceId = body.voice_id ?? null;
+      // An empty value clears it as null does (a "default voice" option may send "").
+      voiceId = body.voice_id || null;
       if (voiceId) {
         const voice = (await db.query<{ language: string }>('SELECT language FROM voice WHERE id = $1', [voiceId])).rows[0];
         if (!voice) throw badRequest('There is no such voice', [{ field: 'voice_id', code: 'enum' }]);

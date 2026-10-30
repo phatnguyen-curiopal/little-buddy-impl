@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "node src/bin/dev.ts",
+    "dev:lite": "node src/bin/dev-lite.ts",
     "api": "node src/bin/api.ts",
     "voice": "node src/bin/voice.ts",
     "worker": "node src/bin/worker.ts",

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 
 import { claimCodeHash, loadDeviceSecret, normalizeClaimCode, parseClaimToken, verifyClaimToken } from '../../devices/credentials.ts';
-import { releaseToys } from '../../devices/lifecycle.ts';
+import { isActiveToyClash, releaseToys } from '../../devices/lifecycle.ts';
 import { HttpError, badRequest, conflict, notFound } from '../../util/errors.ts';
 import {
   CHILD_COLUMNS, authOf, childFor, idempotent, ifMatch, publicChild, sendWithEtag, uuidParam, type ApiDeps, type ChildRecord,
@@ -109,38 +109,60 @@ export function registerChildren(app: FastifyInstance, deps: ApiDeps) {
     const { familyId, parentId } = authOf(req);
     const body = req.body as { claim_token?: string; claim_code?: string; child_id: string };
     if (Boolean(body.claim_token) === Boolean(body.claim_code)) throw badRequest('Send either a claim_token or a claim_code', [{ field: 'claim_code', code: 'required' }]);
+    // A printed code is only about 39 bits, so pairing has a small budget per
+    // parent (the first backend's 10 an hour) on top of the general limit.
+    if (deps.pairLimit && !deps.pairLimit(`parent:${parentId}`)) throw new HttpError(429, 'rate-limited', 'Too many pairing attempts, wait a little and try again');
     const invalid = new HttpError(404, 'invalid-claim', 'This pairing code is not valid; try pairing again');
-    let deviceId: string;
-    if (body.claim_token) {
-      const parsed = parseClaimToken(body.claim_token);
-      if (!parsed) throw invalid;
-      const secret = await loadDeviceSecret(db, deps.config.deviceKek, parsed.deviceId);
-      if (!secret || !verifyClaimToken(secret, parsed, Math.floor(Date.now() / 1000))) throw invalid;
-      deviceId = parsed.deviceId;
-    } else {
-      const code = normalizeClaimCode(body.claim_code!);
-      const found = code ? (await db.query<{ id: string }>('SELECT id FROM device WHERE claim_code_hash = $1', [claimCodeHash(deps.config.deviceKek, code)])).rows[0] : undefined;
-      if (!found) throw invalid;
-      deviceId = found.id;
-    }
+    const childHasToy = conflict('child-has-toy', 'This child already has a toy; unpair it first');
+
+    // The child comes before the code, so a wrong child, or a child that
+    // already has an awake toy, gets the same answer whatever code was sent:
+    // those answers cannot tell anyone whether a guessed code exists.
     const child = await db.query('SELECT id FROM child WHERE id = $1 AND family_id = $2', [body.child_id, familyId]);
     if (!child.rowCount) throw notFound('child');
+    const busy = (await db.query<{ id: string }>("SELECT id FROM device WHERE child_id = $1 AND status = 'active'", [body.child_id])).rows[0];
+    let deviceId: string | null = null;
+    if (body.claim_token) {
+      const parsed = parseClaimToken(body.claim_token);
+      const secret = parsed ? await loadDeviceSecret(db, deps.config.deviceKek, parsed.deviceId) : null;
+      if (parsed && secret && verifyClaimToken(secret, parsed, Math.floor(Date.now() / 1000))) deviceId = parsed.deviceId;
+    } else {
+      const code = normalizeClaimCode(body.claim_code!);
+      if (code) deviceId = (await db.query<{ id: string }>('SELECT id FROM device WHERE claim_code_hash = $1', [claimCodeHash(deps.config.deviceKek, code)])).rows[0]?.id ?? null;
+    }
+    // A token the toy signed cannot be guessed, so a bad one may say so
+    // first; only a printed code needs the busy child to answer before it.
+    if (!deviceId && body.claim_token) throw invalid;
+    // The child's own awake toy, sent again, is a retry and answers below.
+    if (busy && busy.id !== deviceId) throw childHasToy;
+    if (!deviceId) throw invalid;
+    const claimed = deviceId;
 
-    const device = await db.tx(async (q) => {
-      const d = (await q.query<{ status: string; family_id: string | null; child_id: string | null }>('SELECT status, family_id, child_id FROM device WHERE id = $1 FOR UPDATE', [deviceId])).rows[0];
-      if (!d) throw invalid;
-      // A retry by the family that already owns it is not an error.
-      if (d.status === 'active' && d.family_id === familyId && d.child_id === body.child_id) return 'unchanged';
-      // A printed code someone else already used reads as any wrong code, so
-      // codes cannot be probed; only the toy's own signed token says more.
-      if (d.status !== 'provisioned') throw body.claim_code ? invalid : conflict('device-claimed', 'This toy belongs to another family or is disabled');
-      const busy = await q.query("SELECT 1 FROM device WHERE child_id = $1 AND status = 'active'", [body.child_id]);
-      if (busy.rowCount) throw conflict('child-has-toy', 'This child already has a toy; unpair it first');
-      await q.query("UPDATE device SET status = 'active', family_id = $2, child_id = $3, claimed_at = now() WHERE id = $1", [deviceId, familyId, body.child_id]);
-      await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'claimed', $2)", [deviceId, `parent:${parentId}`]);
-      return 'claimed';
-    });
-    const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1`, [deviceId])).rows[0];
+    let device: 'claimed' | 'unchanged';
+    try {
+      device = await db.tx(async (q) => {
+        const d = (await q.query<{ status: string; family_id: string | null; child_id: string | null }>('SELECT status, family_id, child_id FROM device WHERE id = $1 FOR UPDATE', [claimed])).rows[0];
+        if (!d) throw invalid;
+        // A retry by the family that already owns it is not an error.
+        if (d.status === 'active' && d.family_id === familyId && d.child_id === body.child_id) return 'unchanged';
+        // The family's own toy, asleep or with another of their children, is
+        // theirs to hear about: it moves to a child only after an unpair.
+        if (d.family_id === familyId) throw conflict('toy-in-family', 'This toy is already yours; unpair it first to give it to another child');
+        // A printed code someone else already used reads as any wrong code, so
+        // codes cannot be probed; only the toy's own signed token says more.
+        if (d.status !== 'provisioned') throw body.claim_code ? invalid : conflict('device-claimed', 'This toy belongs to another family or is disabled');
+        const clash = await q.query("SELECT 1 FROM device WHERE child_id = $1 AND status = 'active'", [body.child_id]);
+        if (clash.rowCount) throw childHasToy;
+        await q.query("UPDATE device SET status = 'active', family_id = $2, child_id = $3, claimed_at = now() WHERE id = $1", [claimed, familyId, body.child_id]);
+        await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'claimed', $2)", [claimed, `parent:${parentId}`]);
+        return 'claimed';
+      });
+    } catch (err) {
+      // Another request gave this child an awake toy in the meantime.
+      if (isActiveToyClash(err)) throw childHasToy;
+      throw err;
+    }
+    const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1`, [claimed])).rows[0];
     return { status: device === 'claimed' ? 201 : 200, body: row };
   }));
 
@@ -196,7 +218,7 @@ export function registerChildren(app: FastifyInstance, deps: ApiDeps) {
       });
     } catch (err) {
       // The child got another toy while this one slept: one active toy each.
-      if ((err as { code?: string }).code === '23505') throw conflict('child-has-toy', 'This child already has an awake toy; unpair one first');
+      if (isActiveToyClash(err)) throw conflict('child-has-toy', 'This child already has an awake toy; unpair one first');
       throw err;
     }
     const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1 AND family_id = $2`, [id, familyId])).rows[0];

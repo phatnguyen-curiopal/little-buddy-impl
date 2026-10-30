@@ -4,3 +4,4 @@ manifests/
 out/
 *.wav
 eval/reports/
+.pglite/

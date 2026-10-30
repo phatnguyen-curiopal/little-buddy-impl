@@ -61,17 +61,33 @@ export async function revokeRefresh(q: Queryable, token: string): Promise<void> 
 
 // Signs in an existing parent or creates the family and parent on first sign-in.
 // A verified email links providers, so Apple and email sign-in reach one account.
+// Every caller has just proved the address is theirs (an emailed code, or an
+// Apple or Google token that says the email is verified).
 export async function findOrCreateParent(q: Queryable, who: { provider: 'email' | 'apple' | 'google'; subject: string; email: string; welcomeCredits?: number }): Promise<{ parentId: string; familyId: string; created: boolean }> {
   const bySubject = await q.query<{ id: string; family_id: string }>(
     'SELECT id, family_id FROM parent_user WHERE auth_provider = $1 AND auth_subject = $2',
     [who.provider, who.subject],
   );
   if (bySubject.rows[0]) return { parentId: bySubject.rows[0].id, familyId: bySubject.rows[0].family_id, created: false };
-  const byEmail = await q.query<{ id: string; family_id: string }>('SELECT id, family_id FROM parent_user WHERE lower(email) = lower($1)', [who.email]);
-  if (byEmail.rows[0]) return { parentId: byEmail.rows[0].id, familyId: byEmail.rows[0].family_id, created: false };
+  const byEmail = await q.query<{ id: string; family_id: string; email_verified_at: Date | null }>(
+    'SELECT id, family_id, email_verified_at FROM parent_user WHERE lower(email) = lower($1)',
+    [who.email],
+  );
+  const found = byEmail.rows[0];
+  if (found) {
+    // An account that only typed this address (a password sign-up) is taken
+    // over, not joined: its password and sessions end, so someone who signed
+    // up with another person's email first keeps no way in. Access tokens
+    // already out lapse within their 15 minutes.
+    if (!found.email_verified_at) {
+      await q.query('UPDATE parent_user SET password_hash = NULL, email_verified_at = now() WHERE id = $1', [found.id]);
+      await q.query('UPDATE refresh_token SET revoked_at = now() WHERE parent_id = $1 AND revoked_at IS NULL', [found.id]);
+    }
+    return { parentId: found.id, familyId: found.family_id, created: false };
+  }
   const fam = await q.query<{ id: string }>('INSERT INTO family DEFAULT VALUES RETURNING id');
   const parent = await q.query<{ id: string }>(
-    'INSERT INTO parent_user (family_id, email, auth_provider, auth_subject) VALUES ($1, $2, $3, $4) RETURNING id',
+    'INSERT INTO parent_user (family_id, email, auth_provider, auth_subject, email_verified_at) VALUES ($1, $2, $3, $4, now()) RETURNING id',
     [fam.rows[0].id, who.email.toLowerCase(), who.provider, who.subject],
   );
   await welcomeGrant(q, fam.rows[0].id, who.welcomeCredits ?? 0);

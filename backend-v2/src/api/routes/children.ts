@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 
-import { loadDeviceSecret, parseClaimToken, verifyClaimToken } from '../../devices/credentials.ts';
-import { HttpError, conflict, notFound } from '../../util/errors.ts';
+import { claimCodeHash, loadDeviceSecret, normalizeClaimCode, parseClaimToken, verifyClaimToken } from '../../devices/credentials.ts';
+import { releaseToys } from '../../devices/lifecycle.ts';
+import { HttpError, badRequest, conflict, notFound } from '../../util/errors.ts';
 import {
   CHILD_COLUMNS, authOf, childFor, idempotent, ifMatch, publicChild, sendWithEtag, uuidParam, type ApiDeps, type ChildRecord,
 } from '../context.ts';
 
-const DEVICE_COLUMNS = `id, serial, status, child_id, firmware_version, last_seen_at, claimed_at,
+export const DEVICE_COLUMNS = `id, serial, hardware_rev, status, disabled_by, child_id, firmware_version, last_seen_at, claimed_at,
   (last_seen_at IS NOT NULL AND last_seen_at > now() - interval '2 minutes') AS online`;
 
 const childProps = {
@@ -83,50 +84,63 @@ export function registerChildren(app: FastifyInstance, deps: ApiDeps) {
   app.delete('/children/:childId', async (req, reply) => {
     const child = await childFor(deps, req);
     const toys = await db.tx(async (q) => {
-      const r = await q.query<{ id: string }>(
-        "UPDATE device SET status = 'provisioned', family_id = NULL, child_id = NULL, claimed_at = NULL WHERE child_id = $1 RETURNING id",
-        [child.id],
-      );
-      for (const d of r.rows) await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'unclaimed', $2)", [d.id, `parent:${authOf(req).parentId}`]);
+      const released = await releaseToys(q, { childId: child.id }, `parent:${authOf(req).parentId}`);
       await q.query('DELETE FROM child WHERE id = $1', [child.id]);
-      return r.rows;
+      return released;
     });
-    for (const d of toys) deps.onDeviceBlocked?.(d.id);
+    for (const id of toys) deps.onDeviceBlocked?.(id);
     return reply.code(204).send();
   });
 
-  // Pairing: the toy signed a claim token over Bluetooth, and the app relays it.
+  // Pairing: the app relays a claim token the toy signed over Bluetooth, or
+  // the website sends the code printed on the box.
   app.post('/devices/claim', {
     schema: {
       body: {
-        type: 'object', required: ['claim_token', 'child_id'], additionalProperties: false,
-        properties: { claim_token: { type: 'string', maxLength: 200 }, child_id: { type: 'string', format: 'uuid' } },
+        type: 'object', required: ['child_id'], additionalProperties: false,
+        properties: {
+          claim_token: { type: 'string', maxLength: 200 },
+          claim_code: { type: 'string', maxLength: 20 },
+          child_id: { type: 'string', format: 'uuid' },
+        },
       },
     },
   }, async (req, reply) => idempotent(deps, req, reply, 'POST /devices/claim', async () => {
     const { familyId, parentId } = authOf(req);
-    const body = req.body as { claim_token: string; child_id: string };
+    const body = req.body as { claim_token?: string; claim_code?: string; child_id: string };
+    if (Boolean(body.claim_token) === Boolean(body.claim_code)) throw badRequest('Send either a claim_token or a claim_code', [{ field: 'claim_code', code: 'required' }]);
     const invalid = new HttpError(404, 'invalid-claim', 'This pairing code is not valid; try pairing again');
-    const parsed = parseClaimToken(body.claim_token);
-    if (!parsed) throw invalid;
-    const secret = await loadDeviceSecret(db, deps.config.deviceKek, parsed.deviceId);
-    if (!secret || !verifyClaimToken(secret, parsed, Math.floor(Date.now() / 1000))) throw invalid;
+    let deviceId: string;
+    if (body.claim_token) {
+      const parsed = parseClaimToken(body.claim_token);
+      if (!parsed) throw invalid;
+      const secret = await loadDeviceSecret(db, deps.config.deviceKek, parsed.deviceId);
+      if (!secret || !verifyClaimToken(secret, parsed, Math.floor(Date.now() / 1000))) throw invalid;
+      deviceId = parsed.deviceId;
+    } else {
+      const code = normalizeClaimCode(body.claim_code!);
+      const found = code ? (await db.query<{ id: string }>('SELECT id FROM device WHERE claim_code_hash = $1', [claimCodeHash(deps.config.deviceKek, code)])).rows[0] : undefined;
+      if (!found) throw invalid;
+      deviceId = found.id;
+    }
     const child = await db.query('SELECT id FROM child WHERE id = $1 AND family_id = $2', [body.child_id, familyId]);
     if (!child.rowCount) throw notFound('child');
 
     const device = await db.tx(async (q) => {
-      const d = (await q.query<{ status: string; family_id: string | null; child_id: string | null }>('SELECT status, family_id, child_id FROM device WHERE id = $1 FOR UPDATE', [parsed.deviceId])).rows[0];
+      const d = (await q.query<{ status: string; family_id: string | null; child_id: string | null }>('SELECT status, family_id, child_id FROM device WHERE id = $1 FOR UPDATE', [deviceId])).rows[0];
       if (!d) throw invalid;
       // A retry by the family that already owns it is not an error.
       if (d.status === 'active' && d.family_id === familyId && d.child_id === body.child_id) return 'unchanged';
-      if (d.status !== 'provisioned') throw conflict('device-claimed', 'This toy belongs to another family or is disabled');
+      // A printed code someone else already used reads as any wrong code, so
+      // codes cannot be probed; only the toy's own signed token says more.
+      if (d.status !== 'provisioned') throw body.claim_code ? invalid : conflict('device-claimed', 'This toy belongs to another family or is disabled');
       const busy = await q.query("SELECT 1 FROM device WHERE child_id = $1 AND status = 'active'", [body.child_id]);
       if (busy.rowCount) throw conflict('child-has-toy', 'This child already has a toy; unpair it first');
-      await q.query("UPDATE device SET status = 'active', family_id = $2, child_id = $3, claimed_at = now() WHERE id = $1", [parsed.deviceId, familyId, body.child_id]);
-      await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'claimed', $2)", [parsed.deviceId, `parent:${parentId}`]);
+      await q.query("UPDATE device SET status = 'active', family_id = $2, child_id = $3, claimed_at = now() WHERE id = $1", [deviceId, familyId, body.child_id]);
+      await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'claimed', $2)", [deviceId, `parent:${parentId}`]);
       return 'claimed';
     });
-    const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1`, [parsed.deviceId])).rows[0];
+    const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1`, [deviceId])).rows[0];
     return { status: device === 'claimed' ? 201 : 200, body: row };
   }));
 
@@ -145,15 +159,50 @@ export function registerChildren(app: FastifyInstance, deps: ApiDeps) {
   app.post('/devices/:deviceId/unpair', async (req, reply) => {
     const id = uuidParam((req.params as { deviceId: string }).deviceId, 'toy');
     const { familyId, parentId } = authOf(req);
-    const done = await db.tx(async (q) => {
-      const r = await q.query("UPDATE device SET status = 'provisioned', family_id = NULL, child_id = NULL, claimed_at = NULL WHERE id = $1 AND family_id = $2", [id, familyId]);
-      if (!r.rowCount) return false;
-      await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'unclaimed', $2)", [id, `parent:${parentId}`]);
-      return true;
-    });
-    if (!done) throw notFound('toy');
+    const released = await db.tx((q) => releaseToys(q, { deviceId: id, familyId }, `parent:${parentId}`));
+    if (!released.length) throw notFound('toy');
     deps.onDeviceBlocked?.(id);
     return reply.code(204).send();
+  });
+
+  // A parent can put a toy to sleep and wake it again; a toy staff disabled
+  // stays disabled.
+  app.post('/devices/:deviceId/pause', async (req) => {
+    const id = uuidParam((req.params as { deviceId: string }).deviceId, 'toy');
+    const { familyId, parentId } = authOf(req);
+    const paused = await db.tx(async (q) => {
+      const r = await q.query("UPDATE device SET status = 'disabled', disabled_by = 'parent' WHERE id = $1 AND family_id = $2 AND status = 'active'", [id, familyId]);
+      if (r.rowCount) await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'disabled', $2)", [id, `parent:${parentId}`]);
+      return r.rowCount > 0;
+    });
+    const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1 AND family_id = $2`, [id, familyId])).rows[0];
+    if (!row) throw notFound('toy');
+    if (!paused && !(row.status === 'disabled' && row.disabled_by === 'parent')) throw conflict('toy-not-active', 'Only a toy that is awake can be put to sleep');
+    // Closes its live socket at once when the voice service runs here.
+    deps.onDeviceBlocked?.(id);
+    return row;
+  });
+
+  app.post('/devices/:deviceId/resume', async (req) => {
+    const id = uuidParam((req.params as { deviceId: string }).deviceId, 'toy');
+    const { familyId, parentId } = authOf(req);
+    try {
+      await db.tx(async (q) => {
+        const r = await q.query(
+          "UPDATE device SET status = 'active', disabled_by = NULL WHERE id = $1 AND family_id = $2 AND status = 'disabled' AND disabled_by = 'parent'",
+          [id, familyId],
+        );
+        if (r.rowCount) await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'enabled', $2)", [id, `parent:${parentId}`]);
+      });
+    } catch (err) {
+      // The child got another toy while this one slept: one active toy each.
+      if ((err as { code?: string }).code === '23505') throw conflict('child-has-toy', 'This child already has an awake toy; unpair one first');
+      throw err;
+    }
+    const row = (await db.query(`SELECT ${DEVICE_COLUMNS} FROM device WHERE id = $1 AND family_id = $2`, [id, familyId])).rows[0];
+    if (!row) throw notFound('toy');
+    if (row.status !== 'active') throw conflict('toy-held', 'Only a toy a parent put to sleep can be woken here');
+    return row;
   });
 
   const CONTROLS = `daily_limit_min, quiet_start::text AS quiet_start, quiet_end::text AS quiet_end, bedtime::text AS bedtime,

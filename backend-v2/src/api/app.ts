@@ -5,16 +5,19 @@ import { HttpError, unauthorized } from '../util/errors.ts';
 import { createRateLimiter, type ApiDeps, type Authed } from './context.ts';
 import { registerAccount } from './routes/account.ts';
 import { registerAuth } from './routes/auth.ts';
+import { registerBilling, registerPublicBilling } from './routes/billing.ts';
 import { registerBuddy } from './routes/buddy.ts';
 import { registerChildren } from './routes/children.ts';
 import { registerMemory } from './routes/memory.ts';
 import { registerParent } from './routes/parent.ts';
+import { registerWeb } from './routes/web.ts';
 
 export function buildApi(deps: ApiDeps): FastifyInstance {
   const hops = deps.config.trustProxy;
   const app = Fastify({ logger: false, bodyLimit: 64 * 1024, trustProxy: hops > 0 ? (_address: string, hop: number) => hop < hops : false });
   const parentLimit = createRateLimiter(60, 120);
   const signInLimit = createRateLimiter(10, 20);
+  const publicLimit = createRateLimiter(60, 120);
 
   app.decorateRequest('auth', null);
 
@@ -46,6 +49,14 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
     registerAuth(scope, deps);
   }, { prefix: '/v1' });
 
+  // Public reads for the marketing page: no token, a looser limit per visitor.
+  app.register(async (scope) => {
+    scope.addHook('onRequest', async (req) => {
+      if (!publicLimit(`ip:${req.ip}`)) throw new HttpError(429, 'rate-limited', 'Too many requests, wait a minute');
+    });
+    registerPublicBilling(scope, deps);
+  }, { prefix: '/v1' });
+
   // Everything else: a valid access token, rate limited per parent.
   app.register(async (scope) => {
     scope.addHook('preHandler', async (req: FastifyRequest) => {
@@ -61,6 +72,8 @@ export function buildApi(deps: ApiDeps): FastifyInstance {
     registerBuddy(scope, deps);
     registerMemory(scope, deps);
     registerParent(scope, deps);
+    registerBilling(scope, deps);
+    registerWeb(scope, deps);
   }, { prefix: '/v1' });
 
   return app;

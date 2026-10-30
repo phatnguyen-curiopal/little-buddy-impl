@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import { localTime } from '../../character/mood.ts';
 import { DIAL_KEYS, latestPack, type Dials } from '../../character/packs.ts';
+import { PERSONALITY_RE, dialsForType } from '../../character/personality.ts';
 import { QUESTIONS, matchCharacters, targetFromAnswers, tuneDials, validateAnswers, type Answer, type CastMember, type Target } from '../../character/questionnaire.ts';
 import type { Queryable } from '../../db/index.ts';
 import type { Lang } from '../../domain/types.ts';
@@ -12,10 +13,14 @@ function localeOf(req: FastifyRequest): Lang {
   return String(req.headers['accept-language'] ?? '').toLowerCase().startsWith('en') ? 'en' : 'vi';
 }
 
+// character_voices are the character's own voice per language, the one a
+// Buddy speaks with when no voice is picked.
 const INSTANCE_VIEW = `SELECT i.id, c.slug AS character_slug, c.name AS character_name, i.role, i.language_mode,
     i.energy, i.playfulness, i.curiosity, i.warmth, i.structure, i.relationship_stage, i.met_on::text AS met_on,
+    i.personality, i.voice_id, jsonb_build_object('vi', v.voices->'vi'->>'voice_id', 'en', v.voices->'en'->>'voice_id') AS character_voices,
     i.created_at, i.xmin::text AS etag
   FROM character_instance i JOIN buddy_character c ON c.id = i.character_id
+  JOIN character_pack_version v ON v.id = i.pack_version_id
   WHERE i.child_id = $1 AND i.status = 'active'`;
 
 function shapeInstance(r: Record<string, unknown>) {
@@ -68,6 +73,12 @@ export function registerBuddy(app: FastifyInstance, deps: ApiDeps) {
        JOIN LATERAL (SELECT bible FROM character_pack_version WHERE character_id = c.id AND released_at IS NOT NULL ORDER BY version DESC LIMIT 1) v ON true
        WHERE c.status = 'released' ORDER BY c.slug`,
     );
+    return { data: r.rows };
+  });
+
+  // The voices a parent can pick, each speaking one language.
+  app.get('/voices', async () => {
+    const r = await db.query('SELECT id, name, language FROM voice ORDER BY language, sort, name');
     return { data: r.rows };
   });
 
@@ -167,33 +178,55 @@ export function registerBuddy(app: FastifyInstance, deps: ApiDeps) {
           role: { type: 'string', enum: ['friend', 'sibling', 'parent_figure', 'teacher'] },
           language_mode: { type: 'string', enum: ['vi', 'en', 'bilingual'] },
           dials: { type: 'object', additionalProperties: false, properties: Object.fromEntries(DIAL_KEYS.map((k) => [k, { type: 'integer', minimum: 0, maximum: 100 }])) },
+          personality: { type: ['string', 'null'], pattern: PERSONALITY_RE.source },
+          voice_id: { type: ['string', 'null'], maxLength: 64 },
         },
       },
     },
   }, async (req, reply) => {
     const child = await childFor(deps, req);
     const etag = ifMatch(req);
-    const body = req.body as { role?: string; language_mode?: string; dials?: Partial<Dials> };
-    const current = (await db.query<{ id: string; slug: string } & Dials>(
-      `SELECT i.id, c.slug, i.energy, i.playfulness, i.curiosity, i.warmth, i.structure
-       FROM character_instance i JOIN buddy_character c ON c.id = i.character_id WHERE i.child_id = $1 AND i.status = 'active'`,
+    const body = req.body as { role?: string; language_mode?: string; dials?: Partial<Dials>; personality?: string | null; voice_id?: string | null };
+    const current = (await db.query<{ id: string; slug: string; language_mode: string; personality: string | null; voice_id: string | null; voice_language: string | null } & Dials>(
+      `SELECT i.id, c.slug, i.language_mode, i.personality, i.voice_id, vo.language AS voice_language,
+              i.energy, i.playfulness, i.curiosity, i.warmth, i.structure
+       FROM character_instance i JOIN buddy_character c ON c.id = i.character_id LEFT JOIN voice vo ON vo.id = i.voice_id
+       WHERE i.child_id = $1 AND i.status = 'active'`,
       [child.id],
     )).rows[0];
     if (!current) throw notFound('Buddy');
     const pack = await latestPack(db, current.slug);
-    // Dials stay inside the character's ranges, so it remains itself.
-    const dials = { ...current } as Dials;
+    const ranges = pack?.dialRanges ?? (Object.fromEntries(DIAL_KEYS.map((k) => [k, [0, 100]])) as Record<keyof Dials, [number, number]>);
+    // A personality type sets all five dials; dials sent with it still win.
+    // Either way they stay inside the character's ranges, so it remains itself.
+    const personality = 'personality' in body ? (body.personality ?? null) : current.personality;
+    const dials = (body.personality ? dialsForType(body.personality, ranges) : { ...current }) as Dials;
     for (const k of DIAL_KEYS) {
       const want = body.dials?.[k];
       if (want === undefined) continue;
-      const [lo, hi] = pack?.dialRanges[k] ?? [0, 100];
+      const [lo, hi] = ranges[k];
       dials[k] = Math.min(hi, Math.max(lo, want));
+    }
+    // A picked voice speaks one language: it must suit the Buddy's language,
+    // and a switch to another language drops a voice that no longer fits.
+    const mode = body.language_mode ?? current.language_mode;
+    const suits = (language: string | null) => mode === 'bilingual' || language === mode;
+    let voiceId = current.voice_id;
+    if ('voice_id' in body) {
+      voiceId = body.voice_id ?? null;
+      if (voiceId) {
+        const voice = (await db.query<{ language: string }>('SELECT language FROM voice WHERE id = $1', [voiceId])).rows[0];
+        if (!voice) throw badRequest('There is no such voice', [{ field: 'voice_id', code: 'enum' }]);
+        if (!suits(voice.language)) throw badRequest('This voice speaks another language', [{ field: 'voice_id', code: 'language' }]);
+      }
+    } else if (voiceId && !suits(current.voice_language)) {
+      voiceId = null;
     }
     const r = await db.query(
       `UPDATE character_instance SET role = coalesce($3, role), language_mode = coalesce($4, language_mode),
-              energy = $5, playfulness = $6, curiosity = $7, warmth = $8, structure = $9
+              energy = $5, playfulness = $6, curiosity = $7, warmth = $8, structure = $9, personality = $10, voice_id = $11
        WHERE id = $1 AND xmin::text = $2 RETURNING id`,
-      [current.id, etag, body.role ?? null, body.language_mode ?? null, dials.energy, dials.playfulness, dials.curiosity, dials.warmth, dials.structure],
+      [current.id, etag, body.role ?? null, body.language_mode ?? null, dials.energy, dials.playfulness, dials.curiosity, dials.warmth, dials.structure, personality, voiceId],
     );
     if (!r.rowCount) throw new HttpError(412, 'stale-write', 'Buddy changed since you loaded it. Reload and try again.');
     const view = await db.query(INSTANCE_VIEW, [child.id]);

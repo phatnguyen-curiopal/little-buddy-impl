@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 
+import { releaseToys } from '../../devices/lifecycle.ts';
 import { notFound } from '../../util/errors.ts';
 import { authOf, type ApiDeps } from '../context.ts';
 
@@ -98,16 +99,11 @@ export function registerAccount(app: FastifyInstance, deps: ApiDeps) {
   app.delete('/family', async (req, reply) => {
     const { familyId } = authOf(req);
     const toys = await db.tx(async (q) => {
-      // Toys go back to the factory state so their claim codes work again.
-      const r = await q.query<{ id: string }>(
-        "UPDATE device SET status = 'provisioned', family_id = NULL, child_id = NULL, claimed_at = NULL WHERE family_id = $1 RETURNING id",
-        [familyId],
-      );
-      for (const d of r.rows) await q.query("INSERT INTO device_event (device_id, kind, actor) VALUES ($1, 'unclaimed', 'system')", [d.id]);
+      const released = await releaseToys(q, { familyId }, 'system');
       await q.query('DELETE FROM family WHERE id = $1', [familyId]);
-      return r.rows;
+      return released;
     });
-    for (const d of toys) deps.onDeviceBlocked?.(d.id);
+    for (const id of toys) deps.onDeviceBlocked?.(id);
     return reply.code(204).send();
   });
 }

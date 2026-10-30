@@ -16,6 +16,11 @@ x-v2: &v2
   image: little-buddy-v2:latest
   network_mode: host
   env_file: /opt/little-buddy/env/backend-v2.env
+  # The website lets a parent talk to a Buddy that lives only in the browser,
+  # which production refuses unless asked. Kept here rather than in the env
+  # file so the setting is reviewed with the code; it wins over env_file.
+  environment:
+    WEB_TOY: 'on'
   restart: unless-stopped
   logging: *logging
 

@@ -10,7 +10,7 @@ nginx chung, không khởi động lại dịch vụ chung; nginx chỉ được
 
 | Thành phần | Vị trí |
 |---|---|
-| Website (`frontend/`, build tĩnh) | `/var/www/little-buddy/site`, nginx phục vụ |
+| Website (`frontend/`, build tĩnh, gọi backend-v2 qua `/v2`) | `/var/www/little-buddy/site`, nginx phục vụ |
 | nginx | `/etc/nginx/sites-available/little-buddy.curiopal.com` (bản gốc: `deploy/nginx/`), link sang `sites-enabled` |
 | Chứng chỉ | Let's Encrypt, `certbot` kiểu webroot (`/var/www/little-buddy/acme`), tự gia hạn rồi reload nginx |
 | DNS | Cloudflare, bản ghi A `little-buddy` qua proxy (SSL Full strict), giống các subdomain khác |
@@ -20,7 +20,7 @@ nginx chung, không khởi động lại dịch vụ chung; nginx chỉ được
 | Postgres | Postgres 16 có sẵn của máy (`127.0.0.1:5432`), role `littlebuddy`, database `littlebuddy` và `littlebuddy_brain` (pgvector 0.6) |
 | File env | `/opt/little-buddy/env/backend.env`, `brain.env` (chỉ root đọc được) |
 | Manifest đồ chơi | `/opt/little-buddy/manifests` (chỉ root, chứa bí mật nhà máy) |
-| Mã nguồn đang chạy | `/opt/little-buddy/src` (bản trước ở `src.old`), commit trong `deployed_rev` |
+| Mã nguồn đang chạy | `/opt/little-buddy/src` (bản trước ở `src.old`); commit đã triển khai trọn vẹn (demo, backend-v2 và website) trong `deployed_rev` |
 | Webhook GitHub | `little-buddy-webhook.service`, `127.0.0.1:9130`, nginx chuyển `/hooks/deploy`; bí mật ở `env/webhook.env` |
 | Tự triển khai | `little-buddy-deploy.path` và `.service`, bản clone ở `/opt/little-buddy/repo`, script ở `/opt/little-buddy/bin` |
 | backend-v2 (backend mới) | project compose riêng `little-buddy-v2` (`deploy/compose.v2.yml`): `api` ở `127.0.0.1:3610` (nginx `/v2/`, `/v2/healthz`), `voice` ở `127.0.0.1:3611` (nginx `/v2/device`), `worker`; database `littlebuddy_v2` (role `littlebuddy`, pgvector 0.6); env `/opt/little-buddy/env/backend-v2.env`; commit trong `deployed_rev_v2` |
@@ -57,13 +57,15 @@ Webhook trên GitHub (Settings, Webhooks): Payload URL như trên, content type
 `application/json`, secret là `WEBHOOK_SECRET` trong `env/webhook.env`, chỉ
 sự kiện `push`.
 
-## backend-v2 chạy song song
+## Website và backend-v2
 
-backend-v2 (`backend-v2/`, xem README trong đó) chạy cạnh bản demo, không thay nó: website và đồ chơi web vẫn dùng backend cũ, vì API của hai backend khác nhau. Parent API của backend-v2 ở `https://little-buddy.curiopal.com/v2/...` (nginx đổi `/v2/` thành `/v1/` của nó), socket đồ chơi ở `wss://little-buddy.curiopal.com/v2/device`.
+Website và đồ chơi trên web dùng backend-v2 (`backend-v2/`, xem README trong đó; hợp đồng giữa hai bên ở `frontend/docs/backend-v2.md`). Parent API của backend-v2 ở `https://little-buddy.curiopal.com/v2/...` (nginx đổi `/v2/` thành `/v1/` của nó), socket đồ chơi ở `wss://little-buddy.curiopal.com/v2/device`. Backend cũ và brain vẫn được triển khai như trước, nhưng website không còn gọi tới chúng.
 
-- Mỗi lần triển khai, `remote_deploy.sh` chỉ làm backend-v2 sau khi demo đã khỏe và đã ghi `deployed_rev`: build image, migrate, seed bộ nhân vật, `up`, kiểm tra `/healthz` của cả hai cổng rồi ghi `deployed_rev_v2`. Lỗi của backend-v2 chỉ in cảnh báo, không bao giờ làm hỏng hay lùi bản demo.
-- Không có `env/backend-v2.env` thì bước này bỏ qua. File được tạo một lần trên máy chủ: `NODE_ENV=production`, `HOST=127.0.0.1`, `API_PORT=3610`, `VOICE_PORT=3611`, `TRUST_PROXY=2`, `GATEWAY=live`, `DATABASE_URL` (database `littlebuddy_v2`), `JWT_SECRET` và `DEVICE_KEK` ngẫu nhiên (`openssl rand -hex 32`), `OPENAI_API_KEY` và `ELEVENLABS_API_KEY` chép từ `brain.env`. Database tạo bằng `sudo -u postgres createdb -O littlebuddy littlebuddy_v2` và `CREATE EXTENSION vector` trong đó.
-- Production chặn mã đăng nhập email trả trong response, và máy chủ chưa có dịch vụ gửi mail, nên phụ huynh chỉ đăng nhập được bằng Google hoặc Apple khi đã đặt `GOOGLE_CLIENT_IDS` hoặc `APPLE_CLIENT_IDS`. Buddy nói trước (`SPEAK_FIRST`) đang tắt.
+- Thứ tự mỗi lần triển khai (`remote_deploy.sh`): demo (backend cũ, brain) phải khỏe trước; rồi tới backend-v2: build image, migrate, seed bộ nhân vật, `up`, kiểm tra `/healthz` của cả hai cổng rồi ghi `deployed_rev_v2`; chỉ khi đó website mới được thay, và `deployed_rev` chỉ được ghi khi cả ba đã xong.
+- Nếu backend-v2 không lên, website không bị thay (bản cũ vẫn chạy), script thoát với lỗi và `deployed_rev` giữ nguyên, nên lần push sau sẽ triển khai lại (`auto_deploy.sh` bỏ qua commit đã có trong `deployed_rev`).
+- Không có `env/backend-v2.env` thì backend-v2 không thể lên, nên website cũng không được thay. File được tạo một lần trên máy chủ: `NODE_ENV=production`, `HOST=127.0.0.1`, `API_PORT=3610`, `VOICE_PORT=3611`, `TRUST_PROXY=2`, `GATEWAY=live`, `DATABASE_URL` (database `littlebuddy_v2`), `JWT_SECRET` và `DEVICE_KEK` ngẫu nhiên (`openssl rand -hex 32`), `OPENAI_API_KEY` và `ELEVENLABS_API_KEY` chép từ `brain.env`. Database tạo bằng `sudo -u postgres createdb -O littlebuddy littlebuddy_v2` và `CREATE EXTENSION vector` trong đó.
+- Phụ huynh đăng ký và đăng nhập trên website bằng email và mật khẩu. Production chặn mã đăng nhập email trả trong response (máy chủ chưa có dịch vụ gửi mail); Google hoặc Apple dùng được khi đã đặt `GOOGLE_CLIENT_IDS` hoặc `APPLE_CLIENT_IDS`. Buddy nói trước (`SPEAK_FIRST`) đang tắt.
+- `WEB_TOY=on` của backend-v2 nằm trong `deploy/compose.v2.yml` (mục `environment`, ghi đè `backend-v2.env`), để thiết lập này được xem xét cùng mã nguồn. `PAYMENT_PROVIDER` không đặt nên production là `disabled` (mua gói credit trên web tắt); gia đình mới nhận 1000 credit (`WELCOME_CREDITS`, mặc định của backend-v2).
 - Theo dõi: `docker compose -f /opt/little-buddy/src/deploy/compose.v2.yml logs --tail 100 voice` (hoặc `api`, `worker`).
 
 ## Triển khai bản mới bằng tay

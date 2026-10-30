@@ -7,16 +7,19 @@ LCD, loa, nút bấm) rất "mỏng": mọi việc nặng (nhận dạng giọng
 ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
 
 ```
+┌──────────────────┐  /v2: REST + WebSocket   ┌────────────────────────┐        ┌─────────────────┐
+│ Website phụ huynh │ ◄──────────────────────► │ backend-v2 (TypeScript)│ ◄────► │ OpenAI          │
+│ (frontend/)       │                          │ PostgreSQL + pgvector  │        │ ElevenLabs      │
+└──────────────────┘                          └────────────────────────┘        └─────────────────┘
+
 ┌─────────────┐   WebSocket /v1    ┌────────────────────┐        ┌─────────────────┐
-│  ESP32-S3   │ ◄────────────────► │  Node.js backend   │ ◄────► │  Dịch vụ AI     │
+│  ESP32-S3   │ ◄────────────────► │  Node.js backend   │ ◄────► │  brain          │
 │  đồ chơi    │   HMAC-signed      │  Postgres + Redis  │        │  STT / LLM / TTS│
 └─────────────┘                    └────────────────────┘        └─────────────────┘
-                                             ▲
-                                             │ REST /api (JWT)
-                                    ┌──────────────────┐
-                                    │ Website phụ huynh  │  (frontend/)
-                                    └──────────────────┘
 ```
+
+Website dùng backend-v2. Backend đầu tiên (`backend/` và `brain/`) vẫn chạy song
+song cho bản demo cũ (`/api`, `/v1/stream`).
 
 ## Cấu trúc
 
@@ -25,7 +28,7 @@ ngôn ngữ, tổng hợp giọng, bộ nhớ, tính tiền) nằm ở backend.
 | `backend/` | API Node.js: quản lý thiết bị, xác thực thiết bị (HMAC), tài khoản phụ huynh (JWT), endpoint quản trị. Xem `backend/README.md`. |
 | `brain/` | Dịch vụ hội thoại của Buddy: nhận dạng giọng nói, bộ nhớ, prompt, mô hình ngôn ngữ, tổng hợp giọng. Xem `brain/README.md`. |
 | `backend-v2/` | Backend mới theo đề xuất kỹ thuật (TypeScript): Parent API, voice service, worker, PostgreSQL + pgvector, OpenAI và ElevenLabs. Xem `backend-v2/README.md`. |
-| `frontend/` | Website cho phụ huynh (Vite + React): trang giới thiệu sản phẩm và bảng điều khiển sau khi đăng nhập, nơi trình duyệt cũng đóng vai đồ chơi để trò chuyện với Buddy. Song ngữ. Chạy ở http://localhost:5174. Xem `frontend/README.md`. |
+| `frontend/` | Website cho phụ huynh (Vite + React): trang giới thiệu sản phẩm và bảng điều khiển sau khi đăng nhập, nơi trình duyệt cũng đóng vai đồ chơi để trò chuyện với Buddy. Song ngữ. Gọi backend-v2 qua `/v2`. Chạy ở http://localhost:5174. Xem `frontend/README.md`. |
 | `deploy/` | Triển khai bản demo lên https://little-buddy.curiopal.com: `bash deploy/deploy.sh`. Xem `deploy/README.md`. |
 | `docker/` | Script khởi tạo Postgres (tạo thêm database test). |
 | `docker-compose.yml` | Postgres (pgvector) và Redis cho dev và test. |
@@ -47,17 +50,22 @@ npm run seed          # tạo gia đình demo, 1 thiết bị đã ghép, 1 thi�
 npm run dev           # http://localhost:3000/healthz
 ```
 
-Chạy cả bản demo (brain, backend và frontend) trong một cửa sổ, từ thư mục gốc (mỗi
-thư mục đã `npm install` và có `.env`; `BRAIN_TOKEN` của `backend/.env` và
-`brain/.env` phải trùng nhau):
+Chạy website cùng backend-v2 trong một cửa sổ, từ thư mục gốc (đã `npm install`
+trong `backend-v2/` và `frontend/`). Không cần Docker hay khoá API: backend-v2
+chạy `dev:lite` trên PostgreSQL nhúng (PGlite, dữ liệu ở `backend-v2/.pglite/`)
+và trả lời bằng gateway giả khi không có khoá OpenAI và ElevenLabs:
 
 ```powershell
-npm run dev           # brain :8080, backend :3000, frontend http://localhost:5174/app/talk
+npm run dev           # backend-v2 :3100 (giọng nói :3101), website http://localhost:5174/app
 ```
 
-Mỗi dòng log có tên dịch vụ ở đầu. Ctrl+C dừng cả ba; một dịch vụ chết thì hai
+Mỗi dòng log có tên dịch vụ ở đầu. Ctrl+C dừng cả hai; một dịch vụ chết thì
 dịch vụ kia cũng dừng theo. Nếu cổng nào đang bị chiếm (thường là server cũ
 chưa tắt), lệnh báo rõ và không khởi động gì.
+
+Bản demo cũ (brain và backend) không còn được website dùng. Muốn chạy nó thì
+chạy `npm run dev` trong từng thư mục `brain/` và `backend/` (`BRAIN_TOKEN` của
+`backend/.env` và `brain/.env` phải trùng nhau).
 
 Chạy test (cần container đang chạy; nếu Docker tắt, `npm test` báo lỗi và
 dừng ngay):

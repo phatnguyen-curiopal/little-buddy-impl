@@ -1,11 +1,11 @@
-// Starts the three dev servers the web demo needs (brain, backend, frontend) in
-// one terminal, each line prefixed with its service. No dependency on
-// purpose: this is a dev convenience, not part of any service.
+// Starts what the website needs (backend-v2 and the frontend) in one
+// terminal, each line prefixed with its service. No dependency on purpose:
+// this is a dev convenience, not part of any service.
 //
-//   npm run dev           from the repo root; Ctrl+C stops all three
+//   npm run dev           from the repo root; Ctrl+C stops both
 //
-// If one server exits, the others are stopped too: a half-running demo
-// (say, a backend with no brain) only fails later with a confusing turn error.
+// If one server exits, the other is stopped too: a half-running site (say,
+// pages with no API behind them) only fails later with a confusing error.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -16,30 +16,29 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const isWindows = process.platform === 'win32';
 
-// Order matters only for readability of the first lines: the backend does
-// not call the brain at boot, and Vite proxies lazily.
+// backend-v2 runs as dev:lite: its API, voice service and worker on the
+// in-process PostgreSQL the tests use, so it needs no database server, and
+// with no OpenAI or ElevenLabs keys it answers with its fake gateway. The
+// first backend and the brain are not used by the site any more.
 const SERVICES = [
-  { name: 'brain', dir: 'brain', color: 35, needsEnv: true, port: 8080, host: '127.0.0.1' },
-  { name: 'backend', dir: 'backend', color: 36, needsEnv: true, port: 3000 },
-  { name: 'frontend', dir: 'frontend', color: 33, needsEnv: false, port: 5174 },
+  { name: 'backend-v2', dir: 'backend-v2', script: 'dev:lite', color: 36, ports: [3100, 3101] },
+  { name: 'frontend', dir: 'frontend', script: 'dev', color: 33, ports: [5174] },
 ];
 
 const width = Math.max(...SERVICES.map((s) => s.name.length));
 const tag = (s) => (process.stdout.isTTY ? `\x1b[${s.color}m${s.name.padEnd(width)}\x1b[0m` : s.name.padEnd(width));
 
-// Missing installs or .env files fail inside a child with a long stack
-// trace; checking first gives one clear line per problem instead.
+// A missing install fails inside a child with a long stack trace; checking
+// first gives one clear line per problem instead.
 const problems = [];
 for (const s of SERVICES) {
-  const dir = path.join(root, s.dir);
-  if (!existsSync(path.join(dir, 'node_modules'))) problems.push(`${s.dir}: run "npm install" in ${s.dir}/`);
-  if (s.needsEnv && !existsSync(path.join(dir, '.env'))) problems.push(`${s.dir}: copy ${s.dir}/.env.example to ${s.dir}/.env`);
+  if (!existsSync(path.join(root, s.dir, 'node_modules'))) problems.push(`${s.dir}: run "npm install" in ${s.dir}/`);
 }
 // A server left over from an earlier run holds its port, and the new one
 // would die with EADDRINUSE mid-startup; say so before starting anything.
-function portInUse(port, host) {
+function portInUse(port) {
   return new Promise((resolve) => {
-    const socket = net.connect({ port, host: host ?? 'localhost' });
+    const socket = net.connect({ port, host: 'localhost' });
     socket.once('connect', () => {
       socket.destroy();
       resolve(true);
@@ -48,7 +47,9 @@ function portInUse(port, host) {
   });
 }
 for (const s of SERVICES) {
-  if (await portInUse(s.port, s.host)) problems.push(`${s.dir}: port ${s.port} is already in use (a dev server still running?)`);
+  for (const port of s.ports) {
+    if (await portInUse(port)) problems.push(`${s.dir}: port ${port} is already in use (a dev server still running?)`);
+  }
 }
 if (problems.length) {
   for (const p of problems) console.error(`dev: ${p}`);
@@ -89,7 +90,7 @@ function stopAll(code) {
 }
 
 for (const s of SERVICES) {
-  const child = spawn('npm', ['run', 'dev'], {
+  const child = spawn('npm', ['run', s.script], {
     cwd: path.join(root, s.dir),
     shell: isWindows,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -105,7 +106,7 @@ for (const s of SERVICES) {
   });
 }
 
-console.log('dev: brain http://127.0.0.1:8080  backend http://localhost:3000  frontend http://localhost:5174/app/talk (Ctrl+C stops all)');
+console.log('dev: backend-v2 http://localhost:3100 (voice :3101, data in backend-v2/.pglite/)  site http://localhost:5174/app (Ctrl+C stops both)');
 
 process.on('SIGINT', () => stopAll(0));
 process.on('SIGTERM', () => stopAll(0));

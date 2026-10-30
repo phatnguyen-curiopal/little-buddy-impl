@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The server half of a deploy, shared by deploy/deploy.sh (piped over ssh
 # from a dev machine) and deploy/auto_deploy.sh (a GitHub push). It takes
-# $UPLOAD/src.tgz (backend/, brain/, deploy/) and $UPLOAD/site.tgz (the
-# built frontend), and REV, the revision they came from.
+# $UPLOAD/src.tgz (backend/, backend-v2/, brain/, deploy/) and
+# $UPLOAD/site.tgz (the built frontend), and REV, the revision they came from.
 set -euo pipefail
 UPLOAD="${UPLOAD:-/opt/little-buddy/upload}"
 REV="${REV:?REV is required}"
@@ -28,12 +28,6 @@ echo "remote: migrating"
 $compose run -T --rm --no-deps backend node scripts/migrate.js </dev/null
 $compose run -T --rm --no-deps brain node scripts/migrate.js </dev/null
 $compose up -d --remove-orphans
-
-echo "remote: publishing the site"
-www=/var/www/little-buddy
-rm -rf "$www/site.new" && mkdir -p "$www/site.new" && tar -m -xzf "$UPLOAD/site.tgz" -C "$www/site.new"
-chmod -R a+rX "$www/site.new"
-rm -rf "$www/site.old" && { [ ! -d "$www/site" ] || mv "$www/site" "$www/site.old"; } && mv "$www/site.new" "$www/site"
 
 # Only this site's file, and never left in place if the config breaks.
 site=little-buddy.curiopal.com
@@ -80,18 +74,19 @@ else
   echo "remote: no env/webhook.env, so pushes do not deploy (see deploy/README.md)"
 fi
 
-# backend-v2, the new backend, beside the demo (deploy/compose.v2.yml). It
-# goes out only once the demo is healthy, and nothing in it can fail or undo
-# the demo's deploy: every step returns instead of exiting.
+# backend-v2 (deploy/compose.v2.yml), which the website calls under /v2. It
+# goes out after the demo is healthy and before the site, because a site
+# that calls routes the running backend-v2 lacks would be broken. Every step
+# returns instead of exiting, so a failure keeps the previous site.
 deploy_v2() {
   local v2="docker compose -f src/deploy/compose.v2.yml"
   if [ ! -f env/backend-v2.env ]; then
-    echo "remote: no env/backend-v2.env, so backend-v2 is not deployed (see deploy/README.md)"
-    return 0
+    echo "remote: no env/backend-v2.env, and the website needs backend-v2 (see deploy/README.md)" >&2
+    return 1
   fi
   if [ ! -d src/backend-v2 ]; then
-    echo "remote: this upload has no backend-v2/ (packed by an older auto_deploy.sh); the next deploy includes it"
-    return 0
+    echo "remote: this upload has no backend-v2/ (packed by an older auto_deploy.sh)" >&2
+    return 1
   fi
   echo "remote: backend-v2: building and migrating"
   $v2 build --quiet || return 1
@@ -110,14 +105,36 @@ deploy_v2() {
   return 1
 }
 
+publish_site() {
+  echo "remote: publishing the site"
+  local www=/var/www/little-buddy
+  rm -rf "$www/site.new" && mkdir -p "$www/site.new" && tar -m -xzf "$UPLOAD/site.tgz" -C "$www/site.new"
+  chmod -R a+rX "$www/site.new"
+  rm -rf "$www/site.old" && { [ ! -d "$www/site" ] || mv "$www/site" "$www/site.old"; } && mv "$www/site.new" "$www/site"
+}
+
+# The demo, then backend-v2, then the site that calls it. The revision is
+# recorded only once all three are out: auto_deploy.sh skips a revision it
+# finds in deployed_rev, so recording a half-done deploy would stop the next
+# push from retrying it.
+demo_ok=0
 for i in $(seq 1 30); do
   if curl -fs -o /dev/null http://127.0.0.1:3600/healthz && curl -fs -o /dev/null http://127.0.0.1:8600/healthz; then
-    echo "$REV" > deployed_rev
-    echo "remote: healthy, deployed $REV"
-    deploy_v2 || echo "remote: backend-v2 did not deploy; the demo above is unaffected" >&2
-    exit 0
+    demo_ok=1
+    break
   fi
   sleep 2
 done
-echo "remote: not healthy after 60 s; see: $compose logs --tail 50" >&2
-exit 1
+if [ "$demo_ok" != 1 ]; then
+  echo "remote: not healthy after 60 s; see: $compose logs --tail 50. The site was not published." >&2
+  exit 1
+fi
+echo "remote: demo healthy"
+if ! deploy_v2; then
+  echo "remote: backend-v2 did not deploy, so the site was not published; the previous site keeps running" >&2
+  exit 1
+fi
+publish_site
+echo "$REV" > deployed_rev
+echo "remote: healthy, deployed $REV"
+exit 0
